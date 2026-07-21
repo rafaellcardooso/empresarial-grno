@@ -1,0 +1,20 @@
+[Unit]
+Description=SIR ingest — Alertas RAL (Playwright)
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=rcard
+Group=rcard
+WorkingDirectory=/usr/local/empresarial/workers/sir-ingest
+Environment=PATH=/usr/bin:/usr/local/bin
+EnvironmentFile=/usr/local/empresarial/workers/sir-ingest/.env
+ExecStart=/usr/bin/node sources/AlertasRalRede.js
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sir-ingest-ral
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,54 @@
+---
+description: Docstrings em funções — descrição direta do comportamento, sem instruções ao dev
+alwaysApply: true
+---
+
+# Comentários em funções
+
+Toda função exportada ou com lógica relevante recebe docstring `/** … */` imediatamente acima.
+
+## Formato
+
+- Uma frase objetiva descrevendo **o que a função faz** (entrada/saída/efeito quando não for óbvio).
+- Idioma: português, tom documental.
+- Mencionar efeitos colaterais relevantes (I/O, estado global, mutação de disco).
+
+## Proibido
+
+- Instruir o desenvolvedor (“copie”, “lembre de”, “você deve”, “use quando”).
+- Dicas, sugestões ou TODOs em comentários.
+- Emoji em comentários, logs novos ou strings de código.
+- Comentar linha a linha o óbvio.
+
+## Exemplos
+
+```typescript
+/** Retorna pool MySQL do banco SIR (singleton em global). */
+export function getSirPool(): Pool { … }
+
+/** Marca registro como ENCERRADO quando ausente do scrape atual. */
+export async function processRecordClosures(…) { … }
+```
+
+```typescript
+// Ruim — instrução ao dev
+/** Copie .env.example antes de chamar esta função. */
+
+// Ruim — dica
+/** Dica: prefira cache local. */
+```
+
+## Escopo
+
+- `lib/`, `app/`, `components/`, `scripts/`, `workers/`
+- Handlers de rota (`GET`, `HEAD`), componentes React e helpers internos.
+- Blocos de lógica não óbvia (frames Playwright, encerramento em massa, retry): comentário curto acima do bloco.
+
+## Logs (worker SIR)
+
+- Prefixo `[RAL]` / `[REC]`; mensagens operacionais em português.
+- Sem emoji.
+
+## TypeScript
+
+- Tipos em `lib/queries/*` e `lib/models/*`; evitar `any` em dados de DB.

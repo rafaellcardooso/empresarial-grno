@@ -1,0 +1,30 @@
+---
+description: Estrutura Empresarial GRNO — Next.js + workers SIR + leitura HFC
+alwaysApply: true
+---
+
+# Empresarial — estrutura
+
+Monorepo em `/usr/local/empresarial`. **Next.js só lê**; **workers gravam** no MySQL `sir`.
+
+| Tipo | Local | Escreve DB? |
+|------|--------|-------------|
+| UI + BFF (App Router) | `app/(shell)/`, `app/api/`, `components/`, `lib/` | Não (SIR + HFC read-only) |
+| Queries / pools / models | `lib/db/`, `lib/queries/`, `lib/models/` | Não |
+| Migrations SIR | `migrations/sir/`, `scripts/db/` | Migrate/seed dev |
+| Ingest SIR (Playwright) | `workers/sir-ingest/sources/` | Sim → MySQL `sir` |
+| Bot Telegram SIR | `workers/sir-ingest/telegram/` | Não (HTTP → Next `/api`) |
+| Systemd | `deploy/systemd/`, `workers/sir-ingest/deploy/systemd/` | — |
+
+## Fronteiras
+
+- **Não** colocar Selenium, scrapers ou bots dentro de `app/`.
+- **Não** escrever no MySQL do `hfc-sls` a partir deste repo.
+- BSOD/PME: ler `tbl_inventory_pme` (enrich continua no `hfc-sls`).
+- Porta padrão: **3002** (`npm run dev` / `npm start`).
+
+## Antes de mudar frontend
+
+Priorizar estabilidade do ingest (`AlertasRalRede.js`, `AlertasRecRede.js`) e contrato das tabelas `rals` / `recs` com `lib/queries/sir.ts`.
+
+Skills: `.cursor/skills/emp-revisar-sir-ingest/`, `emp-align-env/`, `emp-db-setup/`. Env: rule `emp-env`, `npm run env:check`. Comentários: rule `emp-comments`.

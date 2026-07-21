@@ -1,0 +1,20 @@
+[Unit]
+Description=SIR ingest — Alertas REC (Playwright)
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=rcard
+Group=rcard
+WorkingDirectory=/usr/local/empresarial/workers/sir-ingest
+Environment=PATH=/usr/bin:/usr/local/bin
+EnvironmentFile=/usr/local/empresarial/workers/sir-ingest/.env
+ExecStart=/usr/bin/node sources/AlertasRecRede.js
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sir-ingest-rec
+
+[Install]
+WantedBy=multi-user.target

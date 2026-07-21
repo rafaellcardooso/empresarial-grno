@@ -1,0 +1,67 @@
+---
+description: Nomenclatura de arquivos, componentes, funções e tipos (padrão de mercado)
+alwaysApply: true
+---
+
+# Nomenclatura
+
+## Pastas
+
+| Pasta | Conteúdo |
+|-------|----------|
+| `app/(shell)/` | Páginas autenticadas com layout GRNO |
+| `app/api/` | Route Handlers (BFF) |
+| `components/layout/` | Shell (Navbar, Sidebar, AppShell) |
+| `components/ui/` | Componentes visuais reutilizáveis |
+| `lib/config/` | Navegação e textos de UI |
+| `lib/db/`, `lib/queries/`, `lib/models/` | Infra, queries e tipos de domínio |
+| `migrations/sir/` | DDL versionado MySQL SIR |
+| `workers/sir-ingest/sources/lib/` | Módulos compartilhados do scraper |
+
+## Arquivos
+
+| Tipo | Padrão | Exemplo |
+|------|--------|---------|
+| Componente React | **PascalCase** + `.tsx` | `AppShell.tsx`, `DataTable.tsx` |
+| Página App Router | `page.tsx`, `layout.tsx`, `route.ts` | export default **`Page`** |
+| Utilitário / query | **camelCase** + `.ts` | `serialize.ts`, `sir.ts` |
+| Config raiz | kebab ou nome fixo | `prettier.config.mjs`, `commitlint.config.mjs` |
+| Worker entry (legado) | manter nome histórico | `AlertasRalRede.js` |
+
+## Componentes React
+
+- **PascalCase**, substantivo ou substantivo composto: `Navbar`, `ThemeToggle`, `GrnoLogo`.
+- Um componente principal exportado por arquivo (`export function X`).
+- Props: tipo **`XProps`** ou inline `{ title: string }`.
+- `"use client"` só quando necessário (hooks, eventos, browser APIs).
+
+## Funções e variáveis (TypeScript / JavaScript)
+
+| Uso | Padrão | Exemplo |
+|-----|--------|---------|
+| Função genérica | **camelCase**, verbo + substantivo | `getSirPool`, `listActiveRals` |
+| Handler de evento | prefixo **`handle`** | `handleThemeToggle`, `handleNavigateBack` |
+| Hook React | prefixo **`use`** | `useSidebarState` |
+| Booleano | **`is` / `has` / `should`** | `isNavItemActive`, `hasError` |
+| Constante de módulo | **UPPER_SNAKE_CASE** | `LOG_PREFIX`, `NAV_SECTIONS` |
+| Tipo / interface | **PascalCase** | `SirRecord`, `TableColumn`, `NavItem` |
+| Query / API read | verbo **`get` / `list` / `count` / `ping`** | `getRalByNum`, `pingSirDb` |
+| Query write (worker) | verbo **`upsert` / `mark` / `save`** | `upsertRal`, `markRecordClosed` |
+
+**Código novo:** identificadores em **inglês**. Texto de UI pode permanecer em português.
+
+## Workers (SIR)
+
+- Funções e config internos em **ingglês camelCase** (`performLogin`, `pollIntervalMs`).
+- Nomes de colunas/tabelas MySQL e frames HTML legados: manter como no SIR (`num_recup`, `frameFiltro`).
+
+## Evitar
+
+- Português em funções/variáveis (`salvarRalNoDB`, `processarTabela`).
+- Abreviações obscuras (`procTbl`, `cfg2`).
+- Componentes em camelCase (`appShell`).
+- Páginas nomeadas `HomePage` / `SirPage` — usar **`Page`** (convenção App Router).
+
+## ESLint
+
+Regras `@typescript-eslint/naming-convention` em `eslint.config.mjs` reforçam camelCase/PascalCase no app Next.

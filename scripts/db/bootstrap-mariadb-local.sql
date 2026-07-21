@@ -1,0 +1,7 @@
+-- Bootstrap claroEmpresarial (SIR RAL/REC) on local MariaDB.
+--
+-- Prefer the Node generator (reads .env.local — same user/senha do hfc-sls):
+--   npm run db:bootstrap
+--
+-- Equivalente manual:
+--   node scripts/db/bootstrap-mariadb-local.mjs | sudo mariadb

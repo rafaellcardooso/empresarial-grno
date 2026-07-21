@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+build
+coverage
+workers/sir-ingest/node_modules
+workers/sir-ingest/states
+workers/sir-ingest/**/__pycache__
+_legacy-ui
+package-lock.json
+workers/sir-ingest/package-lock.json

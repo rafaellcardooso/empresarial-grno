@@ -1,0 +1,18 @@
+[Unit]
+Description=Empresarial GRNO — Next.js (SIR + BSOD)
+After=network.target
+
+[Service]
+Type=simple
+User=rcard
+Group=rcard
+WorkingDirectory=/usr/local/empresarial
+Environment=NODE_ENV=production
+Environment=PORT=3002
+EnvironmentFile=/usr/local/empresarial/.env.local
+ExecStart=/usr/bin/npm run start
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

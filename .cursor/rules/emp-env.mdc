@@ -1,0 +1,58 @@
+---
+description: Sincronizar .env.example com .env local — mesmas chaves, ordem e blocos
+alwaysApply: true
+---
+
+# Variáveis de ambiente
+
+## Pares espelhados (obrigatório)
+
+| Template (commitado) | Local (gitignored) | Projeto |
+|----------------------|-------------------|---------|
+| `.env.example` | `.env.local` | Next.js (raiz) |
+| `workers/sir-ingest/.env.example` | `workers/sir-ingest/.env` | Worker Playwright |
+
+**Não usar** `conexao-db.json` — credenciais MySQL do worker vêm de `SIR_DB_*` (mesmas chaves do Next).
+
+## Regra de ouro
+
+**Ao adicionar, renomear ou remover `process.env.*`:**
+
+1. Atualizar o `.env.example` (placeholder — nunca segredo real).
+2. Atualizar o `.env` / `.env.local` do desenvolvedor **na mesma posição, bloco e comentários**.
+3. Se for `SIR_DB_*`, replicar **igual** na raiz e no worker.
+4. Rodar `npm run env:check` na raiz.
+
+## Chaves SIR compartilhadas
+
+Next (leitura) e worker (escrita) usam o **mesmo** bloco:
+
+```
+SIR_DB_HOST
+SIR_DB_PORT
+SIR_DB_USER
+SIR_DB_PASSWORD
+SIR_DB_NAME
+```
+
+Valores devem ser idênticos em `.env.local` e `workers/sir-ingest/.env`.
+
+## Placeholders no example
+
+| Tipo | Valor no example |
+|------|------------------|
+| Senha/token | `troque_me` ou vazio |
+| Dev SIR local | `monitor` (mesmo do HFC) / `claroEmpresarial` / porta `3306` |
+| URL interna | `http://127.0.0.1:3002/api` |
+
+## Validação
+
+```bash
+npm run env:check
+```
+
+Verifica example ↔ local (chaves, ordem **e comentários**) e paridade `SIR_DB_*` entre Next e worker.
+
+## Nunca commitar
+
+`.env.local`, `workers/sir-ingest/.env`

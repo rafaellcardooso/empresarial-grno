@@ -1,0 +1,32 @@
+---
+description: Quando e como fazer commits neste repositório
+alwaysApply: true
+---
+
+# Commits
+
+- Só commitar quando o usuário pedir; não `push` sem pedido; não mudar `git config`; não `--no-verify`.
+- **Conventional Commits** (validados por commitlint no hook `commit-msg`):
+  - `feat:` nova funcionalidade
+  - `fix:` correção de bug
+  - `docs:` documentação
+  - `style:` formatação (Prettier), sem mudança de lógica
+  - `refactor:` refatoração
+  - `chore:` tooling, deps, CI
+  - `test:` testes
+- Mensagens em **inglês**; assunto imperativo, ≤72 chars; corpo opcional com o **porquê** (1–2 frases).
+- HEREDOC para `git commit -m "$(cat <<'EOF' ... EOF)"`.
+
+```text
+# ✅ GOOD
+feat: add GRNO sidebar layout with collapse state
+
+Restore desktop toggle and sectioned nav from legacy template.
+
+# ❌ BAD
+wip / ajustes / update files / fixed stuff
+```
+
+- Não staged: `.env.local`, `workers/sir-ingest/.env`, dumps em `states/`.
+- Antes de commit que altere env: `npm run env:check` e atualizar `.env.example`.
+- Pre-commit roda **lint-staged** (Prettier + ESLint nos arquivos staged).

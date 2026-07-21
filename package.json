@@ -1,27 +1,51 @@
 {
-  "name": "empresarial-scaffold",
+  "name": "empresarial",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
-    "lint": "eslint"
+    "dev": "next dev --turbopack -p 3002",
+    "build": "next build",
+    "start": "next start -p 3002",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:migrate": "node scripts/db/migrate-sir.mjs",
+    "db:seed": "node scripts/db/seed-sir-dev.mjs",
+    "db:setup": "npm run db:migrate && npm run db:seed",
+    "db:import": "node scripts/db/import-sir-backup.mjs",
+    "db:bootstrap": "node scripts/db/bootstrap-mariadb-local.mjs | sudo mariadb",
+    "env:check": "node scripts/check-env-sync.mjs",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs,json,css,md,mdc}": [
+      "prettier --write"
+    ],
+    "*.{js,jsx,ts,tsx,mjs}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
+    "mysql2": "^3.23.1",
+    "next": "15.5.2",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "next": "15.5.2"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20.19.43",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "dotenv": "^16.6.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
-    "@eslint/eslintrc": "^3"
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.1.0",
+    "prettier": "^3.9.6",
+    "typescript": "^5"
   }
 }

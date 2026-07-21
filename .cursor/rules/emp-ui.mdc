@@ -1,0 +1,29 @@
+---
+description: UI — textos, ícones, capitalização e componentes visuais
+globs: app/**/*.{ts,tsx},components/**/*.{ts,tsx},public/assets/css/**/*
+alwaysApply: false
+---
+
+# UI (Empresarial GRNO)
+
+## Textos
+
+- Interface em **português**, **sentence case** (só primeira palavra e siglas em maiúscula).
+- Siglas fixas: **SIR**, **RAL**, **REC**, **BSOD**, **PME**, **CF**, **CMTS**, **VLAN**, **MAC**, **OPE**.
+- Exemplos corretos: `Painel principal`, `Alternar tema`, `Usuário logado`, `RALs ativas`.
+- Evitar Title Case inglês: ~~`Dashboard Principal`~~, ~~`Usuário Logado`~~.
+- Termos consistentes: **`BSOD`** na navegação e títulos de página; PME só em rótulos de coluna/dado quando necessário.
+- Textos reutilizáveis em `lib/config/ui-copy.ts`; navegação em `lib/config/navigation.ts`.
+
+## Ícones e emoji
+
+- **Não usar emoji** em UI, tooltips, labels ou mensagens (`🔥`, `📅`, etc.).
+- Preferir **Bootstrap Icons** (`bi-*`) com parcimônia — nav e ações, não decoração em todo título/card.
+- Ícones decorativos: `aria-hidden="true"`; botões só com ícone: `aria-label` descritivo.
+
+## Layout
+
+- Shell compartilhado: `app/(shell)/layout.tsx` + `components/layout/AppShell.tsx`.
+- Cabeçalho de página: `components/ui/PageHeader.tsx` (`h1` visual `.h2`).
+- Cards/tabelas: `ContentCard`, `StatCard`, `MetricCard`, `DataTable`.
+- Alinhar listas e métricas com utilitários Bootstrap (`d-flex`, `align-items-center`, `text-truncate`, `gap-2`).

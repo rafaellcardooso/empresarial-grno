@@ -1,0 +1,48 @@
+---
+description: Workers Playwright SIR — RAL/REC, states, MySQL
+globs: workers/sir-ingest/**/*
+alwaysApply: false
+---
+
+# SIR ingest (workers)
+
+## Execução
+
+- **cwd obrigatório**: `workers/sir-ingest/` (paths relativos: `states/`).
+- **MySQL**: credenciais via `SIR_DB_*` no `.env` (mesmas da raiz `.env.local`).
+- **Browser**: Playwright Chromium (`npm run install:browsers` após `npm install`).
+- **Schema DDL**: só via `npm run db:migrate` na raiz — workers **não** rodam migrations.
+- Um processo por tipo (RAL e REC separados); intervalo via `INTERVALO_MONITORAMENTO` (default 5 min).
+- Headless: `PLAYWRIGHT_HEADLESS=false` para debug visual local.
+
+## Persistência
+
+| Artefato | Uso |
+|----------|-----|
+| MySQL `rals` / `recs` | Fonte de verdade para a UI |
+| `states/*Ativas.json` | Snapshot do ciclo anterior (detectar encerradas) |
+| `states/dadosAntigos*.json` | Set de itens já vistos (log na 1ª aparição) |
+| `states/estadoTabela*.json` | Evitar encerrar tudo se tabela ficou vazia de forma transitória |
+| `states/error/*.html` | Debug opcional quando Selenium falha (retém só os N mais recentes) |
+
+## Debug / erro
+
+- `SAVE_SCRAPE_ERROR_HTML=false` desliga dump HTML.
+- `MAX_SCRAPE_ERROR_DUMPS=5` (default) — rotação automática; pasta gitignored.
+- **Não** commitar `states/error/` nem acumular centenas de dumps em disco.
+
+## Contrato DB (não quebrar sem migrar Next + bot)
+
+- `rals`: `UNIQUE(num_recup)`, coluna `detalhes`, `status` ATIVO|ENCERRADO.
+- `recs`: PK `num_recup` (REC e DSR), coluna `detalhes_title`, demais campos de negócio.
+
+## Ao alterar scrapers
+
+1. Manter paridade RAL/REC (frames, retry, error dump, encerramento).
+2. Helpers comuns em `sources/lib/sir-scraper-common.js` — inglês camelCase.
+3. UPSERT atualiza campos mutáveis (duração, CF, detalhes quando disponíveis).
+4. Falha de scrape **não** encerra em massa sem confirmação (`CICLOS_VAZIOS_PARA_ENCERRAR`).
+5. MySQL: ping + reconnect; sem overlap de ciclos (`isCycleRunning`).
+6. Bot Telegram é processo aparte — não acoplar ao scraper.
+
+Revisão detalhada: skill `emp-revisar-sir-ingest`.

@@ -1,0 +1,17 @@
+{
+  "name": "sir-ingest",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Scrapers Playwright SIR (RAL/REC) — grava MySQL claroEmpresarial",
+  "scripts": {
+    "start:ral": "node sources/AlertasRalRede.js",
+    "start:rec": "node sources/AlertasRecRede.js",
+    "install:browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "mysql2": "^3.15.2",
+    "playwright": "^1.55.0"
+  }
+}

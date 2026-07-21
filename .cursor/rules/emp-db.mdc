@@ -1,0 +1,39 @@
+---
+description: Bancos de dados — SIR models + HFC read-only
+globs: lib/db/**/*,lib/models/**/*,lib/queries/**/*
+alwaysApply: false
+---
+
+# Bancos de dados
+
+## MySQL `sir` (RAL/REC)
+
+- Pool: `lib/db/sir.ts` · queries: `lib/queries/sir.ts` · **models**: `lib/models/`.
+- Tabelas: `rals`, `recs` — ver `migrations/sir/001_initial_schema.sql`.
+- Populadas por `workers/sir-ingest`; Next **somente leitura**.
+- Filtro padrão UI/API: `status = 'ATIVO'` (`SIR_RECORD_STATUS.active`).
+
+### Models
+
+| Model | Tabela | Notas |
+|-------|--------|--------|
+| `RalRecord` | `rals` | coluna `detalhes` |
+| `RecRecord` | `recs` | coluna `detalhes_title` |
+| `SirRecordStatus` | ambas | `'ATIVO' \| 'ENCERRADO'` |
+
+Import: `import { RalRecord, RecRecord, SIR_TABLES } from '@/lib/models'`.
+
+## MySQL `hfc-sls` (BSOD / PME)
+
+- Pool read-only: `lib/db/hfc.ts` · queries: `lib/queries/bsod.ts`.
+- `tbl_inventory_pme` — inventário PME (VLAN BSOD, contrato, nó).
+- `tbl_monitor_pme` — saúde SNMP por MAC (`status`, `tx`, `rx`, `mer`, `time`); usar última leitura por MAC.
+
+## Dev sem SIR remoto
+
+Usar `docker-compose.dev.yml` + `npm run db:setup` (ver rule `emp-migrations`).
+
+## Convenções
+
+- Serializar `Date` → ISO em `lib/serialize.ts`.
+- Alteração de schema: migration SQL + models + queries + worker upsert juntos.

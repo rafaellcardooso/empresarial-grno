@@ -1,0 +1,28 @@
+---
+description: Prettier, ESLint e qualidade de código TypeScript/React
+globs: **/*.{ts,tsx,js,mjs,cjs,json,css,md,mdc}
+alwaysApply: false
+---
+
+# Lint e format
+
+- **Prettier** = formatação (`prettier.config.mjs`).
+- **ESLint** = regras Next + TypeScript (`eslint.config.mjs`); `eslint-config-prettier` evita conflito.
+- Antes de commit: hooks rodam via **lint-staged** (só staged).
+
+## Comandos
+
+```bash
+npm run lint          # eslint .
+npm run lint:fix      # eslint . --fix
+npm run format        # prettier --write .
+npm run format:check  # prettier --check .
+```
+
+## VS Code / Cursor
+
+Extensões recomendadas: ESLint + Prettier. `formatOnSave` ativo em `.vscode/settings.json`.
+
+## Workers JS
+
+Scrapers em `workers/sir-ingest/sources/` entram no ESLint/Prettier; ignorar `states/` e `node_modules/`.

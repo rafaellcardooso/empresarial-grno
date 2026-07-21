@@ -1,0 +1,28 @@
+---
+description: Next.js App Router — SSR, BFF e UI GRNO
+globs: app/**/*.{ts,tsx},components/**/*.{ts,tsx},lib/**/*.ts
+alwaysApply: false
+---
+
+# Next.js (Empresarial)
+
+## Padrões
+
+- **App Router**: páginas em `app/`; dados no servidor (Server Components ou Route Handlers).
+- Páginas de monitoramento: `export const dynamic = "force-dynamic"` (dados frescos do DB).
+- Credenciais DB **só** em `lib/db/*` — nunca expor ao client.
+- Route Handlers em `app/api/` = BFF; manter aliases `/api/rals` e `/api/recs` para o bot.
+
+## UI
+
+- Shell GRNO: `app/(shell)/layout.tsx` + `components/layout/`.
+- Componentes visuais: `components/ui/` (`PageHeader`, `DataTable`, …).
+- Config de nav/textos: `lib/config/`.
+- Regras de copy e ícones: rule `emp-ui`.
+- Preferir Server Components para listagens; Client Components só para interatividade.
+
+## O que evitar
+
+- SPA pura para telas que devem vir do servidor.
+- `fetch` client-side para dados que já podem ser lidos no Server Component.
+- Lógica de ingest ou escrita MySQL no app Next.
