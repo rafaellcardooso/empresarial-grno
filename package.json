@@ -12,9 +12,11 @@
     "format:check": "prettier --check .",
     "db:migrate": "node scripts/db/migrate-sir.mjs",
     "db:seed": "node scripts/db/seed-sir-dev.mjs",
+    "db:seed-staff": "node scripts/db/seed-app-staff.mjs",
     "db:setup": "npm run db:migrate && npm run db:seed",
     "db:import": "node scripts/db/import-sir-backup.mjs",
-    "db:bootstrap": "node scripts/db/bootstrap-mariadb-local.mjs | sudo mariadb",
+    "db:bootstrap": "node scripts/db/bootstrap-sir.mjs | sudo mariadb",
+    "db:bootstrap:sql": "node scripts/db/bootstrap-sir.mjs",
     "env:check": "node scripts/check-env-sync.mjs",
     "prepare": "husky"
   },
@@ -27,8 +29,12 @@
     ]
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "driver.js": "^1.8.0",
+    "jose": "^6.2.4",
     "mysql2": "^3.23.1",
     "next": "15.5.2",
+    "nodemailer": "^9.0.3",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
@@ -36,7 +42,9 @@
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
     "@eslint/eslintrc": "^3",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.19.43",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^16.6.1",

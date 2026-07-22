@@ -1,0 +1,23 @@
+/** Textos das telas de autenticação e conta. */
+export const AUTH_COPY = {
+  loginTitle: "Entrar",
+  loginLead: "Use sua matrícula corporativa (ex.: F104262).",
+  registerTitle: "Criar conta",
+  registerLead: "Cadastro sujeito à aprovação do administrador.",
+  forgotTitle: "Esqueci a senha",
+  forgotLead: "Informe sua matrícula corporativa e escolha uma nova senha.",
+  forgotSuccess: "Senha redefinida com sucesso.",
+  forgotVerifyError:
+    "Não foi possível redefinir. Verifique a matrícula e se a conta está ativa.",
+  passwordSelfResetNotificationTitle: "Senha redefinida pelo usuário",
+  accountTitle: "Minha conta",
+  accountLead: "Dados da conta e alteração de senha.",
+  notificationsTitle: "Notificações",
+  notificationsLead: "Avisos enviados pela equipe GRNO.",
+  adminUsersTitle: "Aprovações",
+  adminUsersLead: "Aprovar cadastros e gerenciar acessos.",
+  adminNotificationsTitle: "Notificações",
+  adminNotificationsLead: "Criar e disparar avisos para todos os usuários.",
+  pendingBadge: "Aguardando aprovação",
+  staffBadge: "Administrador",
+} as const;
