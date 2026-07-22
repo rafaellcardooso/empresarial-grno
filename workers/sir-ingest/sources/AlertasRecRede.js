@@ -14,6 +14,7 @@ import {
   SirBrowserSession,
   startPollingLoop,
   submitRecordTypeFilter,
+  waitForScrapeTable,
 } from "./lib/sir-scraper-common.js";
 
 const LOG_PREFIX = "[REC]";
@@ -97,7 +98,8 @@ async function parseRecRow(row) {
 /** Processa linhas da tabela REC, persiste no banco e detecta encerramentos. */
 async function processRecTable(page, seenItems) {
   const tableFrame = await getTableFrame(page, config.elementTimeoutMs);
-  const rows = tableFrame.locator("table.listaTable tbody tr");
+  await waitForScrapeTable(tableFrame, config.elementTimeoutMs);
+  const rows = tableFrame.locator("table.listaTable").first().locator("tbody > tr");
   const rowCount = await rows.count();
 
   const currentIds = [];

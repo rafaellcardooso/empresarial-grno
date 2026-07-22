@@ -14,9 +14,11 @@ import {
   SirBrowserSession,
   startPollingLoop,
   submitRecordTypeFilter,
+  waitForScrapeTable,
 } from "./lib/sir-scraper-common.js";
 
 const LOG_PREFIX = "[RAL]";
+const RAL_NUM_PATTERN = /^RAL-\d+\/\d{4}$/i;
 
 const config = loadBaseConfig({
   seenItemsFile: "states/dadosAntigosRal.json",
@@ -62,28 +64,66 @@ async function upsertRal(ral) {
   ]);
 }
 
+/** Indica registro RAL pelo prefixo do num_recup. */
+function isRalRecord(numRecup) {
+  return RAL_NUM_PATTERN.test(String(numRecup || "").trim());
+}
+
+/** Localiza num_recup RAL entre as células da linha. */
+async function findRalNumRecupInRow(row) {
+  const cells = row.locator("td");
+  const cellCount = await cells.count();
+
+  for (let index = 0; index < cellCount; index += 1) {
+    const text = await getCellText(cells.nth(index));
+    if (isRalRecord(text)) {
+      return { numRecup: text.trim() };
+    }
+  }
+
+  return null;
+}
+
 /** Extrai campos de uma linha da tabela RAL no SIR. */
 async function parseRalRow(row) {
   const cells = row.locator("td");
   const cellCount = await cells.count();
-  if (cellCount < 8) {
-    throw new Error(`Incomplete RAL row (${cellCount} columns, expected >= 8)`);
+  const ralMatch = await findRalNumRecupInRow(row);
+
+  if (!ralMatch) {
+    throw new Error(`Skipped row — not RAL (${cellCount} columns)`);
+  }
+
+  if (cellCount < 6) {
+    throw new Error(`Skipped row — too few columns (${cellCount})`);
   }
 
   const designation = await getCellText(cells.nth(0));
-  const openedAtPrimary = await getCellText(cells.nth(6));
-  const openedAtFallback = await getCellText(cells.nth(4));
-  const openedAt = openedAtPrimary || openedAtFallback;
   const details = await extractDetailsFromRow(row);
 
+  if (cellCount >= 8) {
+    const openedAtPrimary = await getCellText(cells.nth(6));
+    const openedAtFallback = await getCellText(cells.nth(4));
+    return {
+      numRecup: ralMatch.numRecup,
+      designation,
+      type: await getCellText(cells.nth(1)),
+      anomalyCode: await getCellText(cells.nth(2)),
+      openedAt: openedAtPrimary || openedAtFallback,
+      duration: await getCellText(cells.nth(5)),
+      executorCf: await getCellText(cells.nth(7)),
+      details,
+    };
+  }
+
   return {
-    numRecup: await getCellText(cells.nth(3)),
+    numRecup: ralMatch.numRecup,
     designation,
     type: await getCellText(cells.nth(1)),
     anomalyCode: await getCellText(cells.nth(2)),
-    openedAt,
-    duration: await getCellText(cells.nth(5)),
-    executorCf: await getCellText(cells.nth(7)),
+    openedAt: await getCellText(cells.nth(4)),
+    duration: "",
+    executorCf: await getCellText(cells.nth(5)),
     details,
   };
 }
@@ -91,7 +131,8 @@ async function parseRalRow(row) {
 /** Processa linhas da tabela RAL, persiste no banco e detecta encerramentos. */
 async function processRalTable(page, seenItems) {
   const tableFrame = await getTableFrame(page, config.elementTimeoutMs);
-  const rows = tableFrame.locator("table.listaTable tbody tr");
+  await waitForScrapeTable(tableFrame, config.elementTimeoutMs);
+  const rows = tableFrame.locator("table.listaTable").first().locator("tbody > tr");
   const rowCount = await rows.count();
 
   const currentIds = [];
@@ -115,8 +156,10 @@ async function processRalTable(page, seenItems) {
 
       await upsertRal(ral);
     } catch (err) {
-      rowErrors += 1;
-      console.warn(`${LOG_PREFIX} Row parse error:`, err.message);
+      if (!err.message.includes("Skipped row")) {
+        rowErrors += 1;
+        console.warn(`${LOG_PREFIX} Row parse error:`, err.message);
+      }
     }
   }
 

@@ -271,6 +271,31 @@ async function waitForFrame(page, frameName, timeoutMs) {
   throw new Error(`Frame not found: ${frameName}`);
 }
 
+/** Aguarda tabela SIR carregar (vazia ou com linhas de dados). */
+export async function waitForScrapeTable(tableFrame, timeoutMs) {
+  const recordPattern = /(?:RAL|REC|DSQ|TCQ)-\d+\/\d{4}/i;
+  const table = tableFrame.locator("table.listaTable").first();
+  await table.waitFor({ state: "attached", timeout: timeoutMs });
+
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const rows = table.locator("tbody > tr");
+    const rowCount = await rows.count();
+    if (rowCount === 0) return;
+
+    for (let index = 0; index < rowCount; index += 1) {
+      const row = rows.nth(index);
+      const cellCount = await row.locator("td").count();
+      if (cellCount >= 7) return;
+
+      const rowText = await row.innerText();
+      if (recordPattern.test(rowText)) return;
+    }
+
+    await tableFrame.waitForTimeout(250);
+  }
+}
+
 /** Seleciona tipo de registro no filtro SIR e confirma. */
 export async function submitRecordTypeFilter(page, recordType, timeoutMs) {
   page.setDefaultTimeout(timeoutMs);
