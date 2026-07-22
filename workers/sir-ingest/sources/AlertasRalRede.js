@@ -75,7 +75,7 @@ function isRalRecord(numRecup) {
 
 /** Extrai campos de uma linha da snapshot da tabela RAL. */
 function parseRalSnapshotRow(row) {
-  const { texts, rowTitle, designationTitle, cellCount } = row;
+  const { texts, rowTitle, designationTitle, openedAtFromLink, cellCount } = row;
   const numRecup = texts.find((text) => isRalRecord(text))?.trim() ?? "";
 
   if (!numRecup) {
@@ -86,12 +86,14 @@ function parseRalSnapshotRow(row) {
     throw new Error(`Skipped row — incomplete RAL (${cellCount} columns)`);
   }
 
+  const openedAt = texts[4] || openedAtFromLink || "";
+
   return {
     numRecup,
     designation: designationTitle || texts[0] || "",
     type: texts[1] || "",
     anomalyCode: texts[2] || "",
-    openedAt: texts[4] || "",
+    openedAt,
     duration: texts[5] || "",
     executorCf: texts[7] || "",
     details: rowTitle || null,

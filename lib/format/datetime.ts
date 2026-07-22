@@ -2,6 +2,7 @@
 export const APP_TIME_ZONE = "America/Sao_Paulo";
 
 const MYSQL_DATETIME_RE = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/;
+const SIR_DATETIME_RE = /^(\d{2})\/(\d{2})\/(\d{4})\s*-\s*(\d{2}):(\d{2})(?::(\d{2}))?$/;
 
 /** Converte valor vindo do banco/API em Date. Strings MySQL usam horário de Brasília. */
 export function parseAppDateTime(value: string | null | undefined): Date | null {
@@ -12,6 +13,13 @@ export function parseAppDateTime(value: string | null | undefined): Date | null 
   if (MYSQL_DATETIME_RE.test(trimmed)) {
     const normalized = trimmed.replace(" ", "T");
     const date = new Date(`${normalized}-03:00`);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const sirMatch = trimmed.match(SIR_DATETIME_RE);
+  if (sirMatch) {
+    const [, day, month, year, hour, minute, second = "00"] = sirMatch;
+    const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}-03:00`);
     return Number.isNaN(date.getTime()) ? null : date;
   }
 

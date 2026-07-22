@@ -562,10 +562,15 @@ export async function scrapeListaTableSnapshot(tableFrame, rowSelector) {
     return Array.from(table.querySelectorAll(selector)).map((row) => {
       const cells = Array.from(row.querySelectorAll(":scope > td"));
       const designationLink = cells[0]?.querySelector("a");
+      const href = designationLink?.getAttribute("href") || "";
+      const hrefQuotes = href.match(/'([^']*)'/g) || [];
+      const openedAtFromLink = hrefQuotes.length >= 6 ? hrefQuotes[5].slice(1, -1).trim() : "";
+
       return {
         texts: cells.map(scrapeCellText),
         rowTitle: row.getAttribute("title")?.trim() || "",
         designationTitle: designationLink?.getAttribute("title")?.trim() || "",
+        openedAtFromLink,
         cellCount: cells.length,
       };
     });
