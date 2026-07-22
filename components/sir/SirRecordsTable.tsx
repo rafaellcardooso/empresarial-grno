@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { RalTipoBadge } from "@/components/sir/RalTipoBadge";
 import { SirDetalhesPanel } from "@/components/sir/SirDetalhesPanel";
+import { SirStatusBadge } from "@/components/sir/SirStatusBadge";
 import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
 import { SortableDataTable, type SortableColumn } from "@/components/ui/SortableDataTable";
 import { UI_COPY } from "@/lib/config/ui-copy";
@@ -91,6 +92,9 @@ function renderSirCell(
   }
   if (key === "tipo_ral") {
     return <RalTipoBadge value={value as string | null} />;
+  }
+  if (key === "status") {
+    return <SirStatusBadge value={value as string | null} />;
   }
   if (DETALHES_KEYS.has(key)) {
     if (!row.has_detalhes) return "—";

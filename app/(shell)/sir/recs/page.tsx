@@ -4,38 +4,47 @@ import { RecPanel } from "@/components/sir/RecPanel";
 import { StatCard } from "@/components/ui/StatCard";
 import { cfFilterFromParam } from "@/lib/config/sir-filters";
 import { isRecTipoKey } from "@/lib/config/rec-types";
+import { sirStatusFilterLabel, sirStatusFromParam } from "@/lib/config/sir-status";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
 import { DASHBOARD_METRICS } from "@/lib/config/ui-copy";
-import { countRecsByCf, countRecsByTipo, countActiveRecs, listActiveRecs } from "@/lib/queries/sir";
+import { countRecs, countRecsByCf, countRecsByTipo, listRecs } from "@/lib/queries/sir";
 
 export const revalidate = 30;
 export const metadata = { title: "REC" };
 
 type PageProps = {
-  searchParams: Promise<{ tipo?: string; cf?: string }>;
+  searchParams: Promise<{ tipo?: string; cf?: string; status?: string }>;
 };
 
-/** Resumo e tabela REC/DSR/TCQ em aberto, com filtros por tipo e CF. */
+/** Resumo e tabela REC/DSR/TCQ com filtros por status, tipo e CF. */
 export default async function Page({ searchParams }: PageProps) {
-  const { tipo, cf } = await searchParams;
+  const { tipo, cf, status } = await searchParams;
+  const activeStatus = sirStatusFromParam(status);
   const activeTipo = isRecTipoKey(tipo) ? tipo : undefined;
   const activeCf = cfFilterFromParam(cf);
+  const queryOptions = { status: activeStatus, tipo: activeTipo, cf: activeCf };
 
   let rows: Record<string, unknown>[] = [];
   let cfRec: { cf_executante: string; total: number }[] = [];
   let totalCount = 0;
+  let openCount = 0;
+  let closedCount = 0;
   let byTipo: Record<string, number> = {};
   let error: string | null = null;
 
   try {
-    const [recRows, total, byCf, tipoCounts] = await Promise.all([
-      listActiveRecs({ cf: activeCf, tipo: activeTipo }),
-      countActiveRecs(),
-      countRecsByCf(),
-      countRecsByTipo(),
+    const [recRows, total, open, closed, byCf, tipoCounts] = await Promise.all([
+      listRecs(queryOptions),
+      countRecs(queryOptions),
+      countRecs({ ...queryOptions, status: "ativo" }),
+      countRecs({ ...queryOptions, status: "encerrado" }),
+      countRecsByCf(activeStatus),
+      countRecsByTipo(activeStatus),
     ]);
     rows = recRows as Record<string, unknown>[];
     totalCount = total;
+    openCount = open;
+    closedCount = closed;
     cfRec = byCf;
     byTipo = Object.fromEntries(tipoCounts.map((item) => [item.rec_tipo, item.total]));
   } catch (err) {
@@ -46,6 +55,8 @@ export default async function Page({ searchParams }: PageProps) {
     return <div className="alert alert-danger">{error}</div>;
   }
 
+  const statusLabel = sirStatusFilterLabel(activeStatus);
+
   return (
     <>
       <PageHeader title="REC" breadcrumbs={[{ label: "SIR", href: "/sir" }, { label: "REC" }]} />
@@ -54,7 +65,7 @@ export default async function Page({ searchParams }: PageProps) {
         <div className="col-md-4">
           <StatCard
             context={DASHBOARD_METRICS.rec.context}
-            label={DASHBOARD_METRICS.rec.label}
+            label={`${DASHBOARD_METRICS.rec.label} — ${statusLabel}`}
             value={totalCount}
           />
         </div>
@@ -66,7 +77,7 @@ export default async function Page({ searchParams }: PageProps) {
                 items={cfRec}
                 basePath="/sir/recs"
                 activeCf={activeCf}
-                filterParams={{ tipo: activeTipo }}
+                filterParams={{ tipo: activeTipo, status: activeStatus }}
               />
             </ul>
           </div>
@@ -77,6 +88,9 @@ export default async function Page({ searchParams }: PageProps) {
         rows={rows}
         total={totalCount}
         byTipo={byTipo}
+        openCount={openCount}
+        closedCount={closedCount}
+        activeStatus={activeStatus}
         activeTipo={activeTipo}
         activeCf={activeCf}
       />

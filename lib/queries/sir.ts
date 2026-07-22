@@ -1,7 +1,8 @@
 import type { RowDataPacket } from "mysql2";
 import { recTipoLikePrefix, recTipoPrefixFromParam } from "@/lib/config/rec-types";
+import { sirRecordStatusFromFilter, type SirStatusFilter } from "@/lib/config/sir-status";
 import { sirQuery } from "@/lib/db/sir";
-import { SIR_RECORD_STATUS, SIR_TABLES, type RalRecord, type RecRecord } from "@/lib/models";
+import { SIR_TABLES, type RalRecord, type RecRecord } from "@/lib/models";
 import { serializeRow, serializeRows } from "@/lib/serialize";
 
 export type CfCount = {
@@ -19,16 +20,38 @@ export type RecTipoCount = {
   total: number;
 };
 
-/** Conta registros ativos por CF (uma query). */
-async function countByCf(table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs) {
+export type SirRalQueryOptions = {
+  status?: SirStatusFilter;
+  tipo?: string;
+  cf?: string;
+};
+
+export type SirRecQueryOptions = {
+  status?: SirStatusFilter;
+  cf?: string;
+  tipo?: string;
+};
+
+/** Monta cláusula SQL de status para listagens SIR. */
+function buildStatusClause(status: SirStatusFilter = "ativo"): { sql: string; params: unknown[] } {
+  const recordStatus = sirRecordStatusFromFilter(status);
+  if (!recordStatus) return { sql: "", params: [] };
+  return { sql: " AND status = ?", params: [recordStatus] };
+}
+
+/** Conta registros por CF conforme filtro de status. */
+async function countByCf(
+  table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs,
+  status: SirStatusFilter = "ativo",
+) {
+  const { sql, params } = buildStatusClause(status);
   const rows = await sirQuery<RowDataPacket[]>(
-    `SELECT cf_executante,
-            SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS total
+    `SELECT cf_executante, COUNT(num_recup) AS total
      FROM ${table}
-     WHERE cf_executante IS NOT NULL
+     WHERE cf_executante IS NOT NULL${sql}
      GROUP BY cf_executante
      ORDER BY total DESC`,
-    [SIR_RECORD_STATUS.active],
+    params,
   );
 
   return rows.map((row) => ({
@@ -49,10 +72,14 @@ const REC_LIST_SELECT = `
   (detalhes_title IS NOT NULL AND detalhes_title <> '') AS has_detalhes
 `;
 
-/** Conta RALs ativas com filtros opcionais. */
-export async function countActiveRals(options?: { tipo?: string; cf?: string }): Promise<number> {
-  const params: unknown[] = [SIR_RECORD_STATUS.active];
-  let sql = `SELECT COUNT(*) AS total FROM ${SIR_TABLES.rals} WHERE status = ?`;
+/** Conta RALs conforme filtros de status, tipo e CF. */
+export async function countRals(options?: SirRalQueryOptions): Promise<number> {
+  const status = options?.status ?? "ativo";
+  const params: unknown[] = [];
+  let sql = `SELECT COUNT(*) AS total FROM ${SIR_TABLES.rals} WHERE 1=1`;
+  const statusClause = buildStatusClause(status);
+  sql += statusClause.sql;
+  params.push(...statusClause.params);
 
   if (options?.tipo) {
     sql += " AND tipo_ral = ?";
@@ -68,10 +95,19 @@ export async function countActiveRals(options?: { tipo?: string; cf?: string }):
   return Number(rows[0]?.total ?? 0);
 }
 
-/** Conta RECs ativas com filtros opcionais por CF e tipo (REC/DSR/TCQ). */
-export async function countActiveRecs(options?: { cf?: string; tipo?: string }): Promise<number> {
-  const params: unknown[] = [SIR_RECORD_STATUS.active];
-  let sql = `SELECT COUNT(*) AS total FROM ${SIR_TABLES.recs} WHERE status = ?`;
+/** Conta RALs ativas com filtros opcionais. */
+export async function countActiveRals(options?: { tipo?: string; cf?: string }): Promise<number> {
+  return countRals({ ...options, status: "ativo" });
+}
+
+/** Conta RECs conforme filtros de status, tipo e CF. */
+export async function countRecs(options?: SirRecQueryOptions): Promise<number> {
+  const status = options?.status ?? "ativo";
+  const params: unknown[] = [];
+  let sql = `SELECT COUNT(*) AS total FROM ${SIR_TABLES.recs} WHERE 1=1`;
+  const statusClause = buildStatusClause(status);
+  sql += statusClause.sql;
+  params.push(...statusClause.params);
 
   const tipoPrefix = recTipoPrefixFromParam(options?.tipo);
   if (tipoPrefix) {
@@ -88,13 +124,19 @@ export async function countActiveRecs(options?: { cf?: string; tipo?: string }):
   return Number(rows[0]?.total ?? 0);
 }
 
-/** Lista RALs com status ativo, ordenadas por última atualização. */
-export async function listActiveRals(options?: {
-  tipo?: string;
-  cf?: string;
-}): Promise<RalRecord[]> {
-  const params: unknown[] = [SIR_RECORD_STATUS.active];
-  let sql = `SELECT ${RAL_LIST_SELECT} FROM ${SIR_TABLES.rals} WHERE status = ?`;
+/** Conta RECs ativas com filtros opcionais por CF e tipo (REC/DSR/TCQ). */
+export async function countActiveRecs(options?: { cf?: string; tipo?: string }): Promise<number> {
+  return countRecs({ ...options, status: "ativo" });
+}
+
+/** Lista RALs conforme filtros de status, tipo e CF. */
+export async function listRals(options?: SirRalQueryOptions): Promise<RalRecord[]> {
+  const status = options?.status ?? "ativo";
+  const params: unknown[] = [];
+  let sql = `SELECT ${RAL_LIST_SELECT} FROM ${SIR_TABLES.rals} WHERE 1=1`;
+  const statusClause = buildStatusClause(status);
+  sql += statusClause.sql;
+  params.push(...statusClause.params);
 
   if (options?.tipo) {
     sql += " AND tipo_ral = ?";
@@ -112,13 +154,22 @@ export async function listActiveRals(options?: {
   return serializeRows(rows);
 }
 
-/** Lista RECs com status ativo, ordenadas por última atualização. */
-export async function listActiveRecs(options?: {
-  cf?: string;
+/** Lista RALs com status ativo, ordenadas por última atualização. */
+export async function listActiveRals(options?: {
   tipo?: string;
-}): Promise<RecRecord[]> {
-  const params: unknown[] = [SIR_RECORD_STATUS.active];
-  let sql = `SELECT ${REC_LIST_SELECT} FROM ${SIR_TABLES.recs} WHERE status = ?`;
+  cf?: string;
+}): Promise<RalRecord[]> {
+  return listRals({ ...options, status: "ativo" });
+}
+
+/** Lista RECs conforme filtros de status, tipo e CF. */
+export async function listRecs(options?: SirRecQueryOptions): Promise<RecRecord[]> {
+  const status = options?.status ?? "ativo";
+  const params: unknown[] = [];
+  let sql = `SELECT ${REC_LIST_SELECT} FROM ${SIR_TABLES.recs} WHERE 1=1`;
+  const statusClause = buildStatusClause(status);
+  sql += statusClause.sql;
+  params.push(...statusClause.params);
 
   const tipoPrefix = recTipoPrefixFromParam(options?.tipo);
   if (tipoPrefix) {
@@ -135,6 +186,14 @@ export async function listActiveRecs(options?: {
 
   const rows = await sirQuery<(RecRecord & RowDataPacket)[]>(sql, params);
   return serializeRows(rows);
+}
+
+/** Lista RECs com status ativo, ordenadas por última atualização. */
+export async function listActiveRecs(options?: {
+  cf?: string;
+  tipo?: string;
+}): Promise<RecRecord[]> {
+  return listRecs({ ...options, status: "ativo" });
 }
 
 /** Busca texto de detalhes de RAL. */
@@ -175,8 +234,9 @@ export async function getRecByNum(numRecup: string): Promise<RecRecord | null> {
   return serializeRow(rows[0] ?? null);
 }
 
-/** Retorna contagem de RECs ativas agrupadas por prefixo (REC/DSR/TCQ). */
-export async function countRecsByTipo(): Promise<RecTipoCount[]> {
+/** Retorna contagem de RECs agrupadas por prefixo (REC/DSR/TCQ). */
+export async function countRecsByTipo(status: SirStatusFilter = "ativo"): Promise<RecTipoCount[]> {
+  const { sql, params } = buildStatusClause(status);
   const rows = await sirQuery<RowDataPacket[]>(
     `SELECT
        CASE
@@ -186,10 +246,10 @@ export async function countRecsByTipo(): Promise<RecTipoCount[]> {
        END AS rec_tipo,
        COUNT(num_recup) AS total
      FROM ${SIR_TABLES.recs}
-     WHERE status = ?
+     WHERE 1=1${sql}
      GROUP BY rec_tipo
      ORDER BY total DESC`,
-    [SIR_RECORD_STATUS.active],
+    params,
   );
 
   return rows.map((row) => ({
@@ -198,15 +258,16 @@ export async function countRecsByTipo(): Promise<RecTipoCount[]> {
   }));
 }
 
-/** Retorna contagem de RALs ativas agrupadas por tipo. */
-export async function countRalsByTipo(): Promise<RalTipoCount[]> {
+/** Retorna contagem de RALs agrupadas por tipo. */
+export async function countRalsByTipo(status: SirStatusFilter = "ativo"): Promise<RalTipoCount[]> {
+  const { sql, params } = buildStatusClause(status);
   const rows = await sirQuery<RowDataPacket[]>(
     `SELECT tipo_ral, COUNT(num_recup) AS total
      FROM ${SIR_TABLES.rals}
-     WHERE status = ?
+     WHERE 1=1${sql}
      GROUP BY tipo_ral
      ORDER BY total DESC`,
-    [SIR_RECORD_STATUS.active],
+    params,
   );
 
   return rows.map((row) => ({
@@ -215,14 +276,14 @@ export async function countRalsByTipo(): Promise<RalTipoCount[]> {
   }));
 }
 
-/** Retorna contagem de RALs ativas agrupadas por CF executante. */
-export async function countRalsByCf() {
-  return countByCf(SIR_TABLES.rals);
+/** Retorna contagem de RALs agrupadas por CF executante. */
+export async function countRalsByCf(status: SirStatusFilter = "ativo") {
+  return countByCf(SIR_TABLES.rals, status);
 }
 
-/** Retorna contagem de RECs ativas agrupadas por CF executante. */
-export async function countRecsByCf() {
-  return countByCf(SIR_TABLES.recs);
+/** Retorna contagem de RECs agrupadas por CF executante. */
+export async function countRecsByCf(status: SirStatusFilter = "ativo") {
+  return countByCf(SIR_TABLES.recs, status);
 }
 
 /** Testa conectividade com o banco SIR. */
