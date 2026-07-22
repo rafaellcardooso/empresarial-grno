@@ -11,8 +11,8 @@ export const UI_COPY = {
 
 /** Rótulos das métricas do painel inicial. */
 export const DASHBOARD_METRICS = {
-  ral: { context: "SIR", label: "RAL EM ABERTO" },
-  rec: { context: "SIR", label: "REC EM ABERTO" },
+  ral: { context: "RAL", label: "ABERTAS" },
+  rec: { context: "REC", label: "ABERTOS" },
   bsod: { context: "INVENTÁRIO", label: "BSOD" },
   sirViewRal: "VER RAL",
   sirViewRec: "VER REC",

@@ -10,14 +10,11 @@ export const METRIC_LABELS = {
     inventario: "INVENTÁRIO PME",
   },
   sir: {
-    ralOpen: "RAL EM ABERTO",
-    recOpen: "REC EM ABERTO",
-    totalRal: "TOTAL RAL",
-    closedRal: "RAL ENCERRADAS",
-    closedRec: "ENCERRADOS",
-    allRecords: "TODOS",
+    ral: "RAL",
+    rec: "REC",
+    recScope: "REC/DSR/TCQ",
+    allTypes: "TODOS OS TIPOS",
     porCf: "POR CF EXECUTANTE",
-    registros: "REGISTROS",
   },
   table: {
     detalhes: "DETALHES",

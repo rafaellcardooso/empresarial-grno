@@ -3,10 +3,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { RalPanel } from "@/components/sir/RalPanel";
 import { StatCard } from "@/components/ui/StatCard";
 import { cfFilterFromParam } from "@/lib/config/sir-filters";
-import { sirStatusFilterLabel, sirStatusFromParam } from "@/lib/config/sir-status";
+import { sirStatusLabelForScope, sirStatusFromParam } from "@/lib/config/sir-status";
 import { isRalTipoKey, ralTipoValueFromParam } from "@/lib/config/ral-types";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
-import { DASHBOARD_METRICS } from "@/lib/config/ui-copy";
 import { countRals, countRalsByCf, countRalsByTipo, listRals } from "@/lib/queries/sir";
 
 export const revalidate = 30;
@@ -56,7 +55,7 @@ export default async function Page({ searchParams }: PageProps) {
     return <div className="alert alert-danger">{error}</div>;
   }
 
-  const statusLabel = sirStatusFilterLabel(activeStatus);
+  const statusLabel = sirStatusLabelForScope("ral", activeStatus);
 
   return (
     <>
@@ -64,11 +63,7 @@ export default async function Page({ searchParams }: PageProps) {
 
       <div className="row g-3 mb-4">
         <div className="col-md-4">
-          <StatCard
-            context={DASHBOARD_METRICS.ral.context}
-            label={`${DASHBOARD_METRICS.ral.label} — ${statusLabel}`}
-            value={totalCount}
-          />
+          <StatCard context={METRIC_LABELS.sir.ral} label={statusLabel} value={totalCount} />
         </div>
         <div className="col-md-8">
           <div className="card shadow-sm h-100 data-panel-card">

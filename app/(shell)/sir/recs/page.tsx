@@ -4,9 +4,8 @@ import { RecPanel } from "@/components/sir/RecPanel";
 import { StatCard } from "@/components/ui/StatCard";
 import { cfFilterFromParam } from "@/lib/config/sir-filters";
 import { isRecTipoKey } from "@/lib/config/rec-types";
-import { sirStatusFilterLabel, sirStatusFromParam } from "@/lib/config/sir-status";
+import { sirStatusLabelForScope, sirStatusFromParam } from "@/lib/config/sir-status";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
-import { DASHBOARD_METRICS } from "@/lib/config/ui-copy";
 import { countRecs, countRecsByCf, countRecsByTipo, listRecs } from "@/lib/queries/sir";
 
 export const revalidate = 30;
@@ -55,7 +54,7 @@ export default async function Page({ searchParams }: PageProps) {
     return <div className="alert alert-danger">{error}</div>;
   }
 
-  const statusLabel = sirStatusFilterLabel(activeStatus);
+  const statusLabel = sirStatusLabelForScope("rec", activeStatus);
 
   return (
     <>
@@ -63,11 +62,7 @@ export default async function Page({ searchParams }: PageProps) {
 
       <div className="row g-3 mb-4">
         <div className="col-md-4">
-          <StatCard
-            context={DASHBOARD_METRICS.rec.context}
-            label={`${DASHBOARD_METRICS.rec.label} — ${statusLabel}`}
-            value={totalCount}
-          />
+          <StatCard context={METRIC_LABELS.sir.rec} label={statusLabel} value={totalCount} />
         </div>
         <div className="col-md-8">
           <div className="card shadow-sm h-100 data-panel-card">
