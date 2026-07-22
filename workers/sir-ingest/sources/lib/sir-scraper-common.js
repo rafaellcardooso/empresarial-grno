@@ -581,6 +581,8 @@ export async function extractRalDetailsFromRow(row) {
 /** Extrai snapshot das linhas da listaTable em uma única leitura DOM. */
 export async function scrapeListaTableSnapshot(tableFrame, rowSelector) {
   return tableFrame.evaluate((selector) => {
+    const SIR_DATETIME_RE = /\d{2}\/\d{2}\/\d{4}(?:\s*-\s*|\s+)\d{2}:\d{2}/;
+
     function scrapeCellText(cell) {
       if (!cell) return "";
       const listaFont = cell.querySelector("font.listaCelulaFont");
@@ -595,18 +597,53 @@ export async function scrapeListaTableSnapshot(tableFrame, rowSelector) {
         .trim();
     }
 
+    function extractSirDateTime(value) {
+      if (!value) return "";
+      const match = String(value).match(SIR_DATETIME_RE);
+      return match ? match[0].trim() : "";
+    }
+
+    function extractOpenedAtFromHref(href) {
+      if (!href) return "";
+      const hrefQuotes = href.match(/'([^']*)'/g) || [];
+      if (hrefQuotes.length >= 6) {
+        const fromQuote = extractSirDateTime(hrefQuotes[5].slice(1, -1));
+        if (fromQuote) return fromQuote;
+      }
+      return extractSirDateTime(href);
+    }
+
+    function extractOpenedAtFromRow(cells, texts) {
+      for (const cell of cells) {
+        for (const link of cell.querySelectorAll("a")) {
+          const fromHref = extractOpenedAtFromHref(link.getAttribute("href") || "");
+          if (fromHref) return fromHref;
+          const fromTitle = extractSirDateTime(link.getAttribute("title") || "");
+          if (fromTitle) return fromTitle;
+        }
+        const fromCellText = extractSirDateTime(scrapeCellText(cell));
+        if (fromCellText) return fromCellText;
+      }
+
+      for (const text of texts) {
+        const fromText = extractSirDateTime(text);
+        if (fromText) return fromText;
+      }
+
+      return "";
+    }
+
     const table = document.querySelector("table.listaTable");
     if (!table) return [];
 
     return Array.from(table.querySelectorAll(selector)).map((row) => {
       const cells = Array.from(row.querySelectorAll(":scope > td"));
+      const texts = cells.map(scrapeCellText);
       const designationLink = cells[0]?.querySelector("a");
-      const href = designationLink?.getAttribute("href") || "";
-      const hrefQuotes = href.match(/'([^']*)'/g) || [];
-      const openedAtFromLink = hrefQuotes.length >= 6 ? hrefQuotes[5].slice(1, -1).trim() : "";
+      const openedAtFromLink = extractOpenedAtFromRow(cells, texts);
 
       return {
-        texts: cells.map(scrapeCellText),
+        texts,
         rowTitle: row.getAttribute("title")?.trim() || "",
         designationTitle: designationLink?.getAttribute("title")?.trim() || "",
         openedAtFromLink,

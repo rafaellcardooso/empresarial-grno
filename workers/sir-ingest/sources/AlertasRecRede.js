@@ -17,7 +17,7 @@ import {
 } from "./lib/sir-scraper-common.js";
 
 const LOG_PREFIX = "[REC]";
-const REC_ROW_SELECTOR = "tbody > tr";
+const REC_ROW_SELECTOR = 'tbody > tr[class*="listaLinha"]';
 
 const config = loadBaseConfig({
   seenItemsFile: "states/dadosAntigosREC.json",
@@ -44,7 +44,11 @@ async function upsertRec(rec) {
       pontos = VALUES(pontos),
       cliente = VALUES(cliente),
       designacao = VALUES(designacao),
-      abertura = VALUES(abertura),
+      abertura = IF(
+        VALUES(abertura) IS NOT NULL AND TRIM(VALUES(abertura)) != '',
+        VALUES(abertura),
+        abertura
+      ),
       cf_executante = VALUES(cf_executante),
       ultima_atualizacao = NOW(),
       status = 'ATIVO',
@@ -68,6 +72,15 @@ function isRecGroupRecord(numRecup) {
   return /^(REC|DSR|TCQ)-\d+\/\d{4}$/i.test(String(numRecup || "").trim());
 }
 
+/** Resolve abertura da linha REC (coluna 5, links ou texto com datetime SIR). */
+function resolveRecOpenedAt(row) {
+  const { texts, openedAtFromLink } = row;
+  const columnValue = texts[5]?.trim() || "";
+  if (columnValue) return columnValue;
+  if (openedAtFromLink) return openedAtFromLink;
+  return "";
+}
+
 /** Extrai campos de uma linha da snapshot da tabela REC/DSR/TCQ. */
 function parseRecSnapshotRow(row) {
   const { texts, rowTitle, cellCount } = row;
@@ -86,7 +99,7 @@ function parseRecSnapshotRow(row) {
     points: texts[1] || "",
     client: texts[3] || "",
     designation: texts[4] || "",
-    openedAt: texts[5] || "",
+    openedAt: resolveRecOpenedAt(row),
     executorCf: texts[6] || "",
     detailsTitle: rowTitle || null,
   };

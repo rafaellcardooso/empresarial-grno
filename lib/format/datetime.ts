@@ -2,7 +2,15 @@
 export const APP_TIME_ZONE = "America/Sao_Paulo";
 
 const MYSQL_DATETIME_RE = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/;
-const SIR_DATETIME_RE = /^(\d{2})\/(\d{2})\/(\d{4})\s*-\s*(\d{2}):(\d{2})(?::(\d{2}))?$/;
+const SIR_DATETIME_DASH_RE = /^(\d{2})\/(\d{2})\/(\d{4})\s*-\s*(\d{2}):(\d{2})(?::(\d{2}))?$/;
+const SIR_DATETIME_SPACE_RE = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/;
+
+/** Converte match SIR DD/MM/YYYY (com ou sem hífen antes da hora) em Date. */
+function dateFromSirMatch(match: RegExpMatchArray): Date | null {
+  const [, day, month, year, hour, minute, second = "00"] = match;
+  const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}-03:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
 
 /** Converte valor vindo do banco/API em Date. Strings MySQL usam horário de Brasília. */
 export function parseAppDateTime(value: string | null | undefined): Date | null {
@@ -16,12 +24,11 @@ export function parseAppDateTime(value: string | null | undefined): Date | null 
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  const sirMatch = trimmed.match(SIR_DATETIME_RE);
-  if (sirMatch) {
-    const [, day, month, year, hour, minute, second = "00"] = sirMatch;
-    const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}-03:00`);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
+  const dashMatch = trimmed.match(SIR_DATETIME_DASH_RE);
+  if (dashMatch) return dateFromSirMatch(dashMatch);
+
+  const spaceMatch = trimmed.match(SIR_DATETIME_SPACE_RE);
+  if (spaceMatch) return dateFromSirMatch(spaceMatch);
 
   const date = new Date(trimmed);
   return Number.isNaN(date.getTime()) ? null : date;

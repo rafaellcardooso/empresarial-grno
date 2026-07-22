@@ -44,7 +44,11 @@ async function upsertRal(ral) {
       descricao = VALUES(descricao),
       tipo_ral = VALUES(tipo_ral),
       codigo_anormalidade = VALUES(codigo_anormalidade),
-      abertura = VALUES(abertura),
+      abertura = IF(
+        VALUES(abertura) IS NOT NULL AND TRIM(VALUES(abertura)) != '',
+        VALUES(abertura),
+        abertura
+      ),
       duracao = VALUES(duracao),
       cf_executante = VALUES(cf_executante),
       ultima_atualizacao = NOW(),
