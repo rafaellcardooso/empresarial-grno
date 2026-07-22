@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuthLink, AuthShell } from "@/components/auth/AuthShell";
 import { LoadingButton } from "@/components/ui/LoadingButton";
@@ -13,7 +13,6 @@ const REMEMBER_ME_KEY = "emp_remember_me";
 
 /** Formulário de login. */
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [corporateId, setCorporateId] = useState("");
   const [password, setPassword] = useState("");
@@ -48,6 +47,7 @@ export function LoginForm() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ corporateId, password, rememberMe }),
       });
       const data = (await response.json()) as { error?: string; theme?: AppTheme };
@@ -62,8 +62,8 @@ export function LoginForm() {
       }
 
       const next = searchParams.get("next") || "/";
-      router.push(next);
-      router.refresh();
+      window.location.assign(next);
+      return;
     } catch {
       setError("Erro de conexão. Tente novamente.");
     } finally {
