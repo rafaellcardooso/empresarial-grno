@@ -8,7 +8,6 @@ export const metadata: Metadata = {
     template: "%s · Empresarial GRNO",
   },
   description: "Monitoramento SIR (RAL/REC) e inventário BSOD/PME (hfc-sls)",
-  icons: { icon: "/assets/img/logo-claro.png" },
 };
 
 /** Layout HTML raiz com assets Bootstrap e tema GRNO. */
