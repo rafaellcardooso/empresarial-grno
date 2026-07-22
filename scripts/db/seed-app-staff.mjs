@@ -37,12 +37,14 @@ function getConfig() {
   };
 }
 
-/** Pergunta no terminal (sem eco para senha). */
-async function prompt(rl, label, { secret = false } = {}) {
-  if (!secret) {
-    return (await rl.question(label)).trim();
-  }
+/** Restaura stdin após leitura em raw mode (readline volta a funcionar). */
+function releaseStdinAfterSecret() {
+  input.setRawMode(false);
+  input.resume();
+}
 
+/** Lê senha sem eco no terminal. */
+async function promptSecret(label) {
   process.stdout.write(label);
   const chars = [];
 
@@ -55,13 +57,13 @@ async function prompt(rl, label, { secret = false } = {}) {
     function onData(char) {
       if (char === "\u0003") {
         process.stdout.write("\n");
+        releaseStdinAfterSecret();
         process.exit(130);
       }
 
       if (char === "\r" || char === "\n") {
-        input.setRawMode(false);
-        input.pause();
         input.removeListener("data", onData);
+        releaseStdinAfterSecret();
         process.stdout.write("\n");
         resolve(chars.join("").trim());
         return;
@@ -77,6 +79,20 @@ async function prompt(rl, label, { secret = false } = {}) {
 
     input.on("data", onData);
   });
+}
+
+/** Pergunta no terminal (sem eco para senha). */
+async function prompt(rl, label, { secret = false } = {}) {
+  if (!secret) {
+    return (await rl.question(label)).trim();
+  }
+
+  rl.pause();
+  try {
+    return await promptSecret(label);
+  } finally {
+    rl.resume();
+  }
 }
 
 /** Valida matrícula, senha e confirmação. */
@@ -97,6 +113,67 @@ function validateStaffInput(corporateId, name, password, confirmPassword) {
   return { corporateId: normalizedId, name: name.trim() };
 }
 
+/** Lê argumento CLI --chave valor ou --chave=valor. */
+function readCliArg(name) {
+  const eqPrefix = `--${name}=`;
+  const flagIndex = process.argv.indexOf(`--${name}`);
+  if (flagIndex >= 0) {
+    return process.argv[flagIndex + 1]?.trim() || null;
+  }
+  const withEquals = process.argv.find((arg) => arg.startsWith(eqPrefix));
+  if (withEquals) {
+    return withEquals.slice(eqPrefix.length).trim() || null;
+  }
+  return null;
+}
+
+/** Monta payload de staff a partir de flags CLI (modo não interativo). */
+function readStaffFromCli() {
+  const corporateId = readCliArg("corporate-id");
+  const name = readCliArg("name");
+  const password = readCliArg("password");
+  const emailRaw = readCliArg("email");
+
+  if (!corporateId && !name && !password && !emailRaw) {
+    return null;
+  }
+
+  if (!corporateId || !name || !password) {
+    throw new Error("Modo CLI exige --corporate-id, --name e --password ( --email opcional ).");
+  }
+
+  const inputData = validateStaffInput(corporateId, name, password, password);
+  const email = emailRaw ? emailRaw.toLowerCase() : null;
+  return { ...inputData, email };
+}
+
+/** Persiste staff no MySQL após validação. */
+async function insertStaff(connection, inputData, password, email) {
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  const [existing] = await connection.query(
+    `SELECT id FROM app_users WHERE corporate_id = ? LIMIT 1`,
+    [inputData.corporateId],
+  );
+  if (existing.length > 0) {
+    throw new Error(`Matrícula ${inputData.corporateId} já cadastrada.`);
+  }
+
+  const [result] = await connection.execute(
+    `INSERT INTO app_users (corporate_id, email, name, password_hash, role, status, approved_at)
+       VALUES (?, ?, ?, ?, 'STAFF', 'ACTIVE', NOW())`,
+    [inputData.corporateId, email, inputData.name, passwordHash],
+  );
+
+  await connection.execute(
+    `INSERT IGNORE INTO app_user_settings (user_id, tour_completed_version) VALUES (?, 0)`,
+    [result.insertId],
+  );
+
+  console.log(`[db:seed-staff] Staff criado: ${inputData.corporateId}`);
+  console.log("[db:seed-staff] Faça login em /login com essa matrícula.");
+}
+
 /** Conta staff ativos no banco. */
 async function countActiveStaff(connection) {
   const [rows] = await connection.query(
@@ -107,6 +184,12 @@ async function countActiveStaff(connection) {
 
 /** Cria o único usuário staff (interativo). */
 async function createStaffInteractive(connection) {
+  const cliStaff = readStaffFromCli();
+  if (cliStaff) {
+    await insertStaff(connection, cliStaff, readCliArg("password"), cliStaff.email);
+    return;
+  }
+
   const rl = createInterface({ input, output });
 
   try {
@@ -121,29 +204,7 @@ async function createStaffInteractive(connection) {
     const email = emailRaw ? emailRaw.toLowerCase() : null;
 
     const inputData = validateStaffInput(corporateId, name, password, confirmPassword);
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    const [existing] = await connection.query(
-      `SELECT id FROM app_users WHERE corporate_id = ? LIMIT 1`,
-      [inputData.corporateId],
-    );
-    if (existing.length > 0) {
-      throw new Error(`Matrícula ${inputData.corporateId} já cadastrada.`);
-    }
-
-    const [result] = await connection.execute(
-      `INSERT INTO app_users (corporate_id, email, name, password_hash, role, status, approved_at)
-       VALUES (?, ?, ?, ?, 'STAFF', 'ACTIVE', NOW())`,
-      [inputData.corporateId, email, inputData.name, passwordHash],
-    );
-
-    await connection.execute(
-      `INSERT IGNORE INTO app_user_settings (user_id, tour_completed_version) VALUES (?, 0)`,
-      [result.insertId],
-    );
-
-    console.log(`\n[db:seed-staff] Staff criado: ${inputData.corporateId}`);
-    console.log("[db:seed-staff] Faça login em /login com essa matrícula.");
+    await insertStaff(connection, inputData, password, email);
   } finally {
     rl.close();
   }
