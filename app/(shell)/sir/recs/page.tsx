@@ -15,7 +15,7 @@ type PageProps = {
   searchParams: Promise<{ tipo?: string; cf?: string }>;
 };
 
-/** Resumo e tabela REC/DSQ/TCQ em aberto, com filtros por tipo e CF. */
+/** Resumo e tabela REC/DSR/TCQ em aberto, com filtros por tipo e CF. */
 export default async function Page({ searchParams }: PageProps) {
   const { tipo, cf } = await searchParams;
   const activeTipo = isRecTipoKey(tipo) ? tipo : undefined;

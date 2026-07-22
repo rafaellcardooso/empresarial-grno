@@ -1,7 +1,8 @@
 import {
   assertCredentials,
-  extractDetailsFromRow,
+  extractRalDetailsFromRow,
   getCellText,
+  getDesignationFromCell,
   getDbConnection,
   getTableFrame,
   loadBaseConfig,
@@ -49,7 +50,11 @@ async function upsertRal(ral) {
       cf_executante = VALUES(cf_executante),
       ultima_atualizacao = NOW(),
       status = 'ATIVO',
-      detalhes = IF(VALUES(detalhes) IS NOT NULL AND VALUES(detalhes) != '', VALUES(detalhes), detalhes)
+      detalhes = IF(
+        VALUES(detalhes) IS NOT NULL AND TRIM(VALUES(detalhes)) != '',
+        VALUES(detalhes),
+        detalhes
+      )
   `;
 
   await connection.execute(sql, [
@@ -94,37 +99,19 @@ async function parseRalRow(row) {
     throw new Error(`Skipped row — not RAL (${cellCount} columns)`);
   }
 
-  if (cellCount < 6) {
-    throw new Error(`Skipped row — too few columns (${cellCount})`);
-  }
-
-  const designation = await getCellText(cells.nth(0));
-  const details = await extractDetailsFromRow(row);
-
-  if (cellCount >= 8) {
-    const openedAtPrimary = await getCellText(cells.nth(6));
-    const openedAtFallback = await getCellText(cells.nth(4));
-    return {
-      numRecup: ralMatch.numRecup,
-      designation,
-      type: await getCellText(cells.nth(1)),
-      anomalyCode: await getCellText(cells.nth(2)),
-      openedAt: openedAtPrimary || openedAtFallback,
-      duration: await getCellText(cells.nth(5)),
-      executorCf: await getCellText(cells.nth(7)),
-      details,
-    };
+  if (cellCount < 8) {
+    throw new Error(`Skipped row — incomplete RAL (${cellCount} columns)`);
   }
 
   return {
     numRecup: ralMatch.numRecup,
-    designation,
+    designation: await getDesignationFromCell(cells.nth(0)),
     type: await getCellText(cells.nth(1)),
     anomalyCode: await getCellText(cells.nth(2)),
     openedAt: await getCellText(cells.nth(4)),
-    duration: "",
-    executorCf: await getCellText(cells.nth(5)),
-    details,
+    duration: await getCellText(cells.nth(5)),
+    executorCf: await getCellText(cells.nth(7)),
+    details: await extractRalDetailsFromRow(row),
   };
 }
 
@@ -132,7 +119,10 @@ async function parseRalRow(row) {
 async function processRalTable(page, seenItems) {
   const tableFrame = await getTableFrame(page, config.elementTimeoutMs);
   await waitForScrapeTable(tableFrame, config.elementTimeoutMs);
-  const rows = tableFrame.locator("table.listaTable").first().locator("tbody > tr");
+  const rows = tableFrame
+    .locator("table.listaTable")
+    .first()
+    .locator('tbody > tr[class*="listaLinha"]');
   const rowCount = await rows.count();
 
   const currentIds = [];

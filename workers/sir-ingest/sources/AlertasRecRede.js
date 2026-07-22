@@ -23,7 +23,7 @@ const config = loadBaseConfig({
   seenItemsFile: "states/dadosAntigosREC.json",
   activeIdsFile: "states/recsAtivas.json",
   tableStateFile: "states/estadoTabelaRec.json",
-  recordType: "REC/DSQ/TCQ",
+  recordType: "REC/DSR/TCQ",
   table: "recs",
 });
 
@@ -63,12 +63,12 @@ async function upsertRec(rec) {
   ]);
 }
 
-/** Indica registro REC/DSQ/TCQ pelo prefixo do num_recup. */
+/** Indica registro REC/DSR/TCQ pelo prefixo do num_recup. */
 function isRecGroupRecord(numRecup) {
-  return /^(REC|DSQ|TCQ)-\d+\/\d{4}$/i.test(String(numRecup).trim());
+  return /^(REC|DSR|TCQ)-\d+\/\d{4}$/i.test(String(numRecup).trim());
 }
 
-/** Extrai campos de uma linha da tabela REC/DSQ/TCQ no SIR. */
+/** Extrai campos de uma linha da tabela REC/DSR/TCQ no SIR. */
 async function parseRecRow(row) {
   const cells = row.locator("td");
   const cellCount = await cells.count();
@@ -78,7 +78,7 @@ async function parseRecRow(row) {
 
   const numRecup = await getCellText(cells.nth(2));
   if (!isRecGroupRecord(numRecup)) {
-    throw new Error(`Skipped row — not REC/DSQ/TCQ (${numRecup || "empty"})`);
+    throw new Error(`Skipped row — not REC/DSR/TCQ (${numRecup || "empty"})`);
   }
 
   const detailsTitle = await extractDetailsFromRow(row);

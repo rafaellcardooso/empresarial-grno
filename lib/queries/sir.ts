@@ -68,7 +68,7 @@ export async function countActiveRals(options?: { tipo?: string; cf?: string }):
   return Number(rows[0]?.total ?? 0);
 }
 
-/** Conta RECs ativas com filtros opcionais por CF e tipo (REC/DSQ/TCQ). */
+/** Conta RECs ativas com filtros opcionais por CF e tipo (REC/DSR/TCQ). */
 export async function countActiveRecs(options?: { cf?: string; tipo?: string }): Promise<number> {
   const params: unknown[] = [SIR_RECORD_STATUS.active];
   let sql = `SELECT COUNT(*) AS total FROM ${SIR_TABLES.recs} WHERE status = ?`;
@@ -175,12 +175,12 @@ export async function getRecByNum(numRecup: string): Promise<RecRecord | null> {
   return serializeRow(rows[0] ?? null);
 }
 
-/** Retorna contagem de RECs ativas agrupadas por prefixo (REC/DSQ/TCQ). */
+/** Retorna contagem de RECs ativas agrupadas por prefixo (REC/DSR/TCQ). */
 export async function countRecsByTipo(): Promise<RecTipoCount[]> {
   const rows = await sirQuery<RowDataPacket[]>(
     `SELECT
        CASE
-         WHEN num_recup LIKE 'DSQ-%' THEN 'DSQ'
+         WHEN num_recup LIKE 'DSR-%' THEN 'DSR'
          WHEN num_recup LIKE 'TCQ-%' THEN 'TCQ'
          ELSE 'REC'
        END AS rec_tipo,

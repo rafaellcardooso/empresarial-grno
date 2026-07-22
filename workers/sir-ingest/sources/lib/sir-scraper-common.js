@@ -273,7 +273,7 @@ async function waitForFrame(page, frameName, timeoutMs) {
 
 /** Aguarda tabela SIR carregar (vazia ou com linhas de dados). */
 export async function waitForScrapeTable(tableFrame, timeoutMs) {
-  const recordPattern = /(?:RAL|REC|DSQ|TCQ)-\d+\/\d{4}/i;
+  const recordPattern = /(?:RAL|REC|DSR|TCQ)-\d+\/\d{4}/i;
   const table = tableFrame.locator("table.listaTable").first();
   await table.waitFor({ state: "attached", timeout: timeoutMs });
 
@@ -478,6 +478,16 @@ export async function getCellText(cell) {
   return (await cell.innerText()).trim();
 }
 
+/** Extrai designação da célula 0 (title do link ou texto visível). */
+export async function getDesignationFromCell(cell) {
+  const link = cell.locator("a");
+  if ((await link.count()) > 0) {
+    const title = await link.first().getAttribute("title");
+    if (title?.trim()) return title.trim();
+  }
+  return getCellText(cell);
+}
+
 /** Extrai atributo title de link ou linha para detalhes do registro. */
 export async function extractTitleFromRow(row, cellIndex = 0) {
   const cell = row.locator("td").nth(cellIndex);
@@ -488,6 +498,13 @@ export async function extractTitleFromRow(row, cellIndex = 0) {
   }
   const rowTitle = await row.getAttribute("title");
   return rowTitle?.trim() || null;
+}
+
+/** Extrai detalhes operacionais do atributo title da linha RAL. */
+export async function extractRalDetailsFromRow(row) {
+  const rowTitle = await row.evaluate((element) => element.getAttribute("title")?.trim() || "");
+  if (rowTitle) return rowTitle;
+  return extractDetailsFromRow(row);
 }
 
 /** Varre células da linha e retorna o title mais longo (detalhes SIR). */

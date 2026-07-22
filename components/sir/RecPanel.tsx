@@ -28,7 +28,7 @@ function buildRecTitle(rowsCount: number, tipoLabel?: string, cf?: string): stri
   return `${parts.join(" — ")} (${rowsCount})`;
 }
 
-/** Painel REC com filtros por tipo (REC/DSQ/TCQ) e tabela ordenável. */
+/** Painel REC com filtros por tipo (REC/DSR/TCQ) e tabela ordenável. */
 export function RecPanel({ rows, total, byTipo, activeTipo, activeCf }: RecPanelProps) {
   const tipoLabel = recTipoFilterLabel(activeTipo);
 
