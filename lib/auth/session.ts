@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import type { NextRequest, NextResponse } from "next/server";
 import type { AppUserRole, AppUserStatus } from "@/lib/models/app-user";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
+import { isSecureCookie } from "@/lib/auth/cookie-secure";
 
 /** Payload mínimo da sessão JWT. */
 export type SessionPayload = {
@@ -66,7 +67,7 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
 function getSessionCookieOptions(maxAgeSeconds: number) {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(),
     sameSite: "lax" as const,
     path: "/",
     maxAge: maxAgeSeconds,

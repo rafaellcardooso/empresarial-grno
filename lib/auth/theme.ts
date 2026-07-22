@@ -1,4 +1,5 @@
 import type { NextResponse } from "next/server";
+import { isSecureCookie } from "@/lib/auth/cookie-secure";
 
 /** Tema Bootstrap suportado pela aplicação. */
 export type AppTheme = "light" | "dark";
@@ -14,7 +15,7 @@ export function isAppTheme(value: unknown): value is AppTheme {
 export function getThemeCookieOptions(maxAgeSeconds = 365 * 24 * 60 * 60) {
   return {
     httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(),
     sameSite: "lax" as const,
     path: "/",
     maxAge: maxAgeSeconds,
