@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect } from "react";
 import { useSession } from "@/components/layout/SessionProvider";
 
+import { fetchJson } from "@/lib/http/fetch-json";
+
 /** Formata contador do badge (máx. 99+). */
 function formatBadgeCount(count: number): string {
   return count > 99 ? "99+" : String(count);
@@ -17,14 +19,9 @@ export function NotificationBell() {
   const isActive = pathname === "/notificacoes";
 
   const refreshUnreadCount = useCallback(async () => {
-    try {
-      const response = await fetch("/api/notifications?countOnly=1");
-      if (!response.ok) return;
-      const data = (await response.json()) as { unreadCount?: number };
-      setUnreadNotifications(data.unreadCount ?? 0);
-    } catch {
-      /* ignora falha de rede */
-    }
+    const result = await fetchJson<{ unreadCount?: number }>("/api/notifications?countOnly=1");
+    if (!result.ok) return;
+    setUnreadNotifications(result.data.unreadCount ?? 0);
   }, [setUnreadNotifications]);
 
   useEffect(() => {

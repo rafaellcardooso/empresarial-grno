@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthLink, AuthShell } from "@/components/auth/AuthShell";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { CORPORATE_ID_HINT, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 
@@ -144,9 +145,9 @@ export function RegisterForm() {
           />
         </div>
 
-        <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-          {loading ? "Enviando…" : "Solicitar acesso"}
-        </button>
+        <LoadingButton type="submit" className="btn btn-primary w-100" loading={loading} loadingLabel="Enviando…">
+          Solicitar acesso
+        </LoadingButton>
       </form>
     </AuthShell>
   );

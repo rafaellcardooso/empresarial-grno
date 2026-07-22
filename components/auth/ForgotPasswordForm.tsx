@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AuthLink, AuthShell } from "@/components/auth/AuthShell";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { CORPORATE_ID_HINT, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 
@@ -120,9 +121,9 @@ export function ForgotPasswordForm() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-            {loading ? "Salvando…" : "Redefinir senha"}
-          </button>
+          <LoadingButton type="submit" className="btn btn-primary w-100" loading={loading} loadingLabel="Salvando…">
+            Redefinir senha
+          </LoadingButton>
         </form>
       )}
     </AuthShell>

@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/layout/SessionProvider";
 import { ContentCard } from "@/components/ui/ContentCard";
+import { InlineAlert } from "@/components/ui/InlineAlert";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
+import { fetchJson } from "@/lib/http/fetch-json";
 
 type NotificationItem = {
   id: number;
@@ -14,53 +17,89 @@ type NotificationItem = {
   readAt: string | null;
 };
 
+type NotificationsResponse = {
+  notifications?: NotificationItem[];
+  unreadCount?: number;
+};
+
+type PatchNotificationResponse = {
+  unreadCount?: number;
+};
+
 /** Lista de notificações do usuário com marcação de lida. */
 export function NotificationList() {
   const { setUnreadNotifications } = useSession();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [markingId, setMarkingId] = useState<number | null>(null);
 
   /** Carrega notificações da API. */
-  async function loadNotifications() {
+  const loadNotifications = useCallback(async () => {
     setLoading(true);
-    try {
-      const response = await fetch("/api/notifications");
-      const data = (await response.json()) as {
-        notifications?: NotificationItem[];
-        unreadCount?: number;
-      };
-      const list = data.notifications ?? [];
-      setItems(list);
-      setUnreadNotifications(
-        data.unreadCount ?? list.filter((item) => !item.readAt).length,
-      );
-    } finally {
+    setError(null);
+
+    const result = await fetchJson<NotificationsResponse>("/api/notifications");
+    if (!result.ok) {
+      setError(result.error);
       setLoading(false);
+      return;
     }
-  }
+
+    const list = result.data.notifications ?? [];
+    setItems(list);
+    setUnreadNotifications(
+      result.data.unreadCount ?? list.filter((item) => !item.readAt).length,
+    );
+    setLoading(false);
+  }, [setUnreadNotifications]);
 
   useEffect(() => {
-    loadNotifications();
-  }, []);
+    void loadNotifications();
+  }, [loadNotifications]);
 
   /** Marca uma notificação como lida. */
   async function handleMarkRead(id: number) {
-    const response = await fetch("/api/notifications", {
+    setError(null);
+    setMarkingId(id);
+
+    const result = await fetchJson<PatchNotificationResponse>("/api/notifications", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    const data = (await response.json()) as { unreadCount?: number };
+
+    setMarkingId(null);
+
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
     const next = items.map((item) =>
       item.id === id ? { ...item, readAt: new Date().toISOString() } : item,
     );
     setItems(next);
-    setUnreadNotifications(data.unreadCount ?? next.filter((item) => !item.readAt).length);
+    setUnreadNotifications(result.data.unreadCount ?? next.filter((item) => !item.readAt).length);
   }
 
   /** Marca todas como lidas. */
   async function handleMarkAllRead() {
-    await fetch("/api/notifications?all=1", { method: "PATCH" });
+    setError(null);
+    setMarkingAll(true);
+
+    const result = await fetchJson<PatchNotificationResponse>("/api/notifications?all=1", {
+      method: "PATCH",
+    });
+
+    setMarkingAll(false);
+
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
     setItems((current) =>
       current.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })),
     );
@@ -71,16 +110,41 @@ export function NotificationList() {
     return <p className="text-body-secondary">Carregando…</p>;
   }
 
+  if (error && items.length === 0) {
+    return (
+      <div className="d-flex flex-column gap-3">
+        <InlineAlert onDismiss={() => setError(null)}>{error}</InlineAlert>
+        <LoadingButton
+          className="btn btn-outline-primary btn-sm align-self-start"
+          loading={loading}
+          loadingLabel="Carregando…"
+          onClick={() => void loadNotifications()}
+        >
+          Tentar novamente
+        </LoadingButton>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return <p className="text-body-secondary mb-0">Nenhuma notificação.</p>;
   }
 
   return (
     <div className="d-flex flex-column gap-3">
+      {error ? (
+        <InlineAlert onDismiss={() => setError(null)}>{error}</InlineAlert>
+      ) : null}
+
       <div className="d-flex justify-content-end">
-        <button type="button" className="btn btn-sm btn-outline-secondary" onClick={handleMarkAllRead}>
+        <LoadingButton
+          className="btn btn-sm btn-outline-secondary"
+          loading={markingAll}
+          loadingLabel="Marcando…"
+          onClick={() => void handleMarkAllRead()}
+        >
           Marcar todas como lidas
-        </button>
+        </LoadingButton>
       </div>
 
       {items.map((item) => (
@@ -101,13 +165,14 @@ export function NotificationList() {
               {formatDateTimePtBr(item.deliveredAt)}
             </span>
             {!item.readAt ? (
-              <button
-                type="button"
+              <LoadingButton
                 className="btn btn-sm btn-outline-primary"
-                onClick={() => handleMarkRead(item.id)}
+                loading={markingId === item.id}
+                loadingLabel="Salvando…"
+                onClick={() => void handleMarkRead(item.id)}
               >
                 Marcar como lida
-              </button>
+              </LoadingButton>
             ) : (
               <span className="badge text-bg-secondary">Lida</span>
             )}

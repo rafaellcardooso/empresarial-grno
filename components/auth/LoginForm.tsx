@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuthLink, AuthShell } from "@/components/auth/AuthShell";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 import { applyClientTheme } from "@/lib/auth/theme-client";
 import type { AppTheme } from "@/lib/auth/theme";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
@@ -135,9 +136,9 @@ export function LoginForm() {
           </label>
         </div>
 
-        <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-          {loading ? "Entrando…" : "Entrar"}
-        </button>
+        <LoadingButton type="submit" className="btn btn-primary w-100" loading={loading} loadingLabel="Entrando…">
+          Entrar
+        </LoadingButton>
       </form>
     </AuthShell>
   );

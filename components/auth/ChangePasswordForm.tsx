@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 import { PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 
 type ChangePasswordFormProps = {
@@ -107,9 +108,9 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
         />
       </div>
 
-      <button type="submit" className="btn btn-primary" disabled={loading}>
-        {loading ? "Salvando…" : "Alterar senha"}
-      </button>
+      <LoadingButton type="submit" className="btn btn-primary" loading={loading} loadingLabel="Salvando…">
+        Alterar senha
+      </LoadingButton>
     </form>
   );
 }

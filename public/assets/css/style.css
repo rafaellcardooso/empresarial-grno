@@ -1358,6 +1358,41 @@ footer a:hover {
     text-decoration: underline;
 }
 
+.error-page {
+    max-width: 440px;
+    text-align: center;
+}
+
+.error-page__brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.error-page__app-name {
+    font-weight: 600;
+    color: var(--text-clr);
+}
+
+.error-page__icon {
+    font-size: 2.5rem;
+    color: var(--accent-clr);
+    margin-bottom: 0.75rem;
+}
+
+.error-page__title {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.error-page__description {
+    color: var(--secondary-text-clr);
+    margin-bottom: 1.25rem;
+}
+
 .notification-bell {
     position: relative;
     display: inline-flex;

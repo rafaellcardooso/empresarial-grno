@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { ContentCard } from "@/components/ui/ContentCard";
+import { InlineAlert } from "@/components/ui/InlineAlert";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
+import { fetchJson } from "@/lib/http/fetch-json";
 
 type StaffNotification = {
   id: number;
@@ -10,6 +13,15 @@ type StaffNotification = {
   body: string;
   createdAt: string;
   sentAt: string | null;
+};
+
+type StaffNotificationsResponse = {
+  notifications?: StaffNotification[];
+};
+
+type MutationResponse = {
+  error?: string;
+  message?: string;
 };
 
 /** Composer staff: criar e disparar notificações globais. */
@@ -20,16 +32,26 @@ export function NotificationComposer() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [sendingDraftId, setSendingDraftId] = useState<number | null>(null);
 
   /** Carrega histórico de notificações. */
   async function loadHistory() {
-    const response = await fetch("/api/admin/notifications");
-    const data = (await response.json()) as { notifications?: StaffNotification[] };
-    setHistory(data.notifications ?? []);
+    setHistoryLoading(true);
+
+    const result = await fetchJson<StaffNotificationsResponse>("/api/admin/notifications");
+    if (!result.ok) {
+      setError(result.error);
+      setHistoryLoading(false);
+      return;
+    }
+
+    setHistory(result.data.notifications ?? []);
+    setHistoryLoading(false);
   }
 
   useEffect(() => {
-    loadHistory();
+    void loadHistory();
   }, []);
 
   /** Cria rascunho ou envia imediatamente. */
@@ -38,39 +60,43 @@ export function NotificationComposer() {
     setMessage(null);
     setLoading(true);
 
-    try {
-      const response = await fetch("/api/admin/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body, send: sendNow }),
-      });
-      const data = (await response.json()) as { error?: string; message?: string };
+    const result = await fetchJson<MutationResponse>("/api/admin/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, body, send: sendNow }),
+    });
 
-      if (!response.ok) {
-        setError(data.error ?? "Não foi possível salvar.");
-        return;
-      }
+    setLoading(false);
 
-      setMessage(data.message ?? "Salvo.");
-      setTitle("");
-      setBody("");
-      await loadHistory();
-    } finally {
-      setLoading(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
     }
+
+    setMessage(result.data.message ?? "Salvo.");
+    setTitle("");
+    setBody("");
+    await loadHistory();
   }
 
   /** Dispara rascunho existente. */
   async function handleSendDraft(id: number) {
     setError(null);
     setMessage(null);
-    const response = await fetch(`/api/admin/notifications/${id}/send`, { method: "POST" });
-    const data = (await response.json()) as { error?: string; message?: string };
-    if (!response.ok) {
-      setError(data.error ?? "Falha ao enviar.");
+    setSendingDraftId(id);
+
+    const result = await fetchJson<MutationResponse>(`/api/admin/notifications/${id}/send`, {
+      method: "POST",
+    });
+
+    setSendingDraftId(null);
+
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
-    setMessage(data.message ?? "Enviado.");
+
+    setMessage(result.data.message ?? "Enviado.");
     await loadHistory();
   }
 
@@ -85,14 +111,14 @@ export function NotificationComposer() {
           </p>
 
           {error ? (
-            <div className="alert alert-danger py-2 mb-3" role="alert">
+            <InlineAlert className="mb-3" onDismiss={() => setError(null)}>
               {error}
-            </div>
+            </InlineAlert>
           ) : null}
           {message ? (
-            <div className="alert alert-success py-2 mb-3" role="status">
+            <InlineAlert variant="success" className="mb-3" onDismiss={() => setMessage(null)}>
               {message}
-            </div>
+            </InlineAlert>
           ) : null}
 
           <div className="mb-3">
@@ -106,6 +132,7 @@ export function NotificationComposer() {
               onChange={(event) => setTitle(event.target.value)}
               maxLength={200}
               placeholder="Ex.: Manutenção programada"
+              disabled={loading}
             />
           </div>
 
@@ -120,28 +147,31 @@ export function NotificationComposer() {
               value={body}
               onChange={(event) => setBody(event.target.value)}
               placeholder="Descreva o aviso para os usuários…"
+              disabled={loading}
             />
           </div>
 
           <div className="notification-composer__actions">
-            <button
-              type="button"
+            <LoadingButton
               className="btn btn-primary"
-              disabled={loading || !title.trim() || !body.trim()}
-              onClick={() => handleSubmit(true)}
+              loading={loading}
+              loadingLabel="Enviando…"
+              disabled={!title.trim() || !body.trim()}
+              onClick={() => void handleSubmit(true)}
             >
               <i className="bi bi-send me-1" aria-hidden="true" />
-              {loading ? "Enviando…" : "Disparar para todos"}
-            </button>
-            <button
-              type="button"
+              Disparar para todos
+            </LoadingButton>
+            <LoadingButton
               className="btn btn-outline-secondary"
-              disabled={loading || !title.trim() || !body.trim()}
-              onClick={() => handleSubmit(false)}
+              loading={loading}
+              loadingLabel="Salvando…"
+              disabled={!title.trim() || !body.trim()}
+              onClick={() => void handleSubmit(false)}
             >
               <i className="bi bi-save me-1" aria-hidden="true" />
               Salvar rascunho
-            </button>
+            </LoadingButton>
           </div>
         </ContentCard>
       </div>
@@ -159,7 +189,9 @@ export function NotificationComposer() {
             ) : undefined
           }
         >
-          {history.length === 0 ? (
+          {historyLoading ? (
+            <p className="text-body-secondary mb-0">Carregando histórico…</p>
+          ) : history.length === 0 ? (
             <div className="notification-history-empty">
               <i className="bi bi-inbox notification-history-empty__icon" aria-hidden="true" />
               <p className="notification-history-empty__title">Nenhuma notificação criada</p>
@@ -197,14 +229,15 @@ export function NotificationComposer() {
                       {formatDateTimePtBr(item.createdAt)}
                     </time>
                     {!item.sentAt ? (
-                      <button
-                        type="button"
+                      <LoadingButton
                         className="btn btn-sm btn-outline-primary"
-                        onClick={() => handleSendDraft(item.id)}
+                        loading={sendingDraftId === item.id}
+                        loadingLabel="Enviando…"
+                        onClick={() => void handleSendDraft(item.id)}
                       >
                         <i className="bi bi-send me-1" aria-hidden="true" />
                         Enviar
-                      </button>
+                      </LoadingButton>
                     ) : null}
                   </div>
                 </li>
