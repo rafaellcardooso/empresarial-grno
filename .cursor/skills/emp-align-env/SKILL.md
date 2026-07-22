@@ -44,3 +44,5 @@ cd ../.. && npm run env:check
 ```bash
 curl -s http://127.0.0.1:3003/api/saude | jq
 ```
+
+Deploy produção: [deploy/README.md](../../deploy/README.md).

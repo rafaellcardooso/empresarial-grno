@@ -22,6 +22,7 @@ Monorepo em `/usr/local/empresarial`. **Next.js só lê**; **workers gravam** no
 - **Não** escrever no MySQL do `hfc-sls` a partir deste repo.
 - BSOD/PME: ler `tbl_inventory_pme` (enrich continua no `hfc-sls`).
 - Porta padrão: **3003** (`npm run dev` / `npm start`).
+- Deploy produção: `deploy/README.md` (primeiro deploy + releases).
 
 ## Antes de mudar frontend
 

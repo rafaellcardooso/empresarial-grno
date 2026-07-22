@@ -29,12 +29,15 @@ deploy/systemd/   units (logs → journal)
 
 Schema MySQL: `npm run db:migrate` na raiz (tabelas vazias). **Em prod os dados vêm deste worker**, não de `db:import`.
 
-### Produção (primeiro deploy)
+Filtro SIR no select: **`REC/DSR/TCQ`** (não DSQ). Classificação REC/DSR/TCQ no frontend por prefixo de `num_recup`.
 
-1. Na raiz: `db:bootstrap:sql` + `db:migrate` (ver README).
-2. `.env` aqui com `SIR_DB_*` **iguais** ao `.env.local` da raiz + `SISTEMA_USUARIO` / `SISTEMA_SENHA` / `SISTEMA_URL`.
-3. `npm install && npm run install:browsers`
-4. Systemd: `sir-ingest-ral` e `sir-ingest-rec` (units já definem `TMPDIR` e `PLAYWRIGHT_BROWSERS_PATH` fora de `/tmp`).
+### Produção
+
+Guia completo: [deploy/README.md](../../deploy/README.md).
+
+**Primeiro deploy:** `.env` com `SIR_DB_*` iguais ao `.env.local` + credenciais SIR + `npm install && npm run install:browsers` (como `datacenter`).
+
+**Atualização:** após `git pull`, se mudou `workers/sir-ingest/` → `npm install` aqui e `sudo systemctl restart sir-ingest-ral sir-ingest-rec` (Next **não** precisa rebuild só por worker).
 
 Os arquivos em `states/` guardam ciclo local (IDs vistos, encerramentos). Em deploy novo podem ficar como estão ou ser zerados — o banco começa vazio e enche a cada ciclo de scrape.
 

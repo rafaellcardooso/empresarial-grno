@@ -46,12 +46,17 @@ Aguardar `healthy` no container `empresarial-mysql-sir`. Ajustar `SIR_DB_PORT=33
 
 ### Produção (via ingest — padrão GRNO)
 
+Sempre `cd /usr/local/empresarial` antes de `npm`. Instalar deps (`npm install`) **antes** dos scripts de banco.
+
 Banco **vazio** após migrate; workers preenchem:
 
 ```bash
-npm run db:bootstrap:sql | mariadb -u root -p -h HOST   # admin MySQL
-npm run db:migrate                                       # tabelas vazias
-# workers/sir-ingest: npm install, install:browsers, systemd ral+rec
+cd /usr/local/empresarial
+npm install
+node scripts/db/bootstrap-sir.mjs | sudo mariadb   # não: npm run … | mariadb -u root -p
+npm run db:migrate
+npm run db:seed-staff
+# workers: install:browsers + systemd — ver deploy/README.md
 ```
 
 Não rodar `db:import` / `db:seed` em prod.
@@ -91,7 +96,10 @@ npm run dev
 
 ## Troubleshooting
 
-- `Unknown database` / banco inexistente em prod: rode `npm run db:bootstrap:sql | mariadb -u root -p` e depois `npm run db:migrate`.
+- `Unknown database` / banco inexistente em prod: `node scripts/db/bootstrap-sir.mjs | sudo mariadb` e depois `npm run db:migrate`.
+- `ERROR 1698` no root MariaDB: use `sudo mariadb`, não `-u root -p`.
+- `ENOENT package.json`: rodar comandos em `/usr/local/empresarial`, não em `~` ou `/root`.
+- Deploy completo: [deploy/README.md](../../deploy/README.md).
 - `ECONNREFUSED`: container parado ou `SIR_DB_PORT` errado.
 - `Access denied`: credenciais `.env.local` ≠ `docker-compose.dev.yml` ou bootstrap MariaDB.
 - Env desalinhado: `npm run env:check` — ver rule `emp-env`.

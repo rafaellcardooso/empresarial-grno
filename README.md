@@ -23,7 +23,9 @@ empresarial/
   scripts/db/
   public/assets/             # tema Bootstrap GRNO (css, img, js)
   workers/sir-ingest/
-  deploy/systemd/
+  deploy/
+    README.md              # deploy produção (primeiro deploy + releases)
+    systemd/
 ```
 
 > Ideal a longo prazo: mover `workers/sir-ingest` para `/usr/local/sir-ingest` (requer root).
@@ -39,51 +41,64 @@ npm run env:check
 
 Comandos úteis: `npm run db:migrate`, `npm run db:seed`, `npm run db:import`, `npm run db:bootstrap:sql`, `npm run env:check`.
 
-### Produção — banco vazio + ingest (recomendado)
+## Deploy — produção
 
-Em prod o banco **não vem do `.sql`**: cria-se o schema e os workers **RAL/REC** populam `rals` e `recs` a partir do SIR legado.
+Guia completo: **[deploy/README.md](deploy/README.md)** (SRV-APP-DEV, usuário `datacenter`, porta **3003**).
 
-**Ordem no servidor:**
+### Atualização rotineira (após `git pull`)
 
 ```bash
-# 1) Env (raiz + worker com os mesmos SIR_DB_*)
-cp .env.example .env.local
-cd workers/sir-ingest && cp .env.example .env && cd ../..
-
-# 2) Admin MySQL — cria claroEmpresarial + usuário monitor
-npm run db:bootstrap:sql | mariadb -u root -p -h HOST_DO_MYSQL
-# Se o app não for localhost no MySQL, ajuste antes:
-#   SIR_DB_GRANT_HOSTS=localhost,127.0.0.1,IP_DO_APP
-
-# 3) Tabelas vazias (rals, recs, schema_migrations)
-npm run db:migrate
-
-# 4) Validar paridade de credenciais raiz ↔ worker
-npm run env:check
-
-# 5) Ingest (Playwright grava no MySQL)
-cd workers/sir-ingest
-npm install && npm run install:browsers   # Chromium em .playwright-browsers/, temp em states/tmp/
-cd ../..
-sudo cp workers/sir-ingest/deploy/systemd/*.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now sir-ingest-ral sir-ingest-rec
-
-# 6) Next (somente leitura)
-npm install && npm run build
-sudo cp deploy/systemd/empresarial-next.service /etc/systemd/system/
-sudo systemctl enable --now empresarial-next
+cd /usr/local/empresarial
+git pull origin main
+npm install
+npm run build
+sudo systemctl restart empresarial-next
+# Se mudou workers/sir-ingest/:
+cd workers/sir-ingest && npm install && cd ../..
+sudo systemctl restart sir-ingest-ral sir-ingest-rec
 ```
 
-Após alguns ciclos do ingest (~5 min cada), confira:
+### Primeiro deploy (resumo)
+
+Em prod o banco **não vem do `.sql`**: schema vazio + workers **RAL/REC** populam `rals` e `recs`.
+
+```bash
+cd /usr/local/empresarial
+git pull origin main
+npm install
+
+cp .env.example .env.local
+cd workers/sir-ingest && cp .env.example .env && cd ../..
+# Editar credenciais; depois: npm run env:check
+
+# Banco — use sudo mariadb (não mariadb -u root -p) e pipe só o SQL:
+node scripts/db/bootstrap-sir.mjs | sudo mariadb
+npm run db:migrate
+npm run db:seed-staff
+
+cd workers/sir-ingest
+npm install && npm run install:browsers
+# Se Chromium faltar: sudo npx playwright install-deps chromium
+cd ../..
+
+sudo cp workers/sir-ingest/deploy/systemd/*.service /etc/systemd/system/
+sudo cp deploy/systemd/empresarial-next.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now sir-ingest-ral sir-ingest-rec empresarial-next
+
+npm run build
+sudo systemctl restart empresarial-next
+```
+
+Conferência:
 
 ```bash
 curl -s http://127.0.0.1:3003/api/saude | jq
-curl -s http://127.0.0.1:3003/api/rals | jq length
+sudo journalctl -u sir-ingest-ral -n 20 --no-pager
 ```
 
-> **Não use** `db:import` nem `db:seed` em prod se a carga vier do ingest.
-> O worker faz `INSERT … ON DUPLICATE KEY UPDATE` e marca `ENCERRADO` quando o registro some do SIR.
+> **Não use** `db:import` nem `db:seed` em prod se a carga vier do ingest.  
+> Erros comuns (`ENOENT package.json`, `ERROR 1698`, pipe do bootstrap, Playwright): ver [deploy/README.md](deploy/README.md#troubleshooting-erros-comuns).
 
 **Dev local** (com snapshot): `npm run db:migrate && npm run db:import` — só para desenvolvimento.
 
@@ -104,18 +119,19 @@ Login em `/login` com **matrícula corporativa** (ex.: `F104262`). Cadastros em 
 
 **Staff único:** rode `npm run db:seed-staff` uma vez após `db:migrate`. Se precisar trocar senha: `npm run db:seed-staff -- --reset-password`.
 
-Páginas: `/`, `/sir`, `/sir/rals`, `/sir/recs`, `/bsod`.
+Páginas: `/`, `/sir`, `/sir/rals`, `/sir/recs`, `/bsod`. SIR: filtros por status (ativo/encerrado/todos), tipo e CF; ordenação por abertura.
 
-APIs (compatíveis com o Flask antigo para o bot):
+APIs:
 
-| Rota                                        | Descrição         |
-| ------------------------------------------- | ----------------- |
-| `GET /api/rals`                             | RALs ativas       |
-| `GET /api/recs`                             | RECs ativas       |
-| `GET /api/rals/:num` / `GET /api/recs/:num` | Detalhe           |
-| `GET /api/rals/contagem_por_cf`             | Contagem por CF   |
-| `GET /api/bsod`                             | PME com BSOD VLAN |
-| `GET /api/saude`                            | Ping SIR + HFC    |
+| Rota                                        | Descrição                  |
+| ------------------------------------------- | -------------------------- |
+| `GET /api/rals`                             | RALs ativas (bot Telegram) |
+| `GET /api/recs`                             | RECs ativas (bot Telegram) |
+| `GET /api/rals/:num` / `GET /api/recs/:num` | Detalhe                    |
+| `GET /api/rals/contagem_por_cf`             | Contagem por CF            |
+| `GET /api/sir/rals`, `/api/sir/recs`        | BFF com filtros (UI)       |
+| `GET /api/bsod`                             | PME com BSOD VLAN          |
+| `GET /api/saude`                            | Ping SIR + HFC             |
 
 ## Setup — ingest SIR
 
@@ -132,13 +148,13 @@ Detalhes do fluxo de coleta (sessão, offset RAL/REC, monitoramento): `workers/s
 
 Credenciais MySQL: bloco `SIR_DB_*` no `.env` (igual ao `.env.local` da raiz).
 
-Systemd (exemplo):
+Systemd — ver [deploy/README.md](../deploy/README.md):
 
 ```bash
 sudo cp workers/sir-ingest/deploy/systemd/*.service /etc/systemd/system/
 sudo cp deploy/systemd/empresarial-next.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now sir-ingest-ral sir-ingest-rec
+sudo systemctl enable --now sir-ingest-ral sir-ingest-rec empresarial-next
 ```
 
 Bot Telegram: `python3 telegram/main-consultas-sir.py` (usa `TELEGRAM_BOT_TOKEN` e `EMPRESARIAL_API_URL`).
