@@ -10,6 +10,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "lint-staged": "lint-staged",
+    "validate": "npm run format:check && npm run lint",
     "db:migrate": "node scripts/db/migrate-sir.mjs",
     "db:seed": "node scripts/db/seed-sir-dev.mjs",
     "db:seed-staff": "node scripts/db/seed-app-staff.mjs",

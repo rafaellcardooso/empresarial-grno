@@ -108,14 +108,14 @@ Páginas: `/`, `/sir`, `/sir/rals`, `/sir/recs`, `/bsod`.
 
 APIs (compatíveis com o Flask antigo para o bot):
 
-| Rota | Descrição |
-|------|-----------|
-| `GET /api/rals` | RALs ativas |
-| `GET /api/recs` | RECs ativas |
-| `GET /api/rals/:num` / `GET /api/recs/:num` | Detalhe |
-| `GET /api/rals/contagem_por_cf` | Contagem por CF |
-| `GET /api/bsod` | PME com BSOD VLAN |
-| `GET /api/saude` | Ping SIR + HFC |
+| Rota                                        | Descrição         |
+| ------------------------------------------- | ----------------- |
+| `GET /api/rals`                             | RALs ativas       |
+| `GET /api/recs`                             | RECs ativas       |
+| `GET /api/rals/:num` / `GET /api/recs/:num` | Detalhe           |
+| `GET /api/rals/contagem_por_cf`             | Contagem por CF   |
+| `GET /api/bsod`                             | PME com BSOD VLAN |
+| `GET /api/saude`                            | Ping SIR + HFC    |
 
 ## Setup — ingest SIR
 
@@ -144,6 +144,27 @@ sudo systemctl enable --now sir-ingest-ral sir-ingest-rec
 Bot Telegram: `python3 telegram/main-consultas-sir.py` (usa `TELEGRAM_BOT_TOKEN` e `EMPRESARIAL_API_URL`).
 
 Flask legado removido — bot Telegram usa Next em `/api`.
+
+## Formatação e qualidade
+
+O projeto usa **Prettier** (formatação) e **ESLint** (regras). Configuração em `prettier.config.mjs` e `eslint.config.mjs`.
+
+```bash
+npm run format        # formata tudo
+npm run format:check  # só verifica (falha se algo estiver fora do padrão)
+npm run lint          # ESLint
+npm run validate      # format:check + lint (roda no pre-push)
+```
+
+**Hooks Git (Husky):**
+
+| Hook         | O que faz                                                          |
+| ------------ | ------------------------------------------------------------------ |
+| `pre-commit` | Prettier + ESLint nos arquivos staged (`lint-staged`)              |
+| `commit-msg` | Valida mensagem (Conventional Commits)                             |
+| `pre-push`   | `npm run validate` — bloqueia push se código não estiver formatado |
+
+No Cursor/VS Code, abra a pasta do projeto e instale as extensões recomendadas (Prettier + ESLint). O `.vscode/settings.json` já ativa **format on save**.
 
 ## Regras
 

@@ -9,6 +9,7 @@ alwaysApply: false
 - **Prettier** = formatação (`prettier.config.mjs`).
 - **ESLint** = regras Next + TypeScript (`eslint.config.mjs`); `eslint-config-prettier` evita conflito.
 - Antes de commit: hooks rodam via **lint-staged** (só staged).
+- Antes de push: `npm run validate` (`format:check` + `lint`) no hook **pre-push**.
 
 ## Comandos
 

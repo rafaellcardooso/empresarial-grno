@@ -6,6 +6,12 @@ const config = {
   trailingComma: "all",
   printWidth: 100,
   endOfLine: "lf",
+  overrides: [
+    {
+      files: ["*.mdc"],
+      options: { parser: "markdown" },
+    },
+  ],
 };
 
 export default config;

@@ -9,3 +9,6 @@ workers/sir-ingest/**/__pycache__
 _legacy-ui
 package-lock.json
 workers/sir-ingest/package-lock.json
+public/assets/css/bootstrap.min.css
+public/assets/css/bootstrap-icons.min.css
+public/assets/js/bootstrap.bundle.min.js
