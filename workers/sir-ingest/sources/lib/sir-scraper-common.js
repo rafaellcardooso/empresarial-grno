@@ -432,12 +432,24 @@ export function logCycleSummary(logPrefix, summary) {
   console.log(`${logPrefix} ${JSON.stringify(payload)}`);
 }
 
-/** Extrai texto visível de célula da tabela SIR (font interno ou innerText). */
+/** Extrai texto visível de célula da tabela SIR (font interno, link ou innerText). */
 export async function getCellText(cell) {
   const font = cell.locator("font.listaCelulaFont");
   if ((await font.count()) > 0) {
     return (await font.first().innerText()).trim();
   }
+
+  const linkFont = cell.locator("a font");
+  if ((await linkFont.count()) > 0) {
+    return (await linkFont.first().innerText()).trim();
+  }
+
+  const link = cell.locator("a");
+  if ((await link.count()) > 0) {
+    const linkText = (await link.first().innerText()).trim();
+    if (linkText) return linkText;
+  }
+
   return (await cell.innerText()).trim();
 }
 
@@ -451,6 +463,29 @@ export async function extractTitleFromRow(row, cellIndex = 0) {
   }
   const rowTitle = await row.getAttribute("title");
   return rowTitle?.trim() || null;
+}
+
+/** Varre células da linha e retorna o title mais longo (detalhes SIR). */
+export async function extractDetailsFromRow(row) {
+  const rowTitle = await row.getAttribute("title");
+  let best = rowTitle?.trim() || "";
+
+  const cells = row.locator("td");
+  const cellCount = await cells.count();
+
+  for (let index = 0; index < cellCount; index += 1) {
+    const links = cells.nth(index).locator("a");
+    const linkCount = await links.count();
+    for (let linkIndex = 0; linkIndex < linkCount; linkIndex += 1) {
+      const title = await links.nth(linkIndex).getAttribute("title");
+      const trimmed = title?.trim();
+      if (trimmed && trimmed.length > best.length) {
+        best = trimmed;
+      }
+    }
+  }
+
+  return best || null;
 }
 
 /** Registra handlers SIGTERM/SIGINT para encerramento gracioso do worker. */

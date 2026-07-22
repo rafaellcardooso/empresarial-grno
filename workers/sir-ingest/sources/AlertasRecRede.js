@@ -1,6 +1,6 @@
 import {
   assertCredentials,
-  extractTitleFromRow,
+  extractDetailsFromRow,
   getCellText,
   getDbConnection,
   getTableFrame,
@@ -22,7 +22,7 @@ const config = loadBaseConfig({
   seenItemsFile: "states/dadosAntigosREC.json",
   activeIdsFile: "states/recsAtivas.json",
   tableStateFile: "states/estadoTabelaRec.json",
-  recordType: "REC",
+  recordType: "REC/DSQ/TCQ",
   table: "recs",
 });
 
@@ -62,7 +62,12 @@ async function upsertRec(rec) {
   ]);
 }
 
-/** Extrai campos de uma linha da tabela REC/DSR no SIR. */
+/** Indica registro REC/DSQ/TCQ pelo prefixo do num_recup. */
+function isRecGroupRecord(numRecup) {
+  return /^(REC|DSQ|TCQ)-\d+\/\d{4}$/i.test(String(numRecup).trim());
+}
+
+/** Extrai campos de uma linha da tabela REC/DSQ/TCQ no SIR. */
 async function parseRecRow(row) {
   const cells = row.locator("td");
   const cellCount = await cells.count();
@@ -71,11 +76,11 @@ async function parseRecRow(row) {
   }
 
   const numRecup = await getCellText(cells.nth(2));
-  if (!/^(REC|DSR)-/.test(numRecup) && !/\d+\/\d+/.test(numRecup)) {
-    throw new Error("Skipped row — not a REC/DSR");
+  if (!isRecGroupRecord(numRecup)) {
+    throw new Error(`Skipped row — not REC/DSQ/TCQ (${numRecup || "empty"})`);
   }
 
-  const detailsTitle = await extractTitleFromRow(row, 0);
+  const detailsTitle = await extractDetailsFromRow(row);
 
   return {
     numRecup,

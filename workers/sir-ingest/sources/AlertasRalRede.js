@@ -1,6 +1,6 @@
 import {
   assertCredentials,
-  extractTitleFromRow,
+  extractDetailsFromRow,
   getCellText,
   getDbConnection,
   getTableFrame,
@@ -52,7 +52,7 @@ async function upsertRal(ral) {
 
   await connection.execute(sql, [
     ral.numRecup,
-    ral.description,
+    ral.designation,
     ral.type,
     ral.anomalyCode,
     ral.openedAt,
@@ -70,14 +70,18 @@ async function parseRalRow(row) {
     throw new Error(`Incomplete RAL row (${cellCount} columns, expected >= 8)`);
   }
 
-  const details = await extractTitleFromRow(row, 0);
+  const designation = await getCellText(cells.nth(0));
+  const openedAtPrimary = await getCellText(cells.nth(6));
+  const openedAtFallback = await getCellText(cells.nth(4));
+  const openedAt = openedAtPrimary || openedAtFallback;
+  const details = await extractDetailsFromRow(row);
 
   return {
     numRecup: await getCellText(cells.nth(3)),
-    description: await getCellText(cells.nth(0)),
+    designation,
     type: await getCellText(cells.nth(1)),
     anomalyCode: await getCellText(cells.nth(2)),
-    openedAt: await getCellText(cells.nth(4)),
+    openedAt,
     duration: await getCellText(cells.nth(5)),
     executorCf: await getCellText(cells.nth(7)),
     details,
@@ -101,7 +105,7 @@ async function processRalTable(page, seenItems) {
       if (!ral.numRecup) continue;
 
       currentIds.push(ral.numRecup);
-      const itemKey = `${config.recordType}:${ral.numRecup} | ${ral.description}`;
+      const itemKey = `${config.recordType}:${ral.numRecup} | ${ral.designation}`;
 
       if (!seenItems.has(itemKey)) {
         seenItems.add(itemKey);
