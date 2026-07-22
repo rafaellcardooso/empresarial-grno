@@ -3,23 +3,12 @@
 import { ContentCard } from "@/components/ui/ContentCard";
 import { formatNumberPtBr } from "@/lib/format/number";
 import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
-import { FilterMetricCard } from "@/components/ui/FilterMetricCard";
 import { SortableDataTable, type SortableColumn } from "@/components/ui/SortableDataTable";
 import type { BsodFilterKey } from "@/lib/config/bsod-filters";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
 
-type BsodSummary = {
-  total: number;
-  com_vlan: number;
-  sem_vlan: number;
-  online: number;
-  offline: number;
-  sem_leitura: number;
-};
-
-type BsodPanelProps = {
-  summary: BsodSummary;
+type BsodInventoryTableProps = {
   rows: PmeBsodRow[];
   activeFilter?: BsodFilterKey;
 };
@@ -39,87 +28,24 @@ const TABLE_COLUMNS: SortableColumn[] = [
   { key: "monitor_time", label: "ÚLTIMA LEITURA", sortable: true, align: "center" },
 ];
 
-function filterHref(key?: BsodFilterKey): string {
-  return key ? `/bsod?filtro=${key}` : "/bsod";
-}
-
-/** Painel BSOD com KPIs filtráveis e tabela ordenável. */
-export function BsodPanel({ summary, rows, activeFilter }: BsodPanelProps) {
+/** Tabela de inventário PME filtrada por KPI. */
+export function BsodInventoryTable({ rows, activeFilter }: BsodInventoryTableProps) {
   return (
-    <>
-      <div className="row g-3 mb-3">
-        <div className="col-6 col-md-4 col-lg-2">
-          <FilterMetricCard
-            label={METRIC_LABELS.bsod.totalPme}
-            value={formatNumberPtBr(summary.total)}
-            href={filterHref()}
-            active={!activeFilter}
-            variant="neutral"
-          />
-        </div>
-        <div className="col-6 col-md-4 col-lg-2">
-          <FilterMetricCard
-            label={METRIC_LABELS.bsod.online}
-            value={formatNumberPtBr(summary.online)}
-            href={filterHref("online")}
-            active={activeFilter === "online"}
-            variant="success"
-          />
-        </div>
-        <div className="col-6 col-md-4 col-lg-2">
-          <FilterMetricCard
-            label={METRIC_LABELS.bsod.offline}
-            value={formatNumberPtBr(summary.offline)}
-            href={filterHref("offline")}
-            active={activeFilter === "offline"}
-            variant="danger"
-          />
-        </div>
-        <div className="col-6 col-md-4 col-lg-2">
-          <FilterMetricCard
-            label={METRIC_LABELS.bsod.semLeitura}
-            value={formatNumberPtBr(summary.sem_leitura)}
-            href={filterHref("sem_leitura")}
-            active={activeFilter === "sem_leitura"}
-            variant="warning"
-          />
-        </div>
-        <div className="col-6 col-md-4 col-lg-2">
-          <FilterMetricCard
-            label={METRIC_LABELS.bsod.comVlan}
-            value={formatNumberPtBr(summary.com_vlan)}
-            href={filterHref("com_vlan")}
-            active={activeFilter === "com_vlan"}
-            variant="default"
-          />
-        </div>
-        <div className="col-6 col-md-4 col-lg-2">
-          <FilterMetricCard
-            label={METRIC_LABELS.bsod.semVlan}
-            value={formatNumberPtBr(summary.sem_vlan)}
-            href={filterHref("sem_vlan")}
-            active={activeFilter === "sem_vlan"}
-            variant="default"
-          />
-        </div>
-      </div>
-
-      <ContentCard
-        title={
-          activeFilter
-            ? `${METRIC_LABELS.bsod.inventario} — ${filterLabel(activeFilter)} (${rows.length})`
-            : `${METRIC_LABELS.bsod.inventario} (${rows.length})`
-        }
-      >
-        <SortableDataTable
-          className="sortable-data-table--bsod"
-          columns={TABLE_COLUMNS}
-          rows={rows as Record<string, unknown>[]}
-          empty="Nenhum PME para o filtro selecionado."
-          renderCell={renderBsodCell}
-        />
-      </ContentCard>
-    </>
+    <ContentCard
+      title={
+        activeFilter
+          ? `${METRIC_LABELS.bsod.inventario} — ${filterLabel(activeFilter)} (${rows.length})`
+          : `${METRIC_LABELS.bsod.inventario} (${rows.length})`
+      }
+    >
+      <SortableDataTable
+        className="sortable-data-table--bsod"
+        columns={TABLE_COLUMNS}
+        rows={rows as Record<string, unknown>[]}
+        empty="Nenhum PME para o filtro selecionado."
+        renderCell={renderBsodCell}
+      />
+    </ContentCard>
   );
 }
 

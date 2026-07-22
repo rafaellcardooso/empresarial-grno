@@ -21,6 +21,7 @@ export function FilterMetricCard({
   return (
     <Link
       href={href}
+      scroll={false}
       className={`filter-metric-card filter-metric-card--${variant}${active ? " filter-metric-card--active" : ""}${className ? ` ${className}` : ""}`}
       aria-current={active ? "true" : undefined}
     >

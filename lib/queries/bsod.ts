@@ -1,6 +1,7 @@
 import { BSOD_STATUS_LABELS } from "@/lib/config/metric-labels";
 import { normalizeDateTimeIso } from "@/lib/format/datetime";
 import type { RowDataPacket } from "mysql2";
+import { unstable_cache } from "next/cache";
 import { hfcQuery } from "@/lib/db/hfc";
 import { serializeRows } from "@/lib/serialize";
 
@@ -148,6 +149,15 @@ export async function bsodSummary() {
     nodes: Number(totals?.nodes ?? 0),
   };
 }
+
+export type BsodSummary = Awaited<ReturnType<typeof bsodSummary>>;
+
+const BSOD_SUMMARY_REVALIDATE_SEC = 30;
+
+/** Retorna totais BSOD com cache de curta duração (KPIs não mudam por filtro). */
+export const getCachedBsodSummary = unstable_cache(bsodSummary, ["bsod-summary"], {
+  revalidate: BSOD_SUMMARY_REVALIDATE_SEC,
+});
 
 /** Testa conectividade com o banco hfc-sls. */
 export async function pingHfcDb(): Promise<{ ok: boolean; detail: string }> {
