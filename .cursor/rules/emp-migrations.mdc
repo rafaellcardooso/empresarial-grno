@@ -8,12 +8,12 @@ alwaysApply: false
 
 ## Fonte de verdade
 
-| Artefato | Papel |
-|----------|--------|
-| `migrations/sir/*.sql` | DDL versionado (única definição de schema) |
-| `lib/models/*.ts` | Tipos TypeScript espelhando colunas MySQL |
-| `scripts/db/migrate-sir.mjs` | Aplica migrations + `schema_migrations` |
-| `scripts/db/seed-sir-dev.mjs` | Dados de exemplo só para dev |
+| Artefato                           | Papel                                         |
+| ---------------------------------- | --------------------------------------------- |
+| `migrations/sir/*.sql`             | DDL versionado (única definição de schema)    |
+| `lib/models/*.ts`                  | Tipos TypeScript espelhando colunas MySQL     |
+| `scripts/db/migrate-sir.mjs`       | Aplica migrations + `schema_migrations`       |
+| `scripts/db/seed-sir-dev.mjs`      | Dados de exemplo só para dev                  |
 | `scripts/db/import-sir-backup.mjs` | Restaura dump MariaDB de produção (dev local) |
 
 **Não** duplicar `CREATE TABLE` inline no Next ou nos workers — ler `migrations/sir/001_initial_schema.sql`.

@@ -7,14 +7,14 @@ alwaysApply: true
 
 Monorepo em `/usr/local/empresarial`. **Next.js só lê**; **workers gravam** no MySQL `sir`.
 
-| Tipo | Local | Escreve DB? |
-|------|--------|-------------|
-| UI + BFF (App Router) | `app/(shell)/`, `app/api/`, `components/`, `lib/` | Não (SIR + HFC read-only) |
-| Queries / pools / models | `lib/db/`, `lib/queries/`, `lib/models/` | Não |
-| Migrations SIR | `migrations/sir/`, `scripts/db/` | Migrate/seed dev |
-| Ingest SIR (Playwright) | `workers/sir-ingest/sources/` | Sim → MySQL `sir` |
-| Bot Telegram SIR | `workers/sir-ingest/telegram/` | Não (HTTP → Next `/api`) |
-| Systemd | `deploy/systemd/`, `workers/sir-ingest/deploy/systemd/` | — |
+| Tipo                     | Local                                                   | Escreve DB?               |
+| ------------------------ | ------------------------------------------------------- | ------------------------- |
+| UI + BFF (App Router)    | `app/(shell)/`, `app/api/`, `components/`, `lib/`       | Não (SIR + HFC read-only) |
+| Queries / pools / models | `lib/db/`, `lib/queries/`, `lib/models/`                | Não                       |
+| Migrations SIR           | `migrations/sir/`, `scripts/db/`                        | Migrate/seed dev          |
+| Ingest SIR (Playwright)  | `workers/sir-ingest/sources/`                           | Sim → MySQL `sir`         |
+| Bot Telegram SIR         | `workers/sir-ingest/telegram/`                          | Não (HTTP → Next `/api`)  |
+| Systemd                  | `deploy/systemd/`, `workers/sir-ingest/deploy/systemd/` | —                         |
 
 ## Fronteiras
 

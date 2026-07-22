@@ -15,11 +15,11 @@ alwaysApply: false
 
 ### Models
 
-| Model | Tabela | Notas |
-|-------|--------|--------|
-| `RalRecord` | `rals` | coluna `detalhes` |
-| `RecRecord` | `recs` | coluna `detalhes_title` |
-| `SirRecordStatus` | ambas | `'ATIVO' \| 'ENCERRADO'` |
+| Model             | Tabela | Notas                    |
+| ----------------- | ------ | ------------------------ |
+| `RalRecord`       | `rals` | coluna `detalhes`        |
+| `RecRecord`       | `recs` | coluna `detalhes_title`  |
+| `SirRecordStatus` | ambas  | `'ATIVO' \| 'ENCERRADO'` |
 
 Import: `import { RalRecord, RecRecord, SIR_TABLES } from '@/lib/models'`.
 

@@ -17,13 +17,13 @@ alwaysApply: false
 
 ## Persistência
 
-| Artefato | Uso |
-|----------|-----|
-| MySQL `rals` / `recs` | Fonte de verdade para a UI |
-| `states/*Ativas.json` | Snapshot do ciclo anterior (detectar encerradas) |
-| `states/dadosAntigos*.json` | Set de itens já vistos (log na 1ª aparição) |
-| `states/estadoTabela*.json` | Evitar encerrar tudo se tabela ficou vazia de forma transitória |
-| `states/error/*.html` | Debug opcional quando Selenium falha (retém só os N mais recentes) |
+| Artefato                    | Uso                                                                |
+| --------------------------- | ------------------------------------------------------------------ |
+| MySQL `rals` / `recs`       | Fonte de verdade para a UI                                         |
+| `states/*Ativas.json`       | Snapshot do ciclo anterior (detectar encerradas)                   |
+| `states/dadosAntigos*.json` | Set de itens já vistos (log na 1ª aparição)                        |
+| `states/estadoTabela*.json` | Evitar encerrar tudo se tabela ficou vazia de forma transitória    |
+| `states/error/*.html`       | Debug opcional quando Selenium falha (retém só os N mais recentes) |
 
 ## Debug / erro
 

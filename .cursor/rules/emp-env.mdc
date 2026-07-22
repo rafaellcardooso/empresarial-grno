@@ -7,9 +7,9 @@ alwaysApply: true
 
 ## Pares espelhados (obrigatório)
 
-| Template (commitado) | Local (gitignored) | Projeto |
-|----------------------|-------------------|---------|
-| `.env.example` | `.env.local` | Next.js (raiz) |
+| Template (commitado)              | Local (gitignored)        | Projeto           |
+| --------------------------------- | ------------------------- | ----------------- |
+| `.env.example`                    | `.env.local`              | Next.js (raiz)    |
 | `workers/sir-ingest/.env.example` | `workers/sir-ingest/.env` | Worker Playwright |
 
 **Não usar** `conexao-db.json` — credenciais MySQL do worker vêm de `SIR_DB_*` (mesmas chaves do Next).
@@ -39,11 +39,11 @@ Valores devem ser idênticos em `.env.local` e `workers/sir-ingest/.env`.
 
 ## Placeholders no example
 
-| Tipo | Valor no example |
-|------|------------------|
-| Senha/token | `troque_me` ou vazio |
+| Tipo          | Valor no example                                             |
+| ------------- | ------------------------------------------------------------ |
+| Senha/token   | `troque_me` ou vazio                                         |
 | Dev SIR local | `monitor` (mesmo do HFC) / `claroEmpresarial` / porta `3306` |
-| URL interna | `http://127.0.0.1:3002/api` |
+| URL interna   | `http://127.0.0.1:3002/api`                                  |
 
 ## Validação
 
