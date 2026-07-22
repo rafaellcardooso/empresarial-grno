@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { UI_COPY } from "@/lib/config/ui-copy";
+import { parseAppDateTime } from "@/lib/format/datetime";
 
 export type SortableColumn = {
   key: string;
@@ -148,8 +149,8 @@ function compareValues(a: unknown, b: unknown, direction: "asc" | "desc"): numbe
     return (aNum - bNum) * factor;
   }
 
-  const aTime = Date.parse(String(a));
-  const bTime = Date.parse(String(b));
+  const aTime = parseAppDateTime(String(a))?.getTime() ?? Date.parse(String(a));
+  const bTime = parseAppDateTime(String(b))?.getTime() ?? Date.parse(String(b));
   if (!Number.isNaN(aTime) && !Number.isNaN(bTime)) {
     return (aTime - bTime) * factor;
   }

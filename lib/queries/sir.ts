@@ -72,6 +72,19 @@ const REC_LIST_SELECT = `
   (detalhes_title IS NOT NULL AND detalhes_title <> '') AS has_detalhes
 `;
 
+/** Expressão SQL para ordenar abertura SIR (RAL com hífen, REC com espaço). */
+const SIR_ABERTURA_ORDER_EXPR = `COALESCE(
+  STR_TO_DATE(abertura, '%d/%m/%Y - %H:%i'),
+  STR_TO_DATE(abertura, '%d/%m/%Y %H:%i')
+)`;
+
+/** Cláusula ORDER BY abertura ASC, registros sem data ao final. */
+const SIR_ORDER_BY_ABERTURA_ASC = `
+  ORDER BY
+    CASE WHEN abertura IS NULL OR TRIM(abertura) = '' THEN 1 ELSE 0 END,
+    ${SIR_ABERTURA_ORDER_EXPR} ASC
+`;
+
 /** Conta RALs conforme filtros de status, tipo e CF. */
 export async function countRals(options?: SirRalQueryOptions): Promise<number> {
   const status = options?.status ?? "ativo";
@@ -148,13 +161,13 @@ export async function listRals(options?: SirRalQueryOptions): Promise<RalRecord[
     params.push(options.cf);
   }
 
-  sql += " ORDER BY ultima_atualizacao DESC";
+  sql += SIR_ORDER_BY_ABERTURA_ASC;
 
   const rows = await sirQuery<(RalRecord & RowDataPacket)[]>(sql, params);
   return serializeRows(rows);
 }
 
-/** Lista RALs com status ativo, ordenadas por última atualização. */
+/** Lista RALs com status ativo, ordenadas por abertura. */
 export async function listActiveRals(options?: {
   tipo?: string;
   cf?: string;
@@ -182,13 +195,13 @@ export async function listRecs(options?: SirRecQueryOptions): Promise<RecRecord[
     params.push(options.cf);
   }
 
-  sql += " ORDER BY ultima_atualizacao DESC";
+  sql += SIR_ORDER_BY_ABERTURA_ASC;
 
   const rows = await sirQuery<(RecRecord & RowDataPacket)[]>(sql, params);
   return serializeRows(rows);
 }
 
-/** Lista RECs com status ativo, ordenadas por última atualização. */
+/** Lista RECs com status ativo, ordenadas por abertura. */
 export async function listActiveRecs(options?: {
   cf?: string;
   tipo?: string;
