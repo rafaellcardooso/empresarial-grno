@@ -78,8 +78,8 @@ sudo systemctl enable --now empresarial-next
 Após alguns ciclos do ingest (~5 min cada), confira:
 
 ```bash
-curl -s http://127.0.0.1:3002/api/saude | jq
-curl -s http://127.0.0.1:3002/api/rals | jq length
+curl -s http://127.0.0.1:3003/api/saude | jq
+curl -s http://127.0.0.1:3003/api/rals | jq length
 ```
 
 > **Não use** `db:import` nem `db:seed` em prod se a carga vier do ingest.
@@ -97,7 +97,7 @@ cp .env.example .env.local   # após db:setup ou credenciais reais
 npm install
 npm run db:migrate
 npm run db:seed-staff        # interativo — cria o único staff (senha não vai para .env)
-npm run dev                  # http://localhost:3002
+npm run dev                  # http://localhost:3003
 ```
 
 Login em `/login` com **matrícula corporativa** (ex.: `F104262`). Cadastros em `/cadastro` aguardam aprovação em `/admin/usuarios` (staff).

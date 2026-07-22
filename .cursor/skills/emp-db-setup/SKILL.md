@@ -85,7 +85,7 @@ Dumps `backup_*.sql` estão no `.gitignore` — **não commitar**.
 ## 4. Verificar
 
 ```bash
-curl -s http://127.0.0.1:3002/api/saude | jq
+curl -s http://127.0.0.1:3003/api/saude | jq
 npm run dev
 ```
 

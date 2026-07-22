@@ -36,11 +36,11 @@ cd ../.. && npm run env:check
 
 ## Cross-check
 
-- `PORT=3002` ↔ `EMPRESARIAL_API_URL=http://127.0.0.1:3002/api`
+- `PORT=3003` ↔ `EMPRESARIAL_API_URL=http://127.0.0.1:3003/api`
 - `SIR_DB_*` idêntico entre Next e worker
 
 ## Saúde
 
 ```bash
-curl -s http://127.0.0.1:3002/api/saude | jq
+curl -s http://127.0.0.1:3003/api/saude | jq
 ```
