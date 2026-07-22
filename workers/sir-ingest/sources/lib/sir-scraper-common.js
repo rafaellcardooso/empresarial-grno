@@ -5,12 +5,20 @@ import { chromium } from "playwright";
 import mysql from "mysql2/promise";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 
 dotenv.config();
 
+const WORKER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const DEFAULT_TMP_DIR = path.join(WORKER_ROOT, "states", "tmp");
+const DEFAULT_BROWSERS_PATH = path.join(WORKER_ROOT, ".playwright-browsers");
+const TEMP_DIR_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
 let dbConnection = null;
 let isCycleRunning = false;
+let shutdownRegistered = false;
+const shutdownCallbacks = [];
 
 const SAVE_ERROR_HTML = process.env.SAVE_SCRAPE_ERROR_HTML !== "false";
 const MAX_ERROR_DUMPS = Number.parseInt(process.env.MAX_SCRAPE_ERROR_DUMPS || "5", 10);
@@ -31,8 +39,50 @@ export function loadBaseConfig(overrides = {}) {
     emptyCyclesBeforeClose: process.env.CICLOS_VAZIOS_PARA_ENCERRAR
       ? parseInt(process.env.CICLOS_VAZIOS_PARA_ENCERRAR, 10)
       : 2,
+    cycleOffsetMs: process.env.CYCLE_OFFSET_MS
+      ? parseInt(process.env.CYCLE_OFFSET_MS, 10)
+      : 0,
+    sessionMaxCycles: process.env.SESSION_MAX_CYCLES
+      ? parseInt(process.env.SESSION_MAX_CYCLES, 10)
+      : 12,
     ...overrides,
   };
+}
+
+/** Garante TMPDIR e PLAYWRIGHT_BROWSERS_PATH fora de /tmp e remove lixo antigo. */
+export function ensurePlaywrightRuntime() {
+  const tmpDir = process.env.TMPDIR || DEFAULT_TMP_DIR;
+  const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || DEFAULT_BROWSERS_PATH;
+
+  fs.mkdirSync(tmpDir, { recursive: true });
+  fs.mkdirSync(browsersPath, { recursive: true });
+
+  process.env.TMPDIR = tmpDir;
+  process.env.PLAYWRIGHT_BROWSERS_PATH = browsersPath;
+
+  pruneStaleTempDirs(tmpDir);
+}
+
+/** Remove diretórios temporários órfãos do Playwright/Chromium mais antigos que 24h. */
+function pruneStaleTempDirs(tmpDir) {
+  if (!fs.existsSync(tmpDir)) return;
+
+  const cutoff = Date.now() - TEMP_DIR_MAX_AGE_MS;
+  for (const entry of fs.readdirSync(tmpDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    if (!/^(playwright|scoped_dir|\.org\.chromium)/.test(entry.name)) continue;
+
+    const fullPath = path.join(tmpDir, entry.name);
+    try {
+      const { mtimeMs } = fs.statSync(fullPath);
+      if (mtimeMs < cutoff) {
+        fs.rmSync(fullPath, { recursive: true, force: true });
+        console.log(`[SIR] Removed stale temp dir: ${entry.name}`);
+      }
+    } catch (err) {
+      console.warn(`[SIR] Failed to prune ${entry.name}:`, err.message);
+    }
+  }
 }
 
 /** Valida presença de credenciais SISTEMA_USUARIO e SISTEMA_SENHA. */
@@ -243,8 +293,62 @@ export async function getTableFrame(page, timeoutMs) {
   return waitForFrame(page, "frameNivel2ItensRecebidosPrincipal", timeoutMs);
 }
 
+/** Mantém browser/logado entre ciclos; reloga após N ciclos ou erro. */
+export class SirBrowserSession {
+  constructor(config) {
+    this.config = config;
+    this.browser = null;
+    this.page = null;
+    this.cyclesSinceLogin = 0;
+    this.maxCyclesBeforeRelogin = config.sessionMaxCycles ?? 12;
+  }
+
+  /** Retorna página autenticada no SIR, reutilizando sessão quando possível. */
+  async ensurePage() {
+    const needsFresh =
+      !this.browser ||
+      !this.page ||
+      this.cyclesSinceLogin >= this.maxCyclesBeforeRelogin;
+
+    if (needsFresh) {
+      await this.dispose();
+      ensurePlaywrightRuntime();
+      ({ browser: this.browser, page: this.page } = await createBrowser());
+      await this.page.goto(this.config.systemUrl, { waitUntil: "domcontentloaded" });
+      this.page = await performLogin(
+        this.page,
+        this.config.credentials,
+        this.config.elementTimeoutMs,
+      );
+      this.cyclesSinceLogin = 0;
+      console.log("[SIR] Browser session started (fresh login).");
+    }
+
+    return this.page;
+  }
+
+  /** Incrementa contador de ciclos na sessão atual. */
+  markCycleComplete() {
+    this.cyclesSinceLogin += 1;
+  }
+
+  /** Invalida sessão (próximo ciclo fará login de novo). */
+  async invalidate() {
+    await this.dispose();
+  }
+
+  /** Fecha browser e limpa referências. */
+  async dispose() {
+    await disposeBrowser(this.browser);
+    this.browser = null;
+    this.page = null;
+    this.cyclesSinceLogin = 0;
+  }
+}
+
 /** Inicia Chromium headless e retorna browser com página configurada. */
 export async function createBrowser() {
+  ensurePlaywrightRuntime();
   const browser = await chromium.launch({
     headless: process.env.PLAYWRIGHT_HEADLESS !== "false",
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
@@ -355,10 +459,19 @@ export async function extractTitleFromRow(row, cellIndex = 0) {
 
 /** Registra handlers SIGTERM/SIGINT para encerramento gracioso do worker. */
 export function registerGracefulShutdown(onShutdown) {
+  if (onShutdown) shutdownCallbacks.push(onShutdown);
+  if (shutdownRegistered) return;
+  shutdownRegistered = true;
+
   const handler = async () => {
     console.log("[SIR] SIGTERM received — shutting down...");
-    await onShutdown?.();
-    await resetDbConnection();
+    for (const callback of shutdownCallbacks) {
+      try {
+        await callback?.();
+      } catch (err) {
+        console.error("[SIR] Shutdown callback error:", err.message);
+      }
+    }
     process.exit(0);
   };
   process.on("SIGTERM", handler);
@@ -366,8 +479,17 @@ export function registerGracefulShutdown(onShutdown) {
 }
 
 /** Agenda ciclos periódicos de scrape com proteção contra overlap. */
-export function startPollingLoop({ logPrefix, pollIntervalMs, runCycle }) {
-  registerGracefulShutdown(resetDbConnection);
+export function startPollingLoop({
+  logPrefix,
+  pollIntervalMs,
+  runCycle,
+  cycleOffsetMs = 0,
+  onShutdown,
+}) {
+  registerGracefulShutdown(async () => {
+    await onShutdown?.();
+    await resetDbConnection();
+  });
 
   /** Executa um ciclo de scrape ou ignora se o anterior ainda estiver em andamento. */
   async function tick() {
@@ -396,12 +518,20 @@ export function startPollingLoop({ logPrefix, pollIntervalMs, runCycle }) {
     setTimeout(tick, pollIntervalMs);
   }
 
-  console.log(`${logPrefix} Starting monitor (interval ${pollIntervalMs / 1000}s)...`);
-  tick();
+  const offsetSec = cycleOffsetMs / 1000;
+  console.log(
+    `${logPrefix} Starting monitor (interval ${pollIntervalMs / 1000}s${offsetSec > 0 ? `, offset ${offsetSec}s` : ""})...`,
+  );
+
+  if (cycleOffsetMs > 0) {
+    setTimeout(tick, cycleOffsetMs);
+  } else {
+    tick();
+  }
 }
 
 /** Executa função com retentativas e callback opcional na falha final. */
-export async function runWithRetry(fn, { maxRetries, logPrefix, onFinalError }) {
+export async function runWithRetry(fn, { maxRetries, logPrefix, onRetryError, onFinalError }) {
   let lastError = null;
   for (let attempt = 0; attempt < maxRetries; attempt += 1) {
     try {
@@ -410,6 +540,7 @@ export async function runWithRetry(fn, { maxRetries, logPrefix, onFinalError }) 
       lastError = err;
       console.error(`${logPrefix} Attempt ${attempt + 1}/${maxRetries} failed:`, err.message);
       if (attempt < maxRetries - 1) {
+        await onRetryError?.(err, attempt);
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }
@@ -417,3 +548,5 @@ export async function runWithRetry(fn, { maxRetries, logPrefix, onFinalError }) 
   await onFinalError?.(lastError);
   throw lastError;
 }
+
+ensurePlaywrightRuntime();

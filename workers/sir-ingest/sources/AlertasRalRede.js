@@ -1,7 +1,5 @@
 import {
   assertCredentials,
-  createBrowser,
-  disposeBrowser,
   extractTitleFromRow,
   getCellText,
   getDbConnection,
@@ -9,11 +7,11 @@ import {
   loadBaseConfig,
   loadSeenItems,
   logCycleSummary,
-  performLogin,
   processRecordClosures,
   runWithRetry,
   saveErrorPageHtml,
   saveSeenItems,
+  SirBrowserSession,
   startPollingLoop,
   submitRecordTypeFilter,
 } from "./lib/sir-scraper-common.js";
@@ -29,6 +27,8 @@ const config = loadBaseConfig({
 });
 
 assertCredentials(config);
+
+const session = new SirBrowserSession(config);
 
 /** Insere ou atualiza RAL ativa no MySQL. */
 async function upsertRal(ral) {
@@ -130,29 +130,30 @@ async function processRalTable(page, seenItems) {
   return { active: currentIds.length, rowErrors };
 }
 
-/** Executa ciclo completo de scrape RAL (login, filtro, tabela, resumo). */
+/** Executa ciclo de scrape RAL (reutiliza sessão; reloga só se necessário). */
 async function runRalCycle({ startedAt }) {
-  let browser;
-  let page;
   const seenItems = loadSeenItems(config.seenItemsFile);
   let tableStats = { active: 0, rowErrors: 0 };
 
   try {
-    ({ browser, page } = await createBrowser());
-    await page.goto(config.systemUrl, { waitUntil: "domcontentloaded" });
-    page = await performLogin(page, config.credentials, config.elementTimeoutMs);
-
     await runWithRetry(
       async () => {
+        const page = await session.ensurePage();
         await submitRecordTypeFilter(page, config.recordType, config.elementTimeoutMs);
         tableStats = await processRalTable(page, seenItems);
       },
       {
         maxRetries: config.maxRetries,
         logPrefix: LOG_PREFIX,
-        onFinalError: async () => saveErrorPageHtml(page, "RAL"),
+        onRetryError: async () => session.invalidate(),
+        onFinalError: async () => {
+          if (session.page) await saveErrorPageHtml(session.page, "RAL");
+          await session.invalidate();
+        },
       },
     );
+
+    session.markCycleComplete();
 
     logCycleSummary(LOG_PREFIX, {
       recordType: config.recordType,
@@ -162,6 +163,7 @@ async function runRalCycle({ startedAt }) {
       durationMs: Date.now() - startedAt,
     });
   } catch (err) {
+    await session.invalidate();
     logCycleSummary(LOG_PREFIX, {
       recordType: config.recordType,
       status: "error",
@@ -169,13 +171,13 @@ async function runRalCycle({ startedAt }) {
       durationMs: Date.now() - startedAt,
     });
     throw err;
-  } finally {
-    await disposeBrowser(browser);
   }
 }
 
 startPollingLoop({
   logPrefix: LOG_PREFIX,
   pollIntervalMs: config.pollIntervalMs,
+  cycleOffsetMs: config.cycleOffsetMs,
   runCycle: runRalCycle,
+  onShutdown: () => session.dispose(),
 });

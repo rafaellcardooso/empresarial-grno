@@ -7,7 +7,8 @@
   "scripts": {
     "start:ral": "node sources/AlertasRalRede.js",
     "start:rec": "node sources/AlertasRecRede.js",
-    "install:browsers": "playwright install chromium"
+    "setup:runtime": "node scripts/ensure-playwright-dirs.mjs",
+    "install:browsers": "npm run setup:runtime && playwright install chromium"
   },
   "dependencies": {
     "dotenv": "^16.5.0",

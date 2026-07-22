@@ -1,7 +1,7 @@
--- Bootstrap claroEmpresarial (SIR RAL/REC) on local MariaDB.
+-- Bootstrap claroEmpresarial (SIR RAL/REC).
 --
--- Prefer the Node generator (reads .env.local — same user/senha do hfc-sls):
---   npm run db:bootstrap
+-- Prefer the Node generator (reads .env.local):
+--   npm run db:bootstrap          # WSL local (sudo mariadb)
+--   npm run db:bootstrap:sql        # stdout — prod: pipe to mariadb -u root -p
 --
--- Equivalente manual:
---   node scripts/db/bootstrap-mariadb-local.mjs | sudo mariadb
+-- Produção: ajuste SIR_DB_GRANT_HOSTS no .env.local antes de gerar o SQL.

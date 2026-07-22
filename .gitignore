@@ -44,6 +44,9 @@ workers/sir-ingest/node_modules/
 workers/sir-ingest/.env
 workers/sir-ingest/states/error/
 workers/sir-ingest/states/debug/
+workers/sir-ingest/states/tmp/*
+!workers/sir-ingest/states/tmp/.gitkeep
+workers/sir-ingest/.playwright-browsers/
 workers/sir-ingest/**/__pycache__/
 workers/sir-ingest/RalDetail_*.txt
 

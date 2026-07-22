@@ -4,10 +4,13 @@ After=network.target mariadb.service
 
 [Service]
 Type=simple
-User=rcard
-Group=rcard
+User=datacenter
+Group=datacenter
 WorkingDirectory=/usr/local/empresarial/workers/sir-ingest
 Environment=PATH=/usr/bin:/usr/local/bin
+Environment=TMPDIR=/usr/local/empresarial/workers/sir-ingest/states/tmp
+Environment=PLAYWRIGHT_BROWSERS_PATH=/usr/local/empresarial/workers/sir-ingest/.playwright-browsers
+Environment=CYCLE_OFFSET_MS=90000
 EnvironmentFile=/usr/local/empresarial/workers/sir-ingest/.env
 ExecStart=/usr/bin/node sources/AlertasRecRede.js
 Restart=always

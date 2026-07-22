@@ -32,12 +32,60 @@ empresarial/
 
 ```bash
 cp .env.example .env.local
-npm run db:bootstrap
+npm run db:bootstrap          # WSL: cria DB + usuário (sudo mariadb)
 npm run db:migrate && npm run db:import   # ou db:setup para dados fake
 npm run env:check
 ```
 
-Comandos úteis: `npm run db:migrate`, `npm run db:seed`, `npm run db:import`, `npm run env:check`.
+Comandos úteis: `npm run db:migrate`, `npm run db:seed`, `npm run db:import`, `npm run db:bootstrap:sql`, `npm run env:check`.
+
+### Produção — banco vazio + ingest (recomendado)
+
+Em prod o banco **não vem do `.sql`**: cria-se o schema e os workers **RAL/REC** populam `rals` e `recs` a partir do SIR legado.
+
+**Ordem no servidor:**
+
+```bash
+# 1) Env (raiz + worker com os mesmos SIR_DB_*)
+cp .env.example .env.local
+cd workers/sir-ingest && cp .env.example .env && cd ../..
+
+# 2) Admin MySQL — cria claroEmpresarial + usuário monitor
+npm run db:bootstrap:sql | mariadb -u root -p -h HOST_DO_MYSQL
+# Se o app não for localhost no MySQL, ajuste antes:
+#   SIR_DB_GRANT_HOSTS=localhost,127.0.0.1,IP_DO_APP
+
+# 3) Tabelas vazias (rals, recs, schema_migrations)
+npm run db:migrate
+
+# 4) Validar paridade de credenciais raiz ↔ worker
+npm run env:check
+
+# 5) Ingest (Playwright grava no MySQL)
+cd workers/sir-ingest
+npm install && npm run install:browsers   # Chromium em .playwright-browsers/, temp em states/tmp/
+cd ../..
+sudo cp workers/sir-ingest/deploy/systemd/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now sir-ingest-ral sir-ingest-rec
+
+# 6) Next (somente leitura)
+npm install && npm run build
+sudo cp deploy/systemd/empresarial-next.service /etc/systemd/system/
+sudo systemctl enable --now empresarial-next
+```
+
+Após alguns ciclos do ingest (~5 min cada), confira:
+
+```bash
+curl -s http://127.0.0.1:3002/api/saude | jq
+curl -s http://127.0.0.1:3002/api/rals | jq length
+```
+
+> **Não use** `db:import` nem `db:seed` em prod se a carga vier do ingest.
+> O worker faz `INSERT … ON DUPLICATE KEY UPDATE` e marca `ENCERRADO` quando o registro some do SIR.
+
+**Dev local** (com snapshot): `npm run db:migrate && npm run db:import` — só para desenvolvimento.
 
 Skill detalhada: `.cursor/skills/emp-db-setup/SKILL.md`.
 
@@ -47,8 +95,14 @@ Skill detalhada: `.cursor/skills/emp-db-setup/SKILL.md`.
 cd /usr/local/empresarial
 cp .env.example .env.local   # após db:setup ou credenciais reais
 npm install
+npm run db:migrate
+npm run db:seed-staff        # interativo — cria o único staff (senha não vai para .env)
 npm run dev                  # http://localhost:3002
 ```
+
+Login em `/login` com **matrícula corporativa** (ex.: `F104262`). Cadastros em `/cadastro` aguardam aprovação em `/admin/usuarios` (staff).
+
+**Staff único:** rode `npm run db:seed-staff` uma vez após `db:migrate`. Se precisar trocar senha: `npm run db:seed-staff -- --reset-password`.
 
 Páginas: `/`, `/sir`, `/sir/rals`, `/sir/recs`, `/bsod`.
 
@@ -69,10 +123,12 @@ APIs (compatíveis com o Flask antigo para o bot):
 cd /usr/local/empresarial/workers/sir-ingest
 cp .env.example .env
 npm install
-npm run install:browsers
+npm run install:browsers   # tmp + browsers fora de /tmp
 cd ../.. && npm run env:check
 npm run start:ral   # e/ou start:rec
 ```
+
+Detalhes do fluxo de coleta (sessão, offset RAL/REC, monitoramento): `workers/sir-ingest/README.md`.
 
 Credenciais MySQL: bloco `SIR_DB_*` no `.env` (igual ao `.env.local` da raiz).
 

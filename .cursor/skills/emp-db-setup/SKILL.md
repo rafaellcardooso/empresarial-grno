@@ -44,7 +44,21 @@ Aguardar `healthy` no container `empresarial-mysql-sir`. Ajustar `SIR_DB_PORT=33
 
 ## 3. Schema + dados
 
-**Dev com dados fake:**
+### Produção (via ingest — padrão GRNO)
+
+Banco **vazio** após migrate; workers preenchem:
+
+```bash
+npm run db:bootstrap:sql | mariadb -u root -p -h HOST   # admin MySQL
+npm run db:migrate                                       # tabelas vazias
+# workers/sir-ingest: npm install, install:browsers, systemd ral+rec
+```
+
+Não rodar `db:import` / `db:seed` em prod.
+
+### Dev local
+
+**Dados fake:**
 
 ```bash
 npm run db:migrate    # cria DB + tabelas + schema_migrations
@@ -77,6 +91,7 @@ npm run dev
 
 ## Troubleshooting
 
+- `Unknown database` / banco inexistente em prod: rode `npm run db:bootstrap:sql | mariadb -u root -p` e depois `npm run db:migrate`.
 - `ECONNREFUSED`: container parado ou `SIR_DB_PORT` errado.
 - `Access denied`: credenciais `.env.local` ≠ `docker-compose.dev.yml` ou bootstrap MariaDB.
 - Env desalinhado: `npm run env:check` — ver rule `emp-env`.
