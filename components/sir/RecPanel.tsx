@@ -22,7 +22,7 @@ function recFilterHref(filters: { tipo?: RecTipoKey; cf?: string } = {}): string
 }
 
 function buildRecTitle(rowsCount: number, tipoLabel?: string, cf?: string): string {
-  const parts = [METRIC_LABELS.sir.registros];
+  const parts: string[] = [METRIC_LABELS.sir.registros];
   if (tipoLabel) parts.push(tipoLabel);
   if (cf) parts.push(cf);
   return `${parts.join(" — ")} (${rowsCount})`;

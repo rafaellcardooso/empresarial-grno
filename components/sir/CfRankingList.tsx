@@ -12,24 +12,22 @@ type CfRankingItem = {
   total: number;
 };
 
-type CfRankingListProps = {
+type CfRankingListBaseProps = {
   items: CfRankingItem[];
-  basePath: "/sir/rals" | "/sir/recs";
   activeCf?: string;
-  filterParams?: Omit<SirCfFilterParams, "cf"> | Omit<SirRecFilterParams, "cf">;
 };
 
-function cfToggleHref(
-  basePath: CfRankingListProps["basePath"],
-  cf: string,
-  activeCf: string | undefined,
-  filterParams: CfRankingListProps["filterParams"],
-): string {
-  if (basePath === "/sir/recs") {
-    return recCfFilterToggleHref(basePath, cf, activeCf, filterParams);
-  }
-  return cfFilterToggleHref(basePath, cf, activeCf, filterParams as Omit<SirCfFilterParams, "cf">);
-}
+type CfRankingListProps = CfRankingListBaseProps &
+  (
+    | {
+        basePath: "/sir/rals";
+        filterParams?: Omit<SirCfFilterParams, "cf">;
+      }
+    | {
+        basePath: "/sir/recs";
+        filterParams?: Omit<SirRecFilterParams, "cf">;
+      }
+  );
 
 /** Ranking de CF executante com filtro ao clicar no nome. */
 export function CfRankingList({ items, basePath, activeCf, filterParams }: CfRankingListProps) {
@@ -43,13 +41,18 @@ export function CfRankingList({ items, basePath, activeCf, filterParams }: CfRan
     <>
       {visible.map((row) => {
         const isActive = activeCf === row.cf_executante;
+        const href =
+          basePath === "/sir/recs"
+            ? recCfFilterToggleHref(basePath, row.cf_executante, activeCf, filterParams)
+            : cfFilterToggleHref(basePath, row.cf_executante, activeCf, filterParams);
+
         return (
           <li
             className={`list-group-item d-flex justify-content-between align-items-center gap-2 cf-ranking-item${isActive ? " cf-ranking-item--active" : ""}`}
             key={row.cf_executante}
           >
             <Link
-              href={cfToggleHref(basePath, row.cf_executante, activeCf, filterParams)}
+              href={href}
               className={`cf-ranking-link text-truncate${isActive ? " cf-ranking-link--active" : ""}`}
               aria-current={isActive ? "true" : undefined}
             >
