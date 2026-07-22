@@ -7,7 +7,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 # Next.js BFF (aliases /api/rals|recs). Fallback: Flask legado :5007
 API_BASE_URL = os.environ.get(
     "EMPRESARIAL_API_URL",
-    "http://127.0.0.1:3002/api",
+    "http://127.0.0.1:3003/api",
 ).rstrip("/")
 
 # ---------- Funções de API ----------

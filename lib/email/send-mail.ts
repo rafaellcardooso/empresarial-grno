@@ -39,6 +39,6 @@ export async function sendMail(input: SendMailInput): Promise<void> {
 
 /** Monta URL absoluta para links em e-mails. */
 export function getAppPublicUrl(path: string): string {
-  const base = (process.env.APP_PUBLIC_URL || "http://localhost:3002").replace(/\/$/, "");
+  const base = (process.env.APP_PUBLIC_URL || "http://localhost:3003").replace(/\/$/, "");
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }

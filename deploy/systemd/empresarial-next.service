@@ -8,7 +8,7 @@ User=datacenter
 Group=datacenter
 WorkingDirectory=/usr/local/empresarial
 Environment=NODE_ENV=production
-Environment=PORT=3002
+Environment=PORT=3003
 EnvironmentFile=/usr/local/empresarial/.env.local
 ExecStart=/usr/bin/npm run start
 Restart=on-failure
