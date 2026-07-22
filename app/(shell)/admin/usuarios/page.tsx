@@ -9,7 +9,7 @@ export const metadata = { title: "Usuários" };
 
 /** Página staff: aprovação de cadastros e listagem. */
 export default async function Page() {
-  await requireStaff();
+  const session = await requireStaff();
 
   return (
     <>
@@ -23,7 +23,7 @@ export default async function Page() {
         </div>
         <div className="col-12">
           <ContentCard title="Todos os usuários" bodyClassName="p-3">
-            <UserManagementPanel />
+            <UserManagementPanel currentUserId={session.userId} />
           </ContentCard>
         </div>
       </div>

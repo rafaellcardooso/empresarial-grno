@@ -19,4 +19,12 @@ export const AUTH_COPY = {
   adminNotificationsLead: "Criar e disparar avisos para todos os usuários.",
   pendingBadge: "Aguardando aprovação",
   staffBadge: "Administrador",
+  promoteStaff: "Promover a administrador",
+  demoteStaff: "Remover privilégios de administrador",
+  promoteStaffSuccess: "Usuário promovido a administrador.",
+  demoteStaffSuccess: "Privilégios de administrador removidos.",
+  promoteStaffConfirm:
+    "Promover {name} ({corporateId}) a administrador? Terá acesso a aprovações e notificações.",
+  demoteStaffConfirm:
+    "Remover privilégios de administrador de {name} ({corporateId})? Continuará como usuário comum.",
 } as const;

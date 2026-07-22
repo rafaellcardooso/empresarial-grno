@@ -92,6 +92,21 @@ export async function updateUserStatus(
   );
 }
 
+/** Promove usuário a STAFF ativo. */
+export async function promoteUserToStaff(userId: number, approvedBy: number): Promise<void> {
+  await sirQuery(
+    `UPDATE app_users
+     SET role = 'STAFF', status = 'ACTIVE', approved_by = ?, approved_at = NOW()
+     WHERE id = ?`,
+    [approvedBy, userId],
+  );
+}
+
+/** Rebaixa STAFF para usuário comum (mantém status ACTIVE). */
+export async function demoteStaffToUser(userId: number): Promise<void> {
+  await sirQuery(`UPDATE app_users SET role = 'USER' WHERE id = ?`, [userId]);
+}
+
 /** Atualiza hash de senha. */
 export async function updateUserPassword(userId: number, passwordHash: string): Promise<void> {
   await sirQuery(`UPDATE app_users SET password_hash = ? WHERE id = ?`, [passwordHash, userId]);

@@ -9,15 +9,19 @@ import {
 import {
   countActiveStaffExcept,
   deleteUser,
+  demoteStaffToUser,
   getUserById,
   isCorporateIdTaken,
+  promoteUserToStaff,
   toPublicUser,
   updateUserProfile,
   updateUserStatus,
 } from "@/lib/queries/app-users";
 import type { AppUserStatus } from "@/lib/models/app-user";
 
-type PatchBody = { action?: "approve" | "reject" | "suspend" | "reactivate" };
+type PatchBody = {
+  action?: "approve" | "reject" | "suspend" | "reactivate" | "promote-staff" | "demote-user";
+};
 
 type PutBody = {
   corporateId?: string;
@@ -25,14 +29,21 @@ type PutBody = {
   email?: string | null;
 };
 
-const ACTION_STATUS: Record<NonNullable<PatchBody["action"]>, AppUserStatus> = {
+const STATUS_ACTIONS = new Set<NonNullable<PatchBody["action"]>>([
+  "approve",
+  "reject",
+  "suspend",
+  "reactivate",
+]);
+
+const ACTION_STATUS: Record<"approve" | "reject" | "suspend" | "reactivate", AppUserStatus> = {
   approve: "ACTIVE",
   reject: "REJECTED",
   suspend: "SUSPENDED",
   reactivate: "ACTIVE",
 };
 
-/** Aprova, rejeita ou suspende usuário (staff). */
+/** Aprova, rejeita, suspende ou altera papel staff/usuário. */
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "STAFF") {
@@ -47,13 +58,59 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   const body = await parseJsonBody<PatchBody>(request);
   const action = body?.action;
-  if (!action || !ACTION_STATUS[action]) {
+  if (!action) {
     return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
   }
 
   const user = await getUserById(userId);
   if (!user) {
     return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+  }
+
+  if (action === "promote-staff") {
+    if (user.role === "STAFF") {
+      return NextResponse.json({ error: "Usuário já é administrador." }, { status: 400 });
+    }
+
+    await promoteUserToStaff(userId, session.userId);
+    const updated = await getUserById(userId);
+    return NextResponse.json({
+      ok: true,
+      role: "STAFF" as const,
+      user: updated ? toPublicUser(updated) : null,
+    });
+  }
+
+  if (action === "demote-user") {
+    if (user.role !== "STAFF") {
+      return NextResponse.json({ error: "Usuário não é administrador." }, { status: 400 });
+    }
+
+    if (userId === session.userId) {
+      return NextResponse.json(
+        { error: "Você não pode remover seus próprios privilégios de administrador." },
+        { status: 400 },
+      );
+    }
+
+    if (user.status === "ACTIVE" && (await countActiveStaffExcept(userId)) === 0) {
+      return NextResponse.json(
+        { error: "Não é possível rebaixar o último administrador ativo." },
+        { status: 400 },
+      );
+    }
+
+    await demoteStaffToUser(userId);
+    const updated = await getUserById(userId);
+    return NextResponse.json({
+      ok: true,
+      role: "USER" as const,
+      user: updated ? toPublicUser(updated) : null,
+    });
+  }
+
+  if (!STATUS_ACTIONS.has(action)) {
+    return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
   }
 
   if (user.role === "STAFF" && action === "suspend") {

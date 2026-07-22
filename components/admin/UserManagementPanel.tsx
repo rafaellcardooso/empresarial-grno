@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { AppUserPublic } from "@/lib/models/app-user";
+import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { CORPORATE_ID_HINT, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 
 const STATUS_LABELS: Record<AppUserPublic["status"], string> = {
@@ -12,13 +13,14 @@ const STATUS_LABELS: Record<AppUserPublic["status"], string> = {
 };
 
 type UserEditModalProps = {
-  user: AppUserPublic | null;
+  user: AppUserPublic;
+  currentUserId: number;
   onClose: () => void;
   onSaved: () => void;
 };
 
-/** Modal staff: editar dados, redefinir senha e excluir usuário. */
-function UserEditModal({ user, onClose, onSaved }: UserEditModalProps) {
+/** Modal staff: editar dados, papel, redefinir senha e excluir usuário. */
+function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalProps) {
   const [corporateId, setCorporateId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,10 +30,10 @@ function UserEditModal({ user, onClose, onSaved }: UserEditModalProps) {
   const [success, setSuccess] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [changingRole, setChangingRole] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
     setCorporateId(user.corporateId);
     setName(user.name);
     setEmail(user.email ?? "");
@@ -42,19 +44,59 @@ function UserEditModal({ user, onClose, onSaved }: UserEditModalProps) {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [user]);
-
-  if (!user) {
-    return null;
-  }
+  }, []);
 
   const editingUser = user;
+  const isSelf = editingUser.id === currentUserId;
+  const canDemote = editingUser.role === "STAFF" && !isSelf;
+
+  /** Altera papel entre STAFF e USER. */
+  async function handleRoleChange(action: "promote-staff" | "demote-user") {
+    const confirmMessage =
+      action === "promote-staff"
+        ? AUTH_COPY.promoteStaffConfirm
+            .replace("{name}", editingUser.name)
+            .replace("{corporateId}", editingUser.corporateId)
+        : AUTH_COPY.demoteStaffConfirm
+            .replace("{name}", editingUser.name)
+            .replace("{corporateId}", editingUser.corporateId);
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setChangingRole(true);
+
+    try {
+      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = (await response.json()) as { error?: string; user?: AppUserPublic };
+
+      if (!response.ok) {
+        setError(data.error ?? "Não foi possível alterar o papel.");
+        return;
+      }
+
+      setSuccess(
+        action === "promote-staff" ? AUTH_COPY.promoteStaffSuccess : AUTH_COPY.demoteStaffSuccess,
+      );
+      onSaved();
+    } catch {
+      setError("Erro de conexão. Tente novamente.");
+    } finally {
+      setChangingRole(false);
+    }
+  }
 
   /** Salva matrícula, nome e e-mail. */
   async function handleSaveProfile(event: React.FormEvent) {
@@ -231,6 +273,40 @@ function UserEditModal({ user, onClose, onSaved }: UserEditModalProps) {
 
               <hr />
 
+              <div className="mb-4">
+                <h3 className="h6 mb-2">Papel no sistema</h3>
+                <p className="text-body-secondary small mb-3">
+                  {editingUser.role === "STAFF"
+                    ? AUTH_COPY.staffBadge
+                    : "Usuário comum (sem acesso administrativo)."}
+                </p>
+                {editingUser.role === "USER" ? (
+                  <button
+                    type="button"
+                    className="btn btn-outline-success"
+                    onClick={() => handleRoleChange("promote-staff")}
+                    disabled={changingRole}
+                  >
+                    {changingRole ? "Processando…" : AUTH_COPY.promoteStaff}
+                  </button>
+                ) : canDemote ? (
+                  <button
+                    type="button"
+                    className="btn btn-outline-warning"
+                    onClick={() => handleRoleChange("demote-user")}
+                    disabled={changingRole}
+                  >
+                    {changingRole ? "Processando…" : AUTH_COPY.demoteStaff}
+                  </button>
+                ) : isSelf ? (
+                  <p className="text-body-secondary small mb-0">
+                    Você não pode remover seus próprios privilégios de administrador.
+                  </p>
+                ) : null}
+              </div>
+
+              <hr />
+
               <form onSubmit={handleResetPassword}>
                 <h3 className="h6 mb-3">Redefinir senha</h3>
                 <div className="row g-3">
@@ -294,7 +370,7 @@ function UserEditModal({ user, onClose, onSaved }: UserEditModalProps) {
 }
 
 /** Lista completa de usuários com ações de edição (staff). */
-export function UserManagementPanel() {
+export function UserManagementPanel({ currentUserId }: { currentUserId: number }) {
   const [users, setUsers] = useState<AppUserPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<AppUserPublic | null>(null);
@@ -358,7 +434,7 @@ export function UserManagementPanel() {
                   <td>{user.corporateId}</td>
                   <td>{user.name}</td>
                   <td>{user.email ?? "—"}</td>
-                  <td>{user.role === "STAFF" ? "Staff" : "Usuário"}</td>
+                  <td>{user.role === "STAFF" ? AUTH_COPY.staffBadge : "Usuário"}</td>
                   <td>{STATUS_LABELS[user.status]}</td>
                   <td className="text-end">
                     <button
@@ -379,6 +455,7 @@ export function UserManagementPanel() {
       {editingUser ? (
         <UserEditModal
           user={editingUser}
+          currentUserId={currentUserId}
           onClose={() => setEditingUser(null)}
           onSaved={handleSaved}
         />
