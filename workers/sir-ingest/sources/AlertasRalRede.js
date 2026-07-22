@@ -73,8 +73,8 @@ async function parseRalRow(row) {
   const details = await extractTitleFromRow(row, 0);
 
   return {
-    numRecup: (await cells.nth(3).locator("a font").innerText()).trim(),
-    description: (await cells.nth(0).locator("a font").innerText()).trim(),
+    numRecup: await getCellText(cells.nth(3)),
+    description: await getCellText(cells.nth(0)),
     type: await getCellText(cells.nth(1)),
     anomalyCode: await getCellText(cells.nth(2)),
     openedAt: await getCellText(cells.nth(4)),
@@ -118,14 +118,20 @@ async function processRalTable(page, seenItems) {
 
   if (hasNewItems) saveSeenItems(config.seenItemsFile, seenItems);
 
-  await processRecordClosures({
-    currentIds,
-    activeIdsFile: config.activeIdsFile,
-    tableStateFile: config.tableStateFile,
-    table: config.table,
-    logPrefix: LOG_PREFIX,
-    emptyCyclesBeforeClose: config.emptyCyclesBeforeClose,
-  });
+  if (rowErrors === 0) {
+    await processRecordClosures({
+      currentIds,
+      activeIdsFile: config.activeIdsFile,
+      tableStateFile: config.tableStateFile,
+      table: config.table,
+      logPrefix: LOG_PREFIX,
+      emptyCyclesBeforeClose: config.emptyCyclesBeforeClose,
+    });
+  } else {
+    console.warn(
+      `${LOG_PREFIX} Skipping closures — ${rowErrors} row parse error(s); list may be incomplete.`,
+    );
+  }
 
   return { active: currentIds.length, rowErrors };
 }

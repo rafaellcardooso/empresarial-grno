@@ -123,14 +123,20 @@ async function processRecTable(page, seenItems) {
 
   if (hasNewItems) saveSeenItems(config.seenItemsFile, seenItems);
 
-  await processRecordClosures({
-    currentIds,
-    activeIdsFile: config.activeIdsFile,
-    tableStateFile: config.tableStateFile,
-    table: config.table,
-    logPrefix: LOG_PREFIX,
-    emptyCyclesBeforeClose: config.emptyCyclesBeforeClose,
-  });
+  if (rowErrors === 0) {
+    await processRecordClosures({
+      currentIds,
+      activeIdsFile: config.activeIdsFile,
+      tableStateFile: config.tableStateFile,
+      table: config.table,
+      logPrefix: LOG_PREFIX,
+      emptyCyclesBeforeClose: config.emptyCyclesBeforeClose,
+    });
+  } else {
+    console.warn(
+      `${LOG_PREFIX} Skipping closures — ${rowErrors} row parse error(s); list may be incomplete.`,
+    );
+  }
 
   return { active: currentIds.length, rowErrors };
 }
