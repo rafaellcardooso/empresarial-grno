@@ -277,55 +277,93 @@ export function isFrameDetachedError(err) {
   return message.includes("Frame was detached") || message.includes("frame was detached");
 }
 
+/** Lê estado da listaTable via evaluate (sem locators Playwright). */
+async function readScrapeTableState(tableFrame) {
+  return tableFrame.evaluate(() => {
+    const recordPattern = /(?:RAL|REC|DSR|TCQ)-\d+\/\d{4}/i;
+    const table = document.querySelector("table.listaTable");
+    if (!table) return { ready: false, signature: "no-table" };
+
+    const rows = Array.from(table.querySelectorAll("tbody > tr"));
+    if (rows.length === 0) return { ready: true, signature: "empty:0" };
+
+    for (const row of rows) {
+      const cells = row.querySelectorAll(":scope > td");
+      if (cells.length >= 7) {
+        return { ready: true, signature: `ready:${rows.length}:${cells.length}` };
+      }
+      const rowText = row.textContent || "";
+      if (recordPattern.test(rowText)) {
+        return { ready: true, signature: `ready:${rows.length}:${rowText.slice(0, 24)}` };
+      }
+    }
+
+    return { ready: false, signature: `pending:${rows.length}` };
+  });
+}
+
 /** Aguarda tabela SIR carregar (vazia ou com linhas de dados). */
 export async function waitForScrapeTable(tableFrame, timeoutMs) {
-  const recordPattern = /(?:RAL|REC|DSR|TCQ)-\d+\/\d{4}/i;
-  const table = tableFrame.locator("table.listaTable").first();
-  await table.waitFor({ state: "attached", timeout: timeoutMs });
-
   const deadline = Date.now() + timeoutMs;
   let stablePasses = 0;
   let lastSignature = null;
 
   while (Date.now() < deadline) {
-    const rows = table.locator("tbody > tr");
-    const rowCount = await rows.count();
-    let signature = `empty:${rowCount}`;
+    const state = await readScrapeTableState(tableFrame);
 
-    if (rowCount > 0) {
-      for (let index = 0; index < rowCount; index += 1) {
-        const row = rows.nth(index);
-        const cellCount = await row.locator("td").count();
-        if (cellCount >= 7) {
-          signature = `ready:${rowCount}:${cellCount}`;
-          break;
-        }
-
-        const rowText = await row.innerText();
-        if (recordPattern.test(rowText)) {
-          signature = `ready:${rowCount}:${rowText.slice(0, 24)}`;
-          break;
-        }
+    if (state.ready) {
+      if (state.signature === lastSignature) {
+        stablePasses += 1;
+        if (stablePasses >= 2) return;
+      } else {
+        stablePasses = 1;
+        lastSignature = state.signature;
       }
-    }
-
-    if (signature === lastSignature) {
-      stablePasses += 1;
-      if (stablePasses >= 2) return;
     } else {
       stablePasses = 0;
-      lastSignature = signature;
+      lastSignature = null;
     }
 
-    await tableFrame.waitForTimeout(250);
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
 }
 
-/** Retorna frame da tabela após aguardar carregamento estável. */
+/** Retorna frame da tabela após aguardar carregamento estável, retentando se iframe recarregar. */
 export async function prepareScrapeTable(page, timeoutMs) {
-  const tableFrame = await getTableFrame(page, timeoutMs);
-  await waitForScrapeTable(tableFrame, timeoutMs);
-  return tableFrame;
+  const deadline = Date.now() + timeoutMs;
+  let stablePasses = 0;
+  let lastSignature = null;
+
+  while (Date.now() < deadline) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) break;
+
+    try {
+      const tableFrame = await getTableFrame(page, Math.min(5000, remainingMs));
+      const state = await readScrapeTableState(tableFrame);
+
+      if (state.ready) {
+        if (state.signature === lastSignature) {
+          stablePasses += 1;
+          if (stablePasses >= 2) return tableFrame;
+        } else {
+          stablePasses = 1;
+          lastSignature = state.signature;
+        }
+      } else {
+        stablePasses = 0;
+        lastSignature = null;
+      }
+    } catch (err) {
+      if (!isFrameDetachedError(err)) throw err;
+      stablePasses = 0;
+      lastSignature = null;
+    }
+
+    await page.waitForTimeout(250);
+  }
+
+  throw new Error("Scrape table not ready before timeout");
 }
 
 /** Seleciona tipo de registro no filtro SIR e confirma. */
@@ -335,6 +373,7 @@ export async function submitRecordTypeFilter(page, recordType, timeoutMs) {
   const filterFrame = await waitForFrame(page, "frameFiltro", timeoutMs);
   await filterFrame.locator('select[name="indic_tipo_recup"]').selectOption({ label: recordType });
   await filterFrame.locator('[name="confirma"]').click();
+  await page.waitForTimeout(400);
 }
 
 /** Navega frames aninhados até o frame da tabela de itens. */
