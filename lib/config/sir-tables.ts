@@ -4,7 +4,7 @@ export const RAL_TABLE_COLUMNS: SortableColumn[] = [
   { key: "num_recup", label: "Nº", sortable: true, align: "center" },
   { key: "tipo_ral", label: "TIPO", sortable: true, align: "center" },
   { key: "cf_executante", label: "CF", sortable: true, align: "center" },
-  { key: "descricao", label: "DESCRIÇÃO", sortable: true, align: "center" },
+  { key: "descricao", label: "DESIGNAÇÃO", sortable: true, align: "center" },
   { key: "abertura", label: "ABERTURA", sortable: true, align: "center" },
   { key: "duracao", label: "DURAÇÃO", sortable: true, align: "center" },
   { key: "detalhes", label: "DETALHES", sortable: false, align: "center" },

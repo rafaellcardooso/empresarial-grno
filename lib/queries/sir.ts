@@ -1,4 +1,5 @@
 import type { RowDataPacket } from "mysql2";
+import { recTipoLikePrefix, recTipoPrefixFromParam } from "@/lib/config/rec-types";
 import { sirQuery } from "@/lib/db/sir";
 import { SIR_RECORD_STATUS, SIR_TABLES, type RalRecord, type RecRecord } from "@/lib/models";
 import { serializeRow, serializeRows } from "@/lib/serialize";
@@ -10,6 +11,11 @@ export type CfCount = {
 
 export type RalTipoCount = {
   tipo_ral: string;
+  total: number;
+};
+
+export type RecTipoCount = {
+  rec_tipo: string;
   total: number;
 };
 
@@ -62,10 +68,16 @@ export async function countActiveRals(options?: { tipo?: string; cf?: string }):
   return Number(rows[0]?.total ?? 0);
 }
 
-/** Conta RECs ativas com filtro opcional por CF. */
-export async function countActiveRecs(options?: { cf?: string }): Promise<number> {
+/** Conta RECs ativas com filtros opcionais por CF e tipo (REC/DSQ/TCQ). */
+export async function countActiveRecs(options?: { cf?: string; tipo?: string }): Promise<number> {
   const params: unknown[] = [SIR_RECORD_STATUS.active];
   let sql = `SELECT COUNT(*) AS total FROM ${SIR_TABLES.recs} WHERE status = ?`;
+
+  const tipoPrefix = recTipoPrefixFromParam(options?.tipo);
+  if (tipoPrefix) {
+    sql += " AND num_recup LIKE ?";
+    params.push(recTipoLikePrefix(tipoPrefix));
+  }
 
   if (options?.cf) {
     sql += " AND cf_executante = ?";
@@ -101,9 +113,18 @@ export async function listActiveRals(options?: {
 }
 
 /** Lista RECs com status ativo, ordenadas por última atualização. */
-export async function listActiveRecs(options?: { cf?: string }): Promise<RecRecord[]> {
+export async function listActiveRecs(options?: {
+  cf?: string;
+  tipo?: string;
+}): Promise<RecRecord[]> {
   const params: unknown[] = [SIR_RECORD_STATUS.active];
   let sql = `SELECT ${REC_LIST_SELECT} FROM ${SIR_TABLES.recs} WHERE status = ?`;
+
+  const tipoPrefix = recTipoPrefixFromParam(options?.tipo);
+  if (tipoPrefix) {
+    sql += " AND num_recup LIKE ?";
+    params.push(recTipoLikePrefix(tipoPrefix));
+  }
 
   if (options?.cf) {
     sql += " AND cf_executante = ?";
@@ -152,6 +173,29 @@ export async function getRecByNum(numRecup: string): Promise<RecRecord | null> {
     [`%${numRecup}%`],
   );
   return serializeRow(rows[0] ?? null);
+}
+
+/** Retorna contagem de RECs ativas agrupadas por prefixo (REC/DSQ/TCQ). */
+export async function countRecsByTipo(): Promise<RecTipoCount[]> {
+  const rows = await sirQuery<RowDataPacket[]>(
+    `SELECT
+       CASE
+         WHEN num_recup LIKE 'DSQ-%' THEN 'DSQ'
+         WHEN num_recup LIKE 'TCQ-%' THEN 'TCQ'
+         ELSE 'REC'
+       END AS rec_tipo,
+       COUNT(num_recup) AS total
+     FROM ${SIR_TABLES.recs}
+     WHERE status = ?
+     GROUP BY rec_tipo
+     ORDER BY total DESC`,
+    [SIR_RECORD_STATUS.active],
+  );
+
+  return rows.map((row) => ({
+    rec_tipo: String(row.rec_tipo),
+    total: Number(row.total),
+  }));
 }
 
 /** Retorna contagem de RALs ativas agrupadas por tipo. */

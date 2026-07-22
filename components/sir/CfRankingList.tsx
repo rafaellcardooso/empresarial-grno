@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { cfFilterToggleHref, type SirCfFilterParams } from "@/lib/config/sir-filters";
+import {
+  cfFilterToggleHref,
+  recCfFilterToggleHref,
+  type SirCfFilterParams,
+  type SirRecFilterParams,
+} from "@/lib/config/sir-filters";
 import { UI_COPY } from "@/lib/config/ui-copy";
 
 type CfRankingItem = {
@@ -11,8 +16,20 @@ type CfRankingListProps = {
   items: CfRankingItem[];
   basePath: "/sir/rals" | "/sir/recs";
   activeCf?: string;
-  filterParams?: Omit<SirCfFilterParams, "cf">;
+  filterParams?: Omit<SirCfFilterParams, "cf"> | Omit<SirRecFilterParams, "cf">;
 };
+
+function cfToggleHref(
+  basePath: CfRankingListProps["basePath"],
+  cf: string,
+  activeCf: string | undefined,
+  filterParams: CfRankingListProps["filterParams"],
+): string {
+  if (basePath === "/sir/recs") {
+    return recCfFilterToggleHref(basePath, cf, activeCf, filterParams);
+  }
+  return cfFilterToggleHref(basePath, cf, activeCf, filterParams as Omit<SirCfFilterParams, "cf">);
+}
 
 /** Ranking de CF executante com filtro ao clicar no nome. */
 export function CfRankingList({ items, basePath, activeCf, filterParams }: CfRankingListProps) {
@@ -32,7 +49,7 @@ export function CfRankingList({ items, basePath, activeCf, filterParams }: CfRan
             key={row.cf_executante}
           >
             <Link
-              href={cfFilterToggleHref(basePath, row.cf_executante, activeCf, filterParams)}
+              href={cfToggleHref(basePath, row.cf_executante, activeCf, filterParams)}
               className={`cf-ranking-link text-truncate${isActive ? " cf-ranking-link--active" : ""}`}
               aria-current={isActive ? "true" : undefined}
             >

@@ -1,40 +1,43 @@
 import { CfRankingList } from "@/components/sir/CfRankingList";
-import { ContentCard } from "@/components/ui/ContentCard";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { SirRecordsTable } from "@/components/sir/SirRecordsTable";
+import { RecPanel } from "@/components/sir/RecPanel";
 import { StatCard } from "@/components/ui/StatCard";
 import { cfFilterFromParam } from "@/lib/config/sir-filters";
-import { REC_TABLE_COLUMNS } from "@/lib/config/sir-tables";
+import { isRecTipoKey } from "@/lib/config/rec-types";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
 import { DASHBOARD_METRICS } from "@/lib/config/ui-copy";
-import { countRecsByCf, countActiveRecs, listActiveRecs } from "@/lib/queries/sir";
+import { countRecsByCf, countRecsByTipo, countActiveRecs, listActiveRecs } from "@/lib/queries/sir";
 
 export const revalidate = 30;
 export const metadata = { title: "REC" };
 
 type PageProps = {
-  searchParams: Promise<{ cf?: string }>;
+  searchParams: Promise<{ tipo?: string; cf?: string }>;
 };
 
-/** Resumo e tabela de REC em aberto, com filtro por CF. */
+/** Resumo e tabela REC/DSQ/TCQ em aberto, com filtros por tipo e CF. */
 export default async function Page({ searchParams }: PageProps) {
-  const { cf } = await searchParams;
+  const { tipo, cf } = await searchParams;
+  const activeTipo = isRecTipoKey(tipo) ? tipo : undefined;
   const activeCf = cfFilterFromParam(cf);
 
   let rows: Record<string, unknown>[] = [];
   let cfRec: { cf_executante: string; total: number }[] = [];
   let totalCount = 0;
+  let byTipo: Record<string, number> = {};
   let error: string | null = null;
 
   try {
-    const [recRows, total, byCf] = await Promise.all([
-      listActiveRecs({ cf: activeCf }),
+    const [recRows, total, byCf, tipoCounts] = await Promise.all([
+      listActiveRecs({ cf: activeCf, tipo: activeTipo }),
       countActiveRecs(),
       countRecsByCf(),
+      countRecsByTipo(),
     ]);
     rows = recRows as Record<string, unknown>[];
     totalCount = total;
     cfRec = byCf;
+    byTipo = Object.fromEntries(tipoCounts.map((item) => [item.rec_tipo, item.total]));
   } catch (err) {
     error = err instanceof Error ? err.message : String(err);
   }
@@ -42,10 +45,6 @@ export default async function Page({ searchParams }: PageProps) {
   if (error) {
     return <div className="alert alert-danger">{error}</div>;
   }
-
-  const tableTitle = activeCf
-    ? `${METRIC_LABELS.sir.registros} — ${activeCf} (${rows.length})`
-    : `${METRIC_LABELS.sir.registros} (${rows.length})`;
 
   return (
     <>
@@ -63,22 +62,24 @@ export default async function Page({ searchParams }: PageProps) {
           <div className="card shadow-sm h-100 data-panel-card">
             <div className="card-header fw-semibold">{METRIC_LABELS.sir.porCf}</div>
             <ul className="list-group list-group-flush">
-              <CfRankingList items={cfRec} basePath="/sir/recs" activeCf={activeCf} />
+              <CfRankingList
+                items={cfRec}
+                basePath="/sir/recs"
+                activeCf={activeCf}
+                filterParams={{ tipo: activeTipo }}
+              />
             </ul>
           </div>
         </div>
       </div>
 
-      <ContentCard title={tableTitle}>
-        <SirRecordsTable
-          columns={REC_TABLE_COLUMNS}
-          rows={rows}
-          recordLabel="REC"
-          empty={
-            activeCf ? "Nenhuma REC em aberto para o CF selecionado." : "Nenhuma REC em aberto."
-          }
-        />
-      </ContentCard>
+      <RecPanel
+        rows={rows}
+        total={totalCount}
+        byTipo={byTipo}
+        activeTipo={activeTipo}
+        activeCf={activeCf}
+      />
     </>
   );
 }

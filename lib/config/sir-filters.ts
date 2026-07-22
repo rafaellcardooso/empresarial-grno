@@ -1,7 +1,13 @@
 import type { RalTipoKey } from "@/lib/config/ral-types";
+import type { RecTipoKey } from "@/lib/config/rec-types";
 
 export type SirCfFilterParams = {
   tipo?: RalTipoKey;
+  cf?: string;
+};
+
+export type SirRecFilterParams = {
+  tipo?: RecTipoKey;
   cf?: string;
 };
 
@@ -14,6 +20,28 @@ export function cfFilterFromParam(param?: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Monta URL de listagem REC preservando filtros ativos. */
+export function buildRecFilterHref(basePath: string, filters: SirRecFilterParams = {}): string {
+  const params = new URLSearchParams();
+  if (filters.tipo) params.set("tipo", filters.tipo);
+  if (filters.cf) params.set("cf", filters.cf);
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}
+
+/** Alterna filtro de CF em REC: clique no ativo remove o filtro. */
+export function recCfFilterToggleHref(
+  basePath: string,
+  cf: string,
+  activeCf?: string,
+  extra?: Omit<SirRecFilterParams, "cf">,
+): string {
+  if (activeCf === cf) {
+    return buildRecFilterHref(basePath, extra ?? {});
+  }
+  return buildRecFilterHref(basePath, { ...extra, cf });
 }
 
 /** Monta URL de listagem SIR preservando filtros ativos. */
