@@ -12,11 +12,7 @@ type DataTableProps = {
 };
 
 /** Renderiza tabela responsiva a partir de colunas e linhas genéricas. */
-export function DataTable({
-  columns,
-  rows,
-  empty = UI_COPY.emptyDefault,
-}: DataTableProps) {
+export function DataTable({ columns, rows, empty = UI_COPY.emptyDefault }: DataTableProps) {
   if (!rows.length) {
     return <p className="text-body-secondary mb-0 px-3 py-3">{empty}</p>;
   }
@@ -27,7 +23,9 @@ export function DataTable({
         <thead className="table-light">
           <tr>
             {columns.map((column) => (
-              <th key={column.key} className="sortable-data-table__th">{column.label}</th>
+              <th key={column.key} className="sortable-data-table__th">
+                {column.label}
+              </th>
             ))}
           </tr>
         </thead>

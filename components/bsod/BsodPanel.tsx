@@ -151,11 +151,7 @@ function renderBsodCell(key: string, value: unknown, row: Record<string, unknown
   }
   if (key === "tx" || key === "rx" || key === "mer") {
     return (
-      <SignalMetric
-        kind={key}
-        value={value}
-        monitorStatus={row.monitor_status as number | null}
-      />
+      <SignalMetric kind={key} value={value} monitorStatus={row.monitor_status as number | null} />
     );
   }
   if (value == null || value === "") return "—";

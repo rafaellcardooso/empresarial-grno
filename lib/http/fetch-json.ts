@@ -1,7 +1,6 @@
 /** Resultado tipado de fetch JSON com tratamento de erro. */
 export type FetchJsonResult<T> =
-  | { ok: true; data: T; status: number }
-  | { ok: false; error: string; status: number };
+  { ok: true; data: T; status: number } | { ok: false; error: string; status: number };
 
 const DEFAULT_ERROR = "Não foi possível concluir a operação.";
 const NETWORK_ERROR = "Erro de conexão. Tente novamente.";

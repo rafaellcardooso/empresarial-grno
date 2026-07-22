@@ -49,9 +49,7 @@ export function NotificationList() {
 
     const list = result.data.notifications ?? [];
     setItems(list);
-    setUnreadNotifications(
-      result.data.unreadCount ?? list.filter((item) => !item.readAt).length,
-    );
+    setUnreadNotifications(result.data.unreadCount ?? list.filter((item) => !item.readAt).length);
     setLoading(false);
   }, [setUnreadNotifications]);
 
@@ -132,9 +130,7 @@ export function NotificationList() {
 
   return (
     <div className="d-flex flex-column gap-3">
-      {error ? (
-        <InlineAlert onDismiss={() => setError(null)}>{error}</InlineAlert>
-      ) : null}
+      {error ? <InlineAlert onDismiss={() => setError(null)}>{error}</InlineAlert> : null}
 
       <div className="d-flex justify-content-end">
         <LoadingButton
@@ -152,7 +148,9 @@ export function NotificationList() {
           key={item.id}
           title={item.title}
           bodyClassName="p-3"
-          className={item.readAt ? "notification-item notification-item--read" : "notification-item"}
+          className={
+            item.readAt ? "notification-item notification-item--read" : "notification-item"
+          }
         >
           <p className="mb-2">{item.body}</p>
           {item.title === "Nova solicitação de acesso" ? (

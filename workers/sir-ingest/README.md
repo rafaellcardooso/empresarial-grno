@@ -55,16 +55,16 @@ Cada worker roda em loop com intervalo `INTERVALO_MONITORAMENTO` (default 5 min)
 
 Melhorias em relação ao fluxo anterior:
 
-| Aspecto | Comportamento |
-|---------|---------------|
-| **Sessão reutilizada** | Browser permanece aberto entre ciclos; login só na abertura, após erro ou a cada `SESSION_MAX_CYCLES` (default 12 ≈ 1h) |
-| **RAL vs REC deslocados** | REC inicia 90s depois do RAL (`CYCLE_OFFSET_MS=90000` na unit systemd) — evita dois logins simultâneos no SIR |
-| **Temp fora de /tmp** | Perfis Chromium em `states/tmp/`; binários em `.playwright-browsers/` |
-| **Limpeza automática** | Diretórios temp órfãos com mais de 24h são removidos na inicialização |
-| **Encerramento** | Registro some do SIR → após N ciclos vazios confirmados (`CICLOS_VAZIOS_PARA_ENCERRAR`), marca `ENCERRADO` no MySQL |
-| **Overlap** | Se um ciclo ainda estiver rodando, o próximo é ignorado (não empilha browsers) |
-| **Retry** | Até 3 tentativas por ciclo; falha invalida sessão e reloga na próxima tentativa |
-| **Logs estruturados** | Cada ciclo emite JSON `scrape_cycle` no journal (`active`, `rowErrors`, `durationMs`, `status`) |
+| Aspecto                   | Comportamento                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Sessão reutilizada**    | Browser permanece aberto entre ciclos; login só na abertura, após erro ou a cada `SESSION_MAX_CYCLES` (default 12 ≈ 1h) |
+| **RAL vs REC deslocados** | REC inicia 90s depois do RAL (`CYCLE_OFFSET_MS=90000` na unit systemd) — evita dois logins simultâneos no SIR           |
+| **Temp fora de /tmp**     | Perfis Chromium em `states/tmp/`; binários em `.playwright-browsers/`                                                   |
+| **Limpeza automática**    | Diretórios temp órfãos com mais de 24h são removidos na inicialização                                                   |
+| **Encerramento**          | Registro some do SIR → após N ciclos vazios confirmados (`CICLOS_VAZIOS_PARA_ENCERRAR`), marca `ENCERRADO` no MySQL     |
+| **Overlap**               | Se um ciclo ainda estiver rodando, o próximo é ignorado (não empilha browsers)                                          |
+| **Retry**                 | Até 3 tentativas por ciclo; falha invalida sessão e reloga na próxima tentativa                                         |
+| **Logs estruturados**     | Cada ciclo emite JSON `scrape_cycle` no journal (`active`, `rowErrors`, `durationMs`, `status`)                         |
 
 ### Monitorar
 
@@ -77,14 +77,14 @@ curl -s http://127.0.0.1:3002/api/rals | jq length
 
 ### Variáveis úteis
 
-| Variável | Default | Efeito |
-|----------|---------|--------|
-| `INTERVALO_MONITORAMENTO` | `300000` (5 min) | Intervalo entre ciclos |
-| `CYCLE_OFFSET_MS` | `0` (REC: `90000` via systemd) | Atraso antes do 1º ciclo |
-| `SESSION_MAX_CYCLES` | `12` | Força relogin preventivo |
-| `CICLOS_VAZIOS_PARA_ENCERRAR` | `2` | Ciclos com tabela vazia antes de fechar todos |
-| `TMPDIR` | `states/tmp` | Perfil temp do Chromium |
-| `PLAYWRIGHT_BROWSERS_PATH` | `.playwright-browsers` | Binários do Playwright |
+| Variável                      | Default                        | Efeito                                        |
+| ----------------------------- | ------------------------------ | --------------------------------------------- |
+| `INTERVALO_MONITORAMENTO`     | `300000` (5 min)               | Intervalo entre ciclos                        |
+| `CYCLE_OFFSET_MS`             | `0` (REC: `90000` via systemd) | Atraso antes do 1º ciclo                      |
+| `SESSION_MAX_CYCLES`          | `12`                           | Força relogin preventivo                      |
+| `CICLOS_VAZIOS_PARA_ENCERRAR` | `2`                            | Ciclos com tabela vazia antes de fechar todos |
+| `TMPDIR`                      | `states/tmp`                   | Perfil temp do Chromium                       |
+| `PLAYWRIGHT_BROWSERS_PATH`    | `.playwright-browsers`         | Binários do Playwright                        |
 
 ## Execução
 

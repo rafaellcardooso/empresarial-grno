@@ -121,7 +121,12 @@ export function ForgotPasswordForm() {
             />
           </div>
 
-          <LoadingButton type="submit" className="btn btn-primary w-100" loading={loading} loadingLabel="Salvando…">
+          <LoadingButton
+            type="submit"
+            className="btn btn-primary w-100"
+            loading={loading}
+            loadingLabel="Salvando…"
+          >
             Redefinir senha
           </LoadingButton>
         </form>

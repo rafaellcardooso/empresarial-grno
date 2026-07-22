@@ -1,11 +1,6 @@
 import type { RowDataPacket } from "mysql2";
 import { sirQuery } from "@/lib/db/sir";
-import {
-  SIR_RECORD_STATUS,
-  SIR_TABLES,
-  type RalRecord,
-  type RecRecord,
-} from "@/lib/models";
+import { SIR_RECORD_STATUS, SIR_TABLES, type RalRecord, type RecRecord } from "@/lib/models";
 import { serializeRow, serializeRows } from "@/lib/serialize";
 
 export type CfCount = {
@@ -82,7 +77,10 @@ export async function countActiveRecs(options?: { cf?: string }): Promise<number
 }
 
 /** Lista RALs com status ativo, ordenadas por última atualização. */
-export async function listActiveRals(options?: { tipo?: string; cf?: string }): Promise<RalRecord[]> {
+export async function listActiveRals(options?: {
+  tipo?: string;
+  cf?: string;
+}): Promise<RalRecord[]> {
   const params: unknown[] = [SIR_RECORD_STATUS.active];
   let sql = `SELECT ${RAL_LIST_SELECT} FROM ${SIR_TABLES.rals} WHERE status = ?`;
 

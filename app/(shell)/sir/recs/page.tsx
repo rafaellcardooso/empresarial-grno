@@ -49,13 +49,7 @@ export default async function Page({ searchParams }: PageProps) {
 
   return (
     <>
-      <PageHeader
-        title="REC"
-        breadcrumbs={[
-          { label: "SIR", href: "/sir" },
-          { label: "REC" },
-        ]}
-      />
+      <PageHeader title="REC" breadcrumbs={[{ label: "SIR", href: "/sir" }, { label: "REC" }]} />
 
       <div className="row g-3 mb-4">
         <div className="col-md-4">
@@ -81,9 +75,7 @@ export default async function Page({ searchParams }: PageProps) {
           rows={rows}
           recordLabel="REC"
           empty={
-            activeCf
-              ? "Nenhuma REC em aberto para o CF selecionado."
-              : "Nenhuma REC em aberto."
+            activeCf ? "Nenhuma REC em aberto para o CF selecionado." : "Nenhuma REC em aberto."
           }
         />
       </ContentCard>

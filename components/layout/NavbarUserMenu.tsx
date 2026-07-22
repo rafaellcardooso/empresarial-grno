@@ -51,7 +51,12 @@ export function NavbarUserMenu() {
             <span className="navbar-user-menu__email">{user.corporateId}</span>
             {isStaff ? <span className="badge text-bg-danger">Staff</span> : null}
           </div>
-          <Link href="/conta" className="navbar-user-menu__item" role="menuitem" onClick={() => setOpen(false)}>
+          <Link
+            href="/conta"
+            className="navbar-user-menu__item"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
             Minha conta
           </Link>
           {isStaff ? (
@@ -74,7 +79,11 @@ export function NavbarUserMenu() {
               </Link>
             </>
           ) : null}
-          <button type="button" className="navbar-user-menu__item navbar-user-menu__item--action" onClick={handleLogout}>
+          <button
+            type="button"
+            className="navbar-user-menu__item navbar-user-menu__item--action"
+            onClick={handleLogout}
+          >
             Sair
           </button>
         </div>

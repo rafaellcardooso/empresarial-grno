@@ -2,12 +2,7 @@
 export const SESSION_COOKIE_NAME = "emp_session";
 
 /** Rotas públicas (sem login). */
-export const PUBLIC_PATHS = [
-  "/login",
-  "/cadastro",
-  "/esqueci-senha",
-  "/redefinir-senha",
-] as const;
+export const PUBLIC_PATHS = ["/login", "/cadastro", "/esqueci-senha", "/redefinir-senha"] as const;
 
 /** Prefixos de API públicas (bot Telegram + health). */
 export const PUBLIC_API_PREFIXES = [

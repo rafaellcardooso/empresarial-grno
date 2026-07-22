@@ -81,11 +81,7 @@ export async function setSessionCookie(
 ) {
   const days = sessionDays(rememberMe);
   const token = await createSessionToken(payload, rememberMe);
-  response.cookies.set(
-    SESSION_COOKIE_NAME,
-    token,
-    getSessionCookieOptions(days * 24 * 60 * 60),
-  );
+  response.cookies.set(SESSION_COOKIE_NAME, token, getSessionCookieOptions(days * 24 * 60 * 60));
 }
 
 /** Remove cookie de sessão. */

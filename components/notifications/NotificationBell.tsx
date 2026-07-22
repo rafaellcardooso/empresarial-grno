@@ -44,9 +44,7 @@ export function NotificationBell() {
       className={`notification-bell${isActive ? " notification-bell--active" : ""}`}
       data-tour="notifications"
       aria-label={
-        unreadNotifications > 0
-          ? `${unreadNotifications} notificações não lidas`
-          : "Notificações"
+        unreadNotifications > 0 ? `${unreadNotifications} notificações não lidas` : "Notificações"
       }
       aria-current={isActive ? "page" : undefined}
     >

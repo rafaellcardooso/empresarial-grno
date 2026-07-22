@@ -1,6 +1,11 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SirPanel } from "@/components/sir/SirPanel";
-import { countActiveRals, countActiveRecs, listActiveRals, listActiveRecs } from "@/lib/queries/sir";
+import {
+  countActiveRals,
+  countActiveRecs,
+  listActiveRals,
+  listActiveRecs,
+} from "@/lib/queries/sir";
 
 export const revalidate = 30;
 export const metadata = { title: "SIR" };

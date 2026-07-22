@@ -13,7 +13,16 @@ services:
     volumes:
       - empresarial_mysql_sir_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${SIR_DB_ROOT_PASSWORD:-root_dev}"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-uroot",
+          "-p${SIR_DB_ROOT_PASSWORD:-root_dev}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10

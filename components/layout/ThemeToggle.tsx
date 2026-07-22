@@ -32,11 +32,7 @@ export function ThemeToggle() {
       title="Alternar tema"
       aria-label="Alternar tema claro ou escuro"
     >
-      <i
-        className={`bi ${iconClass}`}
-        style={{ fontSize: "1.2rem" }}
-        aria-hidden="true"
-      />
+      <i className={`bi ${iconClass}`} style={{ fontSize: "1.2rem" }} aria-hidden="true" />
     </button>
   );
 }

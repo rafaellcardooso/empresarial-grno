@@ -60,14 +60,14 @@ Não rodar `db:import` / `db:seed` em prod.
 
 **Dados fake:**
 
-```bash
+````bash
 npm run db:migrate    # cria DB + tabelas + schema_migrations
 npm run db:seed       # RAL/REC fake para UI
 # ou
 ```bash
 npm run db:setup      # migrate + seed
 npm run env:check     # validar .env.example ↔ .env.local
-```
+````
 
 **Dev com snapshot de produção** (`backup_sir_16052026.sql` na raiz ou em `data/backups/`):
 

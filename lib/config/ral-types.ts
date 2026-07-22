@@ -1,11 +1,5 @@
 export type RalTipoKey =
-  | "coletor"
-  | "backbone"
-  | "acesso_cliente"
-  | "qualidade"
-  | "ppc"
-  | "fotonica"
-  | "programada";
+  "coletor" | "backbone" | "acesso_cliente" | "qualidade" | "ppc" | "fotonica" | "programada";
 
 export type RalTipoDefinition = {
   key: RalTipoKey;
@@ -75,11 +69,7 @@ const RAL_TIPO_BY_VALUE = new Map(
 
 /** Normaliza valor de tipo para comparação (acentos e caixa). */
 export function normalizeRalTipoValue(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .trim()
-    .toUpperCase();
+  return value.normalize("NFD").replace(/\p{M}/gu, "").trim().toUpperCase();
 }
 
 /** Resolve metadados visuais do tipo de RAL. */

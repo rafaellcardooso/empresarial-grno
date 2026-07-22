@@ -12,9 +12,7 @@ export default function Page() {
         description="Exportação e consultas históricas de RAL, REC e inventário BSOD."
       />
       <ContentCard title="Relatórios disponíveis">
-        <p className="text-body-secondary mb-0 p-3">
-          Nenhum relatório publicado no momento.
-        </p>
+        <p className="text-body-secondary mb-0 p-3">Nenhum relatório publicado no momento.</p>
       </ContentCard>
     </>
   );

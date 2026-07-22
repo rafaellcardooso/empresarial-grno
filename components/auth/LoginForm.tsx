@@ -136,7 +136,12 @@ export function LoginForm() {
           </label>
         </div>
 
-        <LoadingButton type="submit" className="btn btn-primary w-100" loading={loading} loadingLabel="Entrando…">
+        <LoadingButton
+          type="submit"
+          className="btn btn-primary w-100"
+          loading={loading}
+          loadingLabel="Entrando…"
+        >
           Entrar
         </LoadingButton>
       </form>

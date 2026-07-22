@@ -17,10 +17,7 @@ export function InlineAlert({
   const role = variant === "danger" || variant === "warning" ? "alert" : "status";
 
   return (
-    <div
-      className={`alert alert-${variant} py-2${className ? ` ${className}` : ""}`}
-      role={role}
-    >
+    <div className={`alert alert-${variant} py-2${className ? ` ${className}` : ""}`} role={role}>
       <div className="d-flex align-items-start justify-content-between gap-2">
         <span>{children}</span>
         {onDismiss ? (

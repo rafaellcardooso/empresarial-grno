@@ -3,10 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { getNotificationById, sendNotificationToAllUsers } from "@/lib/queries/notifications";
 
 /** Dispara notificação existente para todos os usuários ativos. */
-export async function POST(
-  _request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "STAFF") {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });

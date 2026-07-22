@@ -108,7 +108,12 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
         />
       </div>
 
-      <LoadingButton type="submit" className="btn btn-primary" loading={loading} loadingLabel="Salvando…">
+      <LoadingButton
+        type="submit"
+        className="btn btn-primary"
+        loading={loading}
+        loadingLabel="Salvando…"
+      >
         Alterar senha
       </LoadingButton>
     </form>

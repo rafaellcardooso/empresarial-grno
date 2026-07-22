@@ -52,7 +52,10 @@ function parseEnvStructure(filePath) {
 function parseEnvKeys(filePath) {
   const { lines, missing } = parseEnvStructure(filePath);
   if (missing) return { keys: [], missing: true };
-  return { keys: lines.filter((line) => line.kind === "key").map((line) => line.key), missing: false };
+  return {
+    keys: lines.filter((line) => line.kind === "key").map((line) => line.key),
+    missing: false,
+  };
 }
 
 /** Mapeia chave → valor de um arquivo .env. */
@@ -126,9 +129,7 @@ function diffStructure(examplePath, localPath) {
     }
 
     if (exampleLine.kind === "key" && exampleLine.key !== localLine.key) {
-      issues.push(
-        `line ${lineNo}: key order differs (${exampleLine.key} vs ${localLine.key})`,
-      );
+      issues.push(`line ${lineNo}: key order differs (${exampleLine.key} vs ${localLine.key})`);
     }
   }
 
@@ -216,12 +217,7 @@ function main() {
       }
     }
 
-    if (
-      !onlyExample.length &&
-      !onlyLocal.length &&
-      !orderMismatch &&
-      !structureIssues.length
-    ) {
+    if (!onlyExample.length && !onlyLocal.length && !orderMismatch && !structureIssues.length) {
       console.log(`  ok (${example.keys.length} keys, same order and comments)`);
     }
   }

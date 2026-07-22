@@ -39,8 +39,8 @@ export function SirRecordsTable({ columns, rows, recordLabel, empty }: SirRecord
         };
         const text =
           recordLabel === "RAL"
-            ? payload.data?.detalhes ?? "—"
-            : payload.data?.detalhes_title ?? "—";
+            ? (payload.data?.detalhes ?? "—")
+            : (payload.data?.detalhes_title ?? "—");
 
         setSelected({ numRecup, text: String(text), loading: false });
       } catch {

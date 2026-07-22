@@ -39,9 +39,7 @@ export function loadBaseConfig(overrides = {}) {
     emptyCyclesBeforeClose: process.env.CICLOS_VAZIOS_PARA_ENCERRAR
       ? parseInt(process.env.CICLOS_VAZIOS_PARA_ENCERRAR, 10)
       : 2,
-    cycleOffsetMs: process.env.CYCLE_OFFSET_MS
-      ? parseInt(process.env.CYCLE_OFFSET_MS, 10)
-      : 0,
+    cycleOffsetMs: process.env.CYCLE_OFFSET_MS ? parseInt(process.env.CYCLE_OFFSET_MS, 10) : 0,
     sessionMaxCycles: process.env.SESSION_MAX_CYCLES
       ? parseInt(process.env.SESSION_MAX_CYCLES, 10)
       : 12,
@@ -278,9 +276,7 @@ export async function submitRecordTypeFilter(page, recordType, timeoutMs) {
   page.setDefaultTimeout(timeoutMs);
   await waitForFrame(page, "frameNivel1Principal", timeoutMs);
   const filterFrame = await waitForFrame(page, "frameFiltro", timeoutMs);
-  await filterFrame
-    .locator('select[name="indic_tipo_recup"]')
-    .selectOption({ label: recordType });
+  await filterFrame.locator('select[name="indic_tipo_recup"]').selectOption({ label: recordType });
   await filterFrame.locator('[name="confirma"]').click();
 }
 
@@ -306,9 +302,7 @@ export class SirBrowserSession {
   /** Retorna página autenticada no SIR, reutilizando sessão quando possível. */
   async ensurePage() {
     const needsFresh =
-      !this.browser ||
-      !this.page ||
-      this.cyclesSinceLogin >= this.maxCyclesBeforeRelogin;
+      !this.browser || !this.page || this.cyclesSinceLogin >= this.maxCyclesBeforeRelogin;
 
     if (needsFresh) {
       await this.dispose();
@@ -410,7 +404,9 @@ function pruneErrorDumps(dir, maxKeep) {
 /** Salva HTML da página atual em states/error/ para diagnóstico de falha. */
 export async function saveErrorPageHtml(page, prefix) {
   if (!SAVE_ERROR_HTML) {
-    console.error(`[SIR] Scrape failed (${prefix}). HTML dump disabled (SAVE_SCRAPE_ERROR_HTML=false).`);
+    console.error(
+      `[SIR] Scrape failed (${prefix}). HTML dump disabled (SAVE_SCRAPE_ERROR_HTML=false).`,
+    );
     return;
   }
 

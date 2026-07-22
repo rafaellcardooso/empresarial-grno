@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { APP_TOUR_VERSION } from "@/lib/auth/constants";
 import { getSession } from "@/lib/auth/session";
-import {
-  countPendingUsers,
-  getUserSettings,
-} from "@/lib/queries/app-users";
+import { countPendingUsers, getUserSettings } from "@/lib/queries/app-users";
 import { countUnreadNotifications } from "@/lib/queries/notifications";
 
 /** Retorna usuário logado, contagem de notificações e estado do tour. */

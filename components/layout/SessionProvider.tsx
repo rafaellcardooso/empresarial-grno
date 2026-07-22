@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import type { ShellSessionData } from "@/lib/auth/shell-session";
 import { applyClientTheme } from "@/lib/auth/theme-client";
 import type { AppTheme } from "@/lib/auth/theme";

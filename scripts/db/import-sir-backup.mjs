@@ -66,10 +66,7 @@ async function ensureMigrationTable(connection) {
 async function syncMigrations(connection) {
   await ensureMigrationTable(connection);
   for (const id of loadMigrationIds()) {
-    await connection.query(
-      "INSERT IGNORE INTO schema_migrations (id) VALUES (?)",
-      [id],
-    );
+    await connection.query("INSERT IGNORE INTO schema_migrations (id) VALUES (?)", [id]);
   }
 }
 
@@ -108,12 +105,8 @@ async function main() {
   await connection.query(sql);
   await syncMigrations(connection);
 
-  const [[{ rals }]] = await connection.query(
-    "SELECT COUNT(*) AS rals FROM rals",
-  );
-  const [[{ recs }]] = await connection.query(
-    "SELECT COUNT(*) AS recs FROM recs",
-  );
+  const [[{ rals }]] = await connection.query("SELECT COUNT(*) AS rals FROM rals");
+  const [[{ recs }]] = await connection.query("SELECT COUNT(*) AS recs FROM recs");
 
   await connection.end();
   console.log(`[db:import] Done — ${rals} RAL(s), ${recs} REC/DSR(s).`);

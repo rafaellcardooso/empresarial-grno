@@ -1,11 +1,6 @@
 import type { BsodFilters } from "@/lib/queries/bsod";
 
-export type BsodFilterKey =
-  | "online"
-  | "offline"
-  | "sem_leitura"
-  | "com_vlan"
-  | "sem_vlan";
+export type BsodFilterKey = "online" | "offline" | "sem_leitura" | "com_vlan" | "sem_vlan";
 
 const VALID_FILTERS = new Set<BsodFilterKey>([
   "online",

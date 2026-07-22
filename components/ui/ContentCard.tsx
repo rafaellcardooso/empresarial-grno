@@ -22,7 +22,9 @@ export function ContentCard({
         <span className="content-card__title">{title}</span>
         {headerAside}
       </div>
-      <div className={bodyClassName ? `card-body ${bodyClassName}` : "card-body p-0"}>{children}</div>
+      <div className={bodyClassName ? `card-body ${bodyClassName}` : "card-body p-0"}>
+        {children}
+      </div>
     </div>
   );
 }

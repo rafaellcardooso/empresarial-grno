@@ -38,7 +38,13 @@ export function Navbar() {
           <nav aria-label="breadcrumb" className="d-none d-md-block min-w-0">
             <ol
               className="breadcrumb mb-0 align-items-center"
-              style={{ "--bs-breadcrumb-divider": "'>'", fontSize: "0.95rem", fontWeight: 500 } as React.CSSProperties}
+              style={
+                {
+                  "--bs-breadcrumb-divider": "'>'",
+                  fontSize: "0.95rem",
+                  fontWeight: 500,
+                } as React.CSSProperties
+              }
             >
               <li className="breadcrumb-item">
                 <Link
@@ -50,7 +56,10 @@ export function Navbar() {
                 </Link>
               </li>
               {pathname !== "/" && (
-                <li className="breadcrumb-item active text-white fw-bold text-truncate" aria-current="page">
+                <li
+                  className="breadcrumb-item active text-white fw-bold text-truncate"
+                  aria-current="page"
+                >
                   {pageTitle}
                 </li>
               )}

@@ -33,10 +33,7 @@ const ACTION_STATUS: Record<NonNullable<PatchBody["action"]>, AppUserStatus> = {
 };
 
 /** Aprova, rejeita ou suspende usuário (staff). */
-export async function PATCH(
-  request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "STAFF") {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
@@ -64,16 +61,17 @@ export async function PATCH(
   }
 
   const status = ACTION_STATUS[action];
-  await updateUserStatus(userId, status, action === "approve" || action === "reactivate" ? session.userId : null);
+  await updateUserStatus(
+    userId,
+    status,
+    action === "approve" || action === "reactivate" ? session.userId : null,
+  );
 
   return NextResponse.json({ ok: true, status });
 }
 
 /** Atualiza matrícula, nome e e-mail (staff). */
-export async function PUT(
-  request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "STAFF") {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
@@ -136,10 +134,7 @@ export async function PUT(
 }
 
 /** Exclui usuário (staff). */
-export async function DELETE(
-  _request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "STAFF") {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
@@ -152,7 +147,10 @@ export async function DELETE(
   }
 
   if (userId === session.userId) {
-    return NextResponse.json({ error: "Você não pode excluir sua própria conta." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Você não pode excluir sua própria conta." },
+      { status: 400 },
+    );
   }
 
   const user = await getUserById(userId);

@@ -7,8 +7,7 @@ export const AUTH_COPY = {
   forgotTitle: "Esqueci a senha",
   forgotLead: "Informe sua matrícula corporativa e escolha uma nova senha.",
   forgotSuccess: "Senha redefinida com sucesso.",
-  forgotVerifyError:
-    "Não foi possível redefinir. Verifique a matrícula e se a conta está ativa.",
+  forgotVerifyError: "Não foi possível redefinir. Verifique a matrícula e se a conta está ativa.",
   passwordSelfResetNotificationTitle: "Senha redefinida pelo usuário",
   accountTitle: "Minha conta",
   accountLead: "Dados da conta e alteração de senha.",

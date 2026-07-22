@@ -34,7 +34,9 @@ export default async function Page() {
               <dt className="col-sm-4">E-mail</dt>
               <dd className="col-sm-8">{publicUser.email ?? "—"}</dd>
               <dt className="col-sm-4">Papel</dt>
-              <dd className="col-sm-8">{publicUser.role === "STAFF" ? "Administrador" : "Usuário"}</dd>
+              <dd className="col-sm-8">
+                {publicUser.role === "STAFF" ? "Administrador" : "Usuário"}
+              </dd>
               <dt className="col-sm-4">Status</dt>
               <dd className="col-sm-8">{publicUser.status}</dd>
             </dl>

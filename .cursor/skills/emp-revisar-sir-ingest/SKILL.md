@@ -9,12 +9,12 @@ description: >-
 
 ## Arquivos principais
 
-| Arquivo | Função |
-|---------|--------|
-| `workers/sir-ingest/sources/AlertasRalRede.js` | Scraper RAL |
-| `workers/sir-ingest/sources/AlertasRecRede.js` | Scraper REC |
+| Arquivo                                        | Função                               |
+| ---------------------------------------------- | ------------------------------------ |
+| `workers/sir-ingest/sources/AlertasRalRede.js` | Scraper RAL                          |
+| `workers/sir-ingest/sources/AlertasRecRede.js` | Scraper REC                          |
 | `workers/sir-ingest/telegram/functions/sir.py` | Bot consome `/api/rals`, `/api/recs` |
-| `lib/queries/sir.ts` | Leitura Next |
+| `lib/queries/sir.ts`                           | Leitura Next                         |
 
 ## Fluxo comum (cada ciclo)
 
@@ -27,13 +27,13 @@ description: >-
 
 ## Divergências conhecidas (RAL vs REC)
 
-| Tópico | RAL | REC |
-|--------|-----|-----|
-| Select tipo | `sendKeys("RAL")` | XPath opção exata `REC` |
-| Estado tabela vazia | `tabelaVaziaAnterior` | `tabelaVazia` |
-| Coluna detalhes DB | `detalhes` | `detalhes_title` |
-| Refatoração | monolítico | helpers (`processarTabela`, `extrairDadosLinha`) |
-| HTML erro | `states/error/error_page.html` fixo | arquivo com timestamp |
+| Tópico              | RAL                                 | REC                                              |
+| ------------------- | ----------------------------------- | ------------------------------------------------ |
+| Select tipo         | `sendKeys("RAL")`                   | XPath opção exata `REC`                          |
+| Estado tabela vazia | `tabelaVaziaAnterior`               | `tabelaVazia`                                    |
+| Coluna detalhes DB  | `detalhes`                          | `detalhes_title`                                 |
+| Refatoração         | monolítico                          | helpers (`processarTabela`, `extrairDadosLinha`) |
+| HTML erro           | `states/error/error_page.html` fixo | arquivo com timestamp                            |
 
 ## Checklist de revisão
 

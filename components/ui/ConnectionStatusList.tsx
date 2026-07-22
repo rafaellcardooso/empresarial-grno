@@ -15,9 +15,7 @@ export function ConnectionStatusList({ items }: { items: ConnectionStatusProps[]
           <div className="d-flex align-items-center justify-content-between gap-3 mb-1">
             <span className="fw-medium">{item.label}</span>
             <span
-              className={`badge rounded-pill ${
-                item.ok ? "text-bg-success" : "text-bg-danger"
-              }`}
+              className={`badge rounded-pill ${item.ok ? "text-bg-success" : "text-bg-danger"}`}
             >
               {item.ok ? UI_COPY.connectionOk : UI_COPY.connectionError}
             </span>

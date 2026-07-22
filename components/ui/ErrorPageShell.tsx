@@ -22,13 +22,7 @@ export function ErrorPageShell({
     <div className="auth-page">
       <div className="auth-card error-page text-center">
         <div className="error-page__brand">
-          <Image
-            src="/assets/img/logo-claro.png"
-            alt="Claro"
-            width={48}
-            height={45}
-            priority
-          />
+          <Image src="/assets/img/logo-claro.png" alt="Claro" width={48} height={45} priority />
           <span className="error-page__app-name">{UI_COPY.appName}</span>
         </div>
 

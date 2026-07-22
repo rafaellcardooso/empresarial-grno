@@ -65,9 +65,7 @@ async function shouldSkipMigration(connection, migrationId) {
 
 /** Registra migration como aplicada em schema_migrations. */
 async function markMigrationApplied(connection, migrationId) {
-  await connection.query("INSERT INTO schema_migrations (id) VALUES (?)", [
-    migrationId,
-  ]);
+  await connection.query("INSERT INTO schema_migrations (id) VALUES (?)", [migrationId]);
 }
 
 /** Carrega arquivos SQL de migrations/sir ordenados por nome. */

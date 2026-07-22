@@ -188,10 +188,10 @@ export async function getTourCompletedVersion(userId: number): Promise<number> {
 /** Marca tour como concluído para a versão informada. */
 export async function markTourCompleted(userId: number, version: number): Promise<void> {
   await ensureUserSettings(userId);
-  await sirQuery(
-    `UPDATE app_user_settings SET tour_completed_version = ? WHERE user_id = ?`,
-    [version, userId],
-  );
+  await sirQuery(`UPDATE app_user_settings SET tour_completed_version = ? WHERE user_id = ?`, [
+    version,
+    userId,
+  ]);
 }
 
 /** Retorna tema preferido do usuário. */
@@ -255,8 +255,6 @@ export async function countPendingUsers(): Promise<number> {
 
 /** Lista IDs de usuários ativos (broadcast). */
 export async function listActiveUserIds(): Promise<number[]> {
-  const rows = await sirQuery<RowDataPacket[]>(
-    `SELECT id FROM app_users WHERE status = 'ACTIVE'`,
-  );
+  const rows = await sirQuery<RowDataPacket[]>(`SELECT id FROM app_users WHERE status = 'ACTIVE'`);
   return rows.map((row) => Number(row.id));
 }

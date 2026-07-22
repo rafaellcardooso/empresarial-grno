@@ -9,9 +9,9 @@ Rule: `.cursor/rules/emp-env.mdc`
 
 ## Pares
 
-| Example (commit) | Local (gitignore) |
-|------------------|-------------------|
-| `.env.example` | `.env.local` |
+| Example (commit)                  | Local (gitignore)         |
+| --------------------------------- | ------------------------- |
+| `.env.example`                    | `.env.local`              |
 | `workers/sir-ingest/.env.example` | `workers/sir-ingest/.env` |
 
 MySQL SIR: **`SIR_DB_*` iguais** na raiz e no worker. Não usar `conexao-db.json`.

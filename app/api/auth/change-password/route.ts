@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { getSession } from "@/lib/auth/session";
-import {
-  isValidPassword,
-  parseJsonBody,
-  PASSWORD_REQUIREMENTS,
-} from "@/lib/auth/validation";
+import { isValidPassword, parseJsonBody, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 import { getUserById, updateUserPassword } from "@/lib/queries/app-users";
 
 type ChangePasswordBody = {

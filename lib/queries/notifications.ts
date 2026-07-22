@@ -143,10 +143,15 @@ export async function markAllNotificationsRead(userId: number): Promise<void> {
 }
 
 /** Cria token de reset de senha. */
-export async function createPasswordResetToken(userId: number, tokenHash: string, expiresAt: Date): Promise<void> {
-  await sirQuery(`UPDATE app_password_reset_tokens SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL`, [
-    userId,
-  ]);
+export async function createPasswordResetToken(
+  userId: number,
+  tokenHash: string,
+  expiresAt: Date,
+): Promise<void> {
+  await sirQuery(
+    `UPDATE app_password_reset_tokens SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL`,
+    [userId],
+  );
   await sirQuery(
     `INSERT INTO app_password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)`,
     [userId, tokenHash, expiresAt],

@@ -2,10 +2,7 @@ import { APP_TOUR_VERSION } from "@/lib/auth/constants";
 import { getSession } from "@/lib/auth/session";
 import type { AppTheme } from "@/lib/auth/theme";
 import type { AppUserRole, AppUserStatus } from "@/lib/models/app-user";
-import {
-  countPendingUsers,
-  getUserSettings,
-} from "@/lib/queries/app-users";
+import { countPendingUsers, getUserSettings } from "@/lib/queries/app-users";
 import { countUnreadNotifications } from "@/lib/queries/notifications";
 
 /** Usuário resumido para o shell (navbar/sidebar). */

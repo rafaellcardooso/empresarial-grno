@@ -10,7 +10,9 @@ export function RalTipoBadge({ value }: RalTipoBadgeProps) {
 
   const definition = getRalTipoDefinition(value);
   if (!definition) {
-    return <span className="badge rounded-pill ral-tipo-badge ral-tipo-badge--unknown">{value}</span>;
+    return (
+      <span className="badge rounded-pill ral-tipo-badge ral-tipo-badge--unknown">{value}</span>
+    );
   }
 
   return (

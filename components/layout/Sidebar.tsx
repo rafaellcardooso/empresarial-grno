@@ -29,9 +29,7 @@ function SidebarNavButton({ href, label, icon, active, badge, onNavigate }: Side
         {icon ? <i className={`bi ${icon} sidebar-nav-btn__icon`} aria-hidden="true" /> : null}
         <span className="sidebar-nav-btn__label">{label}</span>
       </span>
-      {badge != null && badge > 0 ? (
-        <span className="sidebar-nav-btn__badge">{badge}</span>
-      ) : null}
+      {badge != null && badge > 0 ? <span className="sidebar-nav-btn__badge">{badge}</span> : null}
     </Link>
   );
 }

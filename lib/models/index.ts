@@ -12,7 +12,4 @@ export {
   type AppUserRole,
   type AppUserStatus,
 } from "@/lib/models/app-user";
-export {
-  type AppNotificationRecord,
-  type UserNotificationRecord,
-} from "@/lib/models/notification";
+export { type AppNotificationRecord, type UserNotificationRecord } from "@/lib/models/notification";

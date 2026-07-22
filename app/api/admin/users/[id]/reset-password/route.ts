@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { hashPassword } from "@/lib/auth/password";
 import { getSession } from "@/lib/auth/session";
-import {
-  isValidPassword,
-  parseJsonBody,
-  PASSWORD_REQUIREMENTS,
-} from "@/lib/auth/validation";
+import { isValidPassword, parseJsonBody, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 import { getUserById, updateUserPassword } from "@/lib/queries/app-users";
 
 type ResetPasswordBody = {
@@ -14,10 +10,7 @@ type ResetPasswordBody = {
 };
 
 /** Redefine senha de usuário (staff). */
-export async function POST(
-  request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "STAFF") {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });

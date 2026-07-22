@@ -30,7 +30,13 @@ export function RegisterForm() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ corporateId, name, email: email || undefined, password, confirmPassword }),
+        body: JSON.stringify({
+          corporateId,
+          name,
+          email: email || undefined,
+          password,
+          confirmPassword,
+        }),
       });
       const data = (await response.json()) as { error?: string; message?: string };
 
@@ -145,7 +151,12 @@ export function RegisterForm() {
           />
         </div>
 
-        <LoadingButton type="submit" className="btn btn-primary w-100" loading={loading} loadingLabel="Enviando…">
+        <LoadingButton
+          type="submit"
+          className="btn btn-primary w-100"
+          loading={loading}
+          loadingLabel="Enviando…"
+        >
           Solicitar acesso
         </LoadingButton>
       </form>

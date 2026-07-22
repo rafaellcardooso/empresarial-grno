@@ -1,9 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  PUBLIC_API_PREFIXES,
-  PUBLIC_AUTH_API_PATHS,
-  PUBLIC_PATHS,
-} from "@/lib/auth/constants";
+import { PUBLIC_API_PREFIXES, PUBLIC_AUTH_API_PATHS, PUBLIC_PATHS } from "@/lib/auth/constants";
 import { getSessionFromRequest } from "@/lib/auth/session";
 
 /** Indica se pathname é rota pública de página. */
@@ -24,9 +20,7 @@ function isPublicAuthApi(pathname: string): boolean {
 /** Indica rota estática ou asset. */
 function isStaticAsset(pathname: string): boolean {
   return (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/assets") ||
-    pathname === "/favicon.ico"
+    pathname.startsWith("/_next") || pathname.startsWith("/assets") || pathname === "/favicon.ico"
   );
 }
 
@@ -54,8 +48,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const isStaffRoute =
-    pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
+  const isStaffRoute = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
 
   if (isStaffRoute && session.role !== "STAFF") {
     if (isApi) {

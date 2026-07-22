@@ -49,13 +49,7 @@ export default async function Page({ searchParams }: PageProps) {
 
   return (
     <>
-      <PageHeader
-        title="RAL"
-        breadcrumbs={[
-          { label: "SIR", href: "/sir" },
-          { label: "RAL" },
-        ]}
-      />
+      <PageHeader title="RAL" breadcrumbs={[{ label: "SIR", href: "/sir" }, { label: "RAL" }]} />
 
       <div className="row g-3 mb-4">
         <div className="col-md-4">
