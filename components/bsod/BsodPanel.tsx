@@ -1,11 +1,12 @@
 "use client";
 
 import { ContentCard } from "@/components/ui/ContentCard";
+import { formatNumberPtBr } from "@/lib/format/number";
+import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
 import { FilterMetricCard } from "@/components/ui/FilterMetricCard";
 import { SortableDataTable, type SortableColumn } from "@/components/ui/SortableDataTable";
 import type { BsodFilterKey } from "@/lib/config/bsod-filters";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
-import { formatDateTimePtBr } from "@/lib/format/datetime";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
 
 type BsodSummary = {
@@ -30,6 +31,7 @@ const TABLE_COLUMNS: SortableColumn[] = [
   { key: "node", label: "NODE", sortable: true, align: "center" },
   { key: "mac", label: "MAC", sortable: true, align: "center" },
   { key: "contrato", label: "CONTRATO", sortable: true, align: "center" },
+  { key: "profile", label: "PROFILE", sortable: true, align: "center" },
   { key: "bsod_vlan", label: "VLAN BSOD", sortable: true, align: "center" },
   { key: "tx", label: "TX", sortable: true, align: "center" },
   { key: "rx", label: "RX", sortable: true, align: "center" },
@@ -49,7 +51,7 @@ export function BsodPanel({ summary, rows, activeFilter }: BsodPanelProps) {
         <div className="col-6 col-md-4 col-lg-2">
           <FilterMetricCard
             label={METRIC_LABELS.bsod.totalPme}
-            value={summary.total.toLocaleString("pt-BR")}
+            value={formatNumberPtBr(summary.total)}
             href={filterHref()}
             active={!activeFilter}
             variant="neutral"
@@ -58,7 +60,7 @@ export function BsodPanel({ summary, rows, activeFilter }: BsodPanelProps) {
         <div className="col-6 col-md-4 col-lg-2">
           <FilterMetricCard
             label={METRIC_LABELS.bsod.online}
-            value={summary.online.toLocaleString("pt-BR")}
+            value={formatNumberPtBr(summary.online)}
             href={filterHref("online")}
             active={activeFilter === "online"}
             variant="success"
@@ -67,7 +69,7 @@ export function BsodPanel({ summary, rows, activeFilter }: BsodPanelProps) {
         <div className="col-6 col-md-4 col-lg-2">
           <FilterMetricCard
             label={METRIC_LABELS.bsod.offline}
-            value={summary.offline.toLocaleString("pt-BR")}
+            value={formatNumberPtBr(summary.offline)}
             href={filterHref("offline")}
             active={activeFilter === "offline"}
             variant="danger"
@@ -76,7 +78,7 @@ export function BsodPanel({ summary, rows, activeFilter }: BsodPanelProps) {
         <div className="col-6 col-md-4 col-lg-2">
           <FilterMetricCard
             label={METRIC_LABELS.bsod.semLeitura}
-            value={summary.sem_leitura.toLocaleString("pt-BR")}
+            value={formatNumberPtBr(summary.sem_leitura)}
             href={filterHref("sem_leitura")}
             active={activeFilter === "sem_leitura"}
             variant="warning"
@@ -85,7 +87,7 @@ export function BsodPanel({ summary, rows, activeFilter }: BsodPanelProps) {
         <div className="col-6 col-md-4 col-lg-2">
           <FilterMetricCard
             label={METRIC_LABELS.bsod.comVlan}
-            value={summary.com_vlan.toLocaleString("pt-BR")}
+            value={formatNumberPtBr(summary.com_vlan)}
             href={filterHref("com_vlan")}
             active={activeFilter === "com_vlan"}
             variant="default"
@@ -94,7 +96,7 @@ export function BsodPanel({ summary, rows, activeFilter }: BsodPanelProps) {
         <div className="col-6 col-md-4 col-lg-2">
           <FilterMetricCard
             label={METRIC_LABELS.bsod.semVlan}
-            value={summary.sem_vlan.toLocaleString("pt-BR")}
+            value={formatNumberPtBr(summary.sem_vlan)}
             href={filterHref("sem_vlan")}
             active={activeFilter === "sem_vlan"}
             variant="default"
@@ -137,14 +139,24 @@ function renderBsodCell(key: string, value: unknown, row: Record<string, unknown
     return <HealthBadge label={String(value)} status={row.monitor_status as number | null} />;
   }
   if (key === "monitor_time") {
-    return formatDateTimePtBr(value as string | null);
+    return <DateTimeStacked value={value as string | null} />;
+  }
+  if (key === "profile") {
+    if (value == null || value === "") return "—";
+    return <span className="bsod-profile-text">{String(value)}</span>;
   }
   if (key === "bsod_vlan") {
     if (value == null || value === "") return "—";
     return <span className="bsod-vlan-badge">{String(value)}</span>;
   }
   if (key === "tx" || key === "rx" || key === "mer") {
-    return <SignalMetric kind={key} value={value} />;
+    return (
+      <SignalMetric
+        kind={key}
+        value={value}
+        monitorStatus={row.monitor_status as number | null}
+      />
+    );
   }
   if (value == null || value === "") return "—";
   return String(value);
@@ -157,13 +169,29 @@ function isSignalNegative(kind: "tx" | "rx" | "mer", value: number): boolean {
   return value > 50;
 }
 
-function SignalMetric({ kind, value }: { kind: "tx" | "rx" | "mer"; value: unknown }) {
+function SignalMetric({
+  kind,
+  value,
+  monitorStatus,
+}: {
+  kind: "tx" | "rx" | "mer";
+  value: unknown;
+  monitorStatus?: number | null;
+}) {
+  const isOffline = monitorStatus === 0;
+
   if (value == null || value === "") {
-    return <span className="bsod-signal-metric bsod-signal-metric--empty">—</span>;
+    return (
+      <span
+        className={`bsod-signal-metric ${isOffline ? "bsod-signal-metric--negative" : "bsod-signal-metric--empty"}`}
+      >
+        —
+      </span>
+    );
   }
   const numeric = Number(value);
-  const formatted = numeric.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
-  const negative = isSignalNegative(kind, numeric);
+  const formatted = formatNumberPtBr(numeric, { maximumFractionDigits: 2 });
+  const negative = isOffline || isSignalNegative(kind, numeric);
   return (
     <span
       className={`bsod-signal-metric ${negative ? "bsod-signal-metric--negative" : "bsod-signal-metric--positive"}`}

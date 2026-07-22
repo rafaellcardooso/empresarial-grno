@@ -1,4 +1,5 @@
 import { BSOD_STATUS_LABELS } from "@/lib/config/metric-labels";
+import { normalizeDateTimeIso } from "@/lib/format/datetime";
 import type { RowDataPacket } from "mysql2";
 import { hfcQuery } from "@/lib/db/hfc";
 import { serializeRows } from "@/lib/serialize";
@@ -60,12 +61,7 @@ function mapPmeRow(row: RowDataPacket): PmeBsodRow {
     tx: row.tx == null ? null : Number(row.tx),
     rx: row.rx == null ? null : Number(row.rx),
     mer: row.mer == null ? null : Number(row.mer),
-    monitor_time:
-      row.monitor_time instanceof Date
-        ? row.monitor_time.toISOString()
-        : row.monitor_time
-          ? String(row.monitor_time)
-          : null,
+    monitor_time: normalizeDateTimeIso(row.monitor_time as string | Date | null | undefined),
   };
 }
 

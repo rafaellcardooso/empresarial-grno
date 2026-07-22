@@ -1,24 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "@/components/layout/SessionProvider";
+import { applyClientTheme } from "@/lib/auth/theme-client";
+import type { AppTheme } from "@/lib/auth/theme";
 
-/** Alterna tema claro/escuro Bootstrap e persiste preferência em localStorage. */
+/** Alterna tema claro/escuro e persiste no perfil do usuário. */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const { theme, setTheme } = useSession();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = (localStorage.getItem("theme") as "light" | "dark" | null) || "light";
-    setTheme(stored);
-    document.documentElement.setAttribute("data-bs-theme", stored);
-  }, []);
+    applyClientTheme(theme);
+    setMounted(true);
+  }, [theme]);
 
-  /** Aplica o tema oposto ao atual em DOM e localStorage. */
+  /** Aplica o tema oposto e salva no perfil. */
   function handleThemeToggle() {
-    const nextTheme = theme === "light" ? "dark" : "light";
+    const nextTheme: AppTheme = theme === "light" ? "dark" : "light";
     setTheme(nextTheme);
-    localStorage.setItem("theme", nextTheme);
-    document.documentElement.setAttribute("data-bs-theme", nextTheme);
   }
+
+  const iconClass = !mounted || theme === "light" ? "bi-moon-fill" : "bi-sun-fill";
 
   return (
     <button
@@ -30,7 +33,7 @@ export function ThemeToggle() {
       aria-label="Alternar tema claro ou escuro"
     >
       <i
-        className={`bi ${theme === "light" ? "bi-moon-fill" : "bi-sun-fill"}`}
+        className={`bi ${iconClass}`}
         style={{ fontSize: "1.2rem" }}
         aria-hidden="true"
       />

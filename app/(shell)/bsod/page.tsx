@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { isBsodFilterKey, parseBsodFilterParam } from "@/lib/config/bsod-filters";
 import { bsodSummary, listPmeBsod } from "@/lib/queries/bsod";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 export const metadata = { title: "BSOD" };
 
 type PageProps = {

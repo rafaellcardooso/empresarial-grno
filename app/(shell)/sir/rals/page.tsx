@@ -6,9 +6,9 @@ import { cfFilterFromParam } from "@/lib/config/sir-filters";
 import { isRalTipoKey, ralTipoValueFromParam } from "@/lib/config/ral-types";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
 import { DASHBOARD_METRICS } from "@/lib/config/ui-copy";
-import { countRalsByCf, countRalsByTipo, listActiveRals } from "@/lib/queries/sir";
+import { countRalsByCf, countRalsByTipo, countActiveRals, listActiveRals } from "@/lib/queries/sir";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 export const metadata = { title: "RAL" };
 
 type PageProps = {
@@ -24,19 +24,19 @@ export default async function Page({ searchParams }: PageProps) {
 
   let rows: Record<string, unknown>[] = [];
   let cfRal: { cf_executante: string; total: number }[] = [];
-  let total = 0;
+  let totalCount = 0;
   let byTipo: Record<string, number> = {};
   let error: string | null = null;
 
   try {
-    const [ralRows, allRals, byCf, tipoCounts] = await Promise.all([
+    const [ralRows, total, byCf, tipoCounts] = await Promise.all([
       listActiveRals({ tipo: tipoFilter, cf: activeCf }),
-      listActiveRals(),
+      countActiveRals(),
       countRalsByCf(),
       countRalsByTipo(),
     ]);
     rows = ralRows as Record<string, unknown>[];
-    total = allRals.length;
+    totalCount = total;
     cfRal = byCf;
     byTipo = Object.fromEntries(tipoCounts.map((item) => [item.tipo_ral, item.total]));
   } catch (err) {
@@ -62,7 +62,7 @@ export default async function Page({ searchParams }: PageProps) {
           <StatCard
             context={DASHBOARD_METRICS.ral.context}
             label={DASHBOARD_METRICS.ral.label}
-            value={total}
+            value={totalCount}
           />
         </div>
         <div className="col-md-8">
@@ -82,7 +82,7 @@ export default async function Page({ searchParams }: PageProps) {
 
       <RalPanel
         rows={rows}
-        total={total}
+        total={totalCount}
         byTipo={byTipo}
         activeTipo={activeTipo}
         activeCf={activeCf}

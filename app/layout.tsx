@@ -20,6 +20,11 @@ export default function RootLayout({
   return (
     <html lang="pt-br" data-bs-theme="light" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=document.cookie.match(/(?:^|; )emp_theme=(light|dark)/);var t=m?m[1]:localStorage.getItem("theme");if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-bs-theme",t);}}catch(e){}})();`,
+          }}
+        />
         {/* Tema Bootstrap Claro / GRNO — assets em /public/assets */}
         {/* eslint-disable-next-line @next/next/no-css-tags */}
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css" />

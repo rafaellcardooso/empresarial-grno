@@ -22,7 +22,8 @@ export function getHfcPool(): Pool {
       password: required("HFC_DB_PASSWORD"),
       database: process.env.HFC_DB_NAME || "hfc-sls",
       waitForConnections: true,
-      connectionLimit: 5,
+      connectionLimit: 10,
+      enableKeepAlive: true,
     });
   }
   return global.__hfcPool;

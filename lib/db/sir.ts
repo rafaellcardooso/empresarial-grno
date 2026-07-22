@@ -1,4 +1,5 @@
-import mysql, { type Pool, type RowDataPacket } from "mysql2/promise";
+import mysql, { type Pool, type ResultSetHeader, type RowDataPacket } from "mysql2/promise";
+import type { ExecuteValues } from "mysql2";
 
 declare global {
   var __sirPool: Pool | undefined;
@@ -22,7 +23,8 @@ function getSirPoolConfig() {
     password: required("SIR_DB_PASSWORD"),
     database: process.env.SIR_DB_NAME || "claroEmpresarial",
     waitForConnections: true,
-    connectionLimit: 5,
+    connectionLimit: 10,
+    enableKeepAlive: true,
   };
 }
 
@@ -41,4 +43,13 @@ export async function sirQuery<T extends RowDataPacket[]>(
 ): Promise<T> {
   const [rows] = await getSirPool().query<T>(sql, params);
   return rows;
+}
+
+/** Executa INSERT/UPDATE/DELETE e retorna metadados (insertId, affectedRows). */
+export async function sirExecute(
+  sql: string,
+  params: ExecuteValues = [],
+): Promise<ResultSetHeader> {
+  const [result] = await getSirPool().execute<ResultSetHeader>(sql, params);
+  return result;
 }

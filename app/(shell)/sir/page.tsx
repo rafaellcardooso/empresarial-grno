@@ -1,8 +1,8 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SirPanel } from "@/components/sir/SirPanel";
-import { listActiveRals, listActiveRecs } from "@/lib/queries/sir";
+import { countActiveRals, countActiveRecs, listActiveRals, listActiveRecs } from "@/lib/queries/sir";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 export const metadata = { title: "SIR" };
 
 /** Resumo SIR com KPIs e tabelas RAL/REC. */

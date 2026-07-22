@@ -18,36 +18,73 @@ export type RalTipoCount = {
   total: number;
 };
 
-/** Conta registros ativos por CF, incluindo CFs sem ocorrências ativas (total zero). */
+/** Conta registros ativos por CF (uma query). */
 async function countByCf(table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs) {
-  const allCfs = await sirQuery<RowDataPacket[]>(
-    `SELECT DISTINCT cf_executante FROM ${table} WHERE cf_executante IS NOT NULL`,
-  );
-  const map = new Map<string, number>();
-  for (const row of allCfs) {
-    map.set(String(row.cf_executante), 0);
-  }
-
-  const active = await sirQuery<RowDataPacket[]>(
-    `SELECT cf_executante, COUNT(num_recup) AS total
+  const rows = await sirQuery<RowDataPacket[]>(
+    `SELECT cf_executante,
+            SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS total
      FROM ${table}
-     WHERE status = ?
-     GROUP BY cf_executante`,
+     WHERE cf_executante IS NOT NULL
+     GROUP BY cf_executante
+     ORDER BY total DESC`,
     [SIR_RECORD_STATUS.active],
   );
-  for (const row of active) {
-    map.set(String(row.cf_executante), Number(row.total));
+
+  return rows.map((row) => ({
+    cf_executante: String(row.cf_executante),
+    total: Number(row.total),
+  }));
+}
+
+const RAL_LIST_SELECT = `
+  num_recup, descricao, tipo_ral, codigo_anormalidade, abertura, duracao,
+  cf_executante, ultima_atualizacao, status,
+  (detalhes IS NOT NULL AND detalhes <> '') AS has_detalhes
+`;
+
+const REC_LIST_SELECT = `
+  num_recup, prioridade, pontos, cliente, designacao, abertura,
+  cf_executante, ultima_atualizacao, status,
+  (detalhes_title IS NOT NULL AND detalhes_title <> '') AS has_detalhes
+`;
+
+/** Conta RALs ativas com filtros opcionais. */
+export async function countActiveRals(options?: { tipo?: string; cf?: string }): Promise<number> {
+  const params: unknown[] = [SIR_RECORD_STATUS.active];
+  let sql = `SELECT COUNT(*) AS total FROM ${SIR_TABLES.rals} WHERE status = ?`;
+
+  if (options?.tipo) {
+    sql += " AND tipo_ral = ?";
+    params.push(options.tipo);
   }
 
-  return [...map.entries()]
-    .map(([cf_executante, total]) => ({ cf_executante, total }))
-    .sort((a, b) => b.total - a.total);
+  if (options?.cf) {
+    sql += " AND cf_executante = ?";
+    params.push(options.cf);
+  }
+
+  const rows = await sirQuery<RowDataPacket[]>(sql, params);
+  return Number(rows[0]?.total ?? 0);
+}
+
+/** Conta RECs ativas com filtro opcional por CF. */
+export async function countActiveRecs(options?: { cf?: string }): Promise<number> {
+  const params: unknown[] = [SIR_RECORD_STATUS.active];
+  let sql = `SELECT COUNT(*) AS total FROM ${SIR_TABLES.recs} WHERE status = ?`;
+
+  if (options?.cf) {
+    sql += " AND cf_executante = ?";
+    params.push(options.cf);
+  }
+
+  const rows = await sirQuery<RowDataPacket[]>(sql, params);
+  return Number(rows[0]?.total ?? 0);
 }
 
 /** Lista RALs com status ativo, ordenadas por última atualização. */
 export async function listActiveRals(options?: { tipo?: string; cf?: string }): Promise<RalRecord[]> {
   const params: unknown[] = [SIR_RECORD_STATUS.active];
-  let sql = `SELECT * FROM ${SIR_TABLES.rals} WHERE status = ?`;
+  let sql = `SELECT ${RAL_LIST_SELECT} FROM ${SIR_TABLES.rals} WHERE status = ?`;
 
   if (options?.tipo) {
     sql += " AND tipo_ral = ?";
@@ -68,7 +105,7 @@ export async function listActiveRals(options?: { tipo?: string; cf?: string }): 
 /** Lista RECs com status ativo, ordenadas por última atualização. */
 export async function listActiveRecs(options?: { cf?: string }): Promise<RecRecord[]> {
   const params: unknown[] = [SIR_RECORD_STATUS.active];
-  let sql = `SELECT * FROM ${SIR_TABLES.recs} WHERE status = ?`;
+  let sql = `SELECT ${REC_LIST_SELECT} FROM ${SIR_TABLES.recs} WHERE status = ?`;
 
   if (options?.cf) {
     sql += " AND cf_executante = ?";
@@ -79,6 +116,26 @@ export async function listActiveRecs(options?: { cf?: string }): Promise<RecReco
 
   const rows = await sirQuery<(RecRecord & RowDataPacket)[]>(sql, params);
   return serializeRows(rows);
+}
+
+/** Busca texto de detalhes de RAL. */
+export async function getRalDetalhes(numRecup: string): Promise<string | null> {
+  const rows = await sirQuery<RowDataPacket[]>(
+    `SELECT detalhes FROM ${SIR_TABLES.rals} WHERE num_recup = ? LIMIT 1`,
+    [numRecup],
+  );
+  const value = rows[0]?.detalhes;
+  return value == null || value === "" ? null : String(value);
+}
+
+/** Busca texto de detalhes de REC. */
+export async function getRecDetalhes(numRecup: string): Promise<string | null> {
+  const rows = await sirQuery<RowDataPacket[]>(
+    `SELECT detalhes_title FROM ${SIR_TABLES.recs} WHERE num_recup = ? LIMIT 1`,
+    [numRecup],
+  );
+  const value = rows[0]?.detalhes_title;
+  return value == null || value === "" ? null : String(value);
 }
 
 /** Busca RAL ativa por número (LIKE parcial). */

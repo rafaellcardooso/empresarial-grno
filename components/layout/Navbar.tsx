@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GrnoLogo } from "@/components/layout/GrnoLogo";
+import { NavbarUserMenu } from "@/components/layout/NavbarUserMenu";
 import { useSidebarLayout } from "@/components/layout/SidebarLayoutProvider";
 import { SidebarToggle } from "@/components/layout/SidebarToggle";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
@@ -57,8 +59,9 @@ export function Navbar() {
         </div>
 
         <div className="d-flex align-items-center ms-auto gap-3 flex-shrink-0">
-          <div className="d-none d-md-block">
-            <span className="navbar-user-label">Operador GRNO</span>
+          <NotificationBell />
+          <div data-tour="user-menu">
+            <NavbarUserMenu />
           </div>
           <ThemeToggle />
         </div>

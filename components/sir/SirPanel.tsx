@@ -6,6 +6,7 @@ import { SirRecordsTable } from "@/components/sir/SirRecordsTable";
 import { RAL_TABLE_COLUMNS, REC_TABLE_COLUMNS } from "@/lib/config/sir-tables";
 import { DASHBOARD_METRICS } from "@/lib/config/ui-copy";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
+import { formatNumberPtBr } from "@/lib/format/number";
 
 type SirPanelProps = {
   rals: Record<string, unknown>[];
@@ -20,7 +21,7 @@ export function SirPanel({ rals, recs }: SirPanelProps) {
         <div className="col-6 col-md-4 col-lg-3">
           <FilterMetricCard
             label={DASHBOARD_METRICS.ral.label}
-            value={rals.length.toLocaleString("pt-BR")}
+            value={formatNumberPtBr(rals.length)}
             href="/sir/rals"
             variant="default"
           />
@@ -28,7 +29,7 @@ export function SirPanel({ rals, recs }: SirPanelProps) {
         <div className="col-6 col-md-4 col-lg-3">
           <FilterMetricCard
             label={DASHBOARD_METRICS.rec.label}
-            value={recs.length.toLocaleString("pt-BR")}
+            value={formatNumberPtBr(recs.length)}
             href="/sir/recs"
             variant="default"
           />

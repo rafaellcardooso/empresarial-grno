@@ -7,9 +7,9 @@ import { cfFilterFromParam } from "@/lib/config/sir-filters";
 import { REC_TABLE_COLUMNS } from "@/lib/config/sir-tables";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
 import { DASHBOARD_METRICS } from "@/lib/config/ui-copy";
-import { countRecsByCf, listActiveRecs } from "@/lib/queries/sir";
+import { countRecsByCf, countActiveRecs, listActiveRecs } from "@/lib/queries/sir";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 export const metadata = { title: "REC" };
 
 type PageProps = {
@@ -23,17 +23,17 @@ export default async function Page({ searchParams }: PageProps) {
 
   let rows: Record<string, unknown>[] = [];
   let cfRec: { cf_executante: string; total: number }[] = [];
-  let total = 0;
+  let totalCount = 0;
   let error: string | null = null;
 
   try {
-    const [recRows, allRecs, byCf] = await Promise.all([
+    const [recRows, total, byCf] = await Promise.all([
       listActiveRecs({ cf: activeCf }),
-      listActiveRecs(),
+      countActiveRecs(),
       countRecsByCf(),
     ]);
     rows = recRows as Record<string, unknown>[];
-    total = allRecs.length;
+    totalCount = total;
     cfRec = byCf;
   } catch (err) {
     error = err instanceof Error ? err.message : String(err);
@@ -62,7 +62,7 @@ export default async function Page({ searchParams }: PageProps) {
           <StatCard
             context={DASHBOARD_METRICS.rec.context}
             label={DASHBOARD_METRICS.rec.label}
-            value={total}
+            value={totalCount}
           />
         </div>
         <div className="col-md-8">

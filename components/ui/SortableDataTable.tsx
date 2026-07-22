@@ -8,6 +8,8 @@ export type SortableColumn = {
   label: string;
   sortable?: boolean;
   align?: "start" | "center" | "end";
+  minWidth?: string;
+  nowrap?: boolean;
 };
 
 type SortableDataTableProps = {
@@ -15,6 +17,7 @@ type SortableDataTableProps = {
   rows: Record<string, unknown>[];
   empty?: string;
   className?: string;
+  nowrap?: boolean;
   renderCell?: (key: string, value: unknown, row: Record<string, unknown>) => ReactNode;
 };
 
@@ -29,6 +32,7 @@ export function SortableDataTable({
   rows,
   empty = UI_COPY.emptyDefault,
   className,
+  nowrap = false,
   renderCell,
 }: SortableDataTableProps) {
   const [sort, setSort] = useState<SortState | null>(null);
@@ -53,7 +57,7 @@ export function SortableDataTable({
   }
 
   return (
-    <div className="table-responsive">
+    <div className="table-responsive sortable-data-table-scroll">
       <table
         className={`table table-hover table-striped align-middle mb-0 sortable-data-table${className ? ` ${className}` : ""}`}
       >
@@ -62,8 +66,13 @@ export function SortableDataTable({
             {columns.map((column) => {
               const isActive = sort?.key === column.key;
               const sortable = column.sortable !== false;
+              const thStyle = column.minWidth ? { minWidth: column.minWidth } : undefined;
               return (
-                <th key={column.key} className={`sortable-data-table__th ${alignClass(column.align)}`}>
+                <th
+                  key={column.key}
+                  className={`sortable-data-table__th ${columnNowrapClass(column, nowrap)} ${alignClass(column.align)}`.trim()}
+                  style={thStyle}
+                >
                   {sortable ? (
                     <button
                       type="button"
@@ -88,11 +97,13 @@ export function SortableDataTable({
             <tr key={String(row.mac ?? row.id ?? index)}>
               {columns.map((column) => {
                 const value = row[column.key];
+                const cellClass = cellWrapClass(column, nowrap);
+                const tdStyle = column.minWidth ? { minWidth: column.minWidth } : undefined;
                 return (
                   <td
                     key={column.key}
-                    className={`text-break ${alignClass(column.align)}`.trim()}
-                    style={{ maxWidth: 280 }}
+                    className={cellClass}
+                    style={tdStyle ?? (nowrap || column.nowrap ? undefined : { maxWidth: 280 })}
                   >
                     {renderCell ? renderCell(column.key, value, row) : formatCellValue(value)}
                   </td>
@@ -110,6 +121,17 @@ function alignClass(align?: "start" | "center" | "end"): string {
   if (align === "end") return "text-end";
   if (align === "start") return "text-start";
   return "text-center";
+}
+
+function columnNowrapClass(column: SortableColumn, tableNowrap: boolean): string {
+  return column.nowrap || tableNowrap ? "sortable-data-table__col--nowrap" : "";
+}
+
+function cellWrapClass(column: SortableColumn, tableNowrap: boolean): string {
+  if (column.nowrap || tableNowrap) {
+    return `sortable-data-table__td--nowrap ${alignClass(column.align)}`.trim();
+  }
+  return `text-break ${alignClass(column.align)}`.trim();
 }
 
 function compareValues(a: unknown, b: unknown, direction: "asc" | "desc"): number {

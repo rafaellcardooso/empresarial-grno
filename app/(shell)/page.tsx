@@ -4,7 +4,7 @@ import { HOME_COPY } from "@/lib/config/home-copy";
 import { pingHfcDb } from "@/lib/queries/bsod";
 import { pingSirDb } from "@/lib/queries/sir";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 export const metadata = { title: "Início" };
 
 /** Página inicial com boas-vindas e atalhos para monitoramento. */
@@ -27,18 +27,22 @@ export default async function Page() {
 
         <div className="row g-3 mb-4">
           <div className="col-md-6">
-            <HomeNavCard
-              href="/sir"
-              title={HOME_COPY.sir.title}
-              description={HOME_COPY.sir.description}
-            />
+            <div data-tour="home-sir">
+              <HomeNavCard
+                href="/sir"
+                title={HOME_COPY.sir.title}
+                description={HOME_COPY.sir.description}
+              />
+            </div>
           </div>
           <div className="col-md-6">
-            <HomeNavCard
-              href="/bsod"
-              title={HOME_COPY.bsod.title}
-              description={HOME_COPY.bsod.description}
-            />
+            <div data-tour="home-bsod">
+              <HomeNavCard
+                href="/bsod"
+                title={HOME_COPY.bsod.title}
+                description={HOME_COPY.bsod.description}
+              />
+            </div>
           </div>
           <div className="col-md-6">
             <HomeNavCard
