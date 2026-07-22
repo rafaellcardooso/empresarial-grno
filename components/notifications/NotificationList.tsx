@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSession } from "@/components/layout/SessionProvider";
 import { ContentCard } from "@/components/ui/ContentCard";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
 
@@ -15,6 +16,7 @@ type NotificationItem = {
 
 /** Lista de notificações do usuário com marcação de lida. */
 export function NotificationList() {
+  const { setUnreadNotifications } = useSession();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,8 +25,15 @@ export function NotificationList() {
     setLoading(true);
     try {
       const response = await fetch("/api/notifications");
-      const data = (await response.json()) as { notifications?: NotificationItem[] };
-      setItems(data.notifications ?? []);
+      const data = (await response.json()) as {
+        notifications?: NotificationItem[];
+        unreadCount?: number;
+      };
+      const list = data.notifications ?? [];
+      setItems(list);
+      setUnreadNotifications(
+        data.unreadCount ?? list.filter((item) => !item.readAt).length,
+      );
     } finally {
       setLoading(false);
     }
@@ -36,16 +45,17 @@ export function NotificationList() {
 
   /** Marca uma notificação como lida. */
   async function handleMarkRead(id: number) {
-    await fetch("/api/notifications", {
+    const response = await fetch("/api/notifications", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    setItems((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, readAt: new Date().toISOString() } : item,
-      ),
+    const data = (await response.json()) as { unreadCount?: number };
+    const next = items.map((item) =>
+      item.id === id ? { ...item, readAt: new Date().toISOString() } : item,
     );
+    setItems(next);
+    setUnreadNotifications(data.unreadCount ?? next.filter((item) => !item.readAt).length);
   }
 
   /** Marca todas como lidas. */
@@ -54,6 +64,7 @@ export function NotificationList() {
     setItems((current) =>
       current.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })),
     );
+    setUnreadNotifications(0);
   }
 
   if (loading) {

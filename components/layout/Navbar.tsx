@@ -58,7 +58,7 @@ export function Navbar() {
           </nav>
         </div>
 
-        <div className="d-flex align-items-center ms-auto gap-3 flex-shrink-0">
+        <div className="d-flex align-items-center ms-auto gap-3 shrink-0">
           <NotificationBell />
           <div data-tour="user-menu">
             <NavbarUserMenu />

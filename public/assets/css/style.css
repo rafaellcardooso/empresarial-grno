@@ -1360,31 +1360,54 @@ footer a:hover {
 
 .notification-bell {
     position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
     color: rgba(255, 255, 255, 0.85);
     font-size: 1.15rem;
     line-height: 1;
     text-decoration: none;
+    transition:
+        color 0.15s ease,
+        background-color 0.15s ease;
 }
 
-.notification-bell:hover {
+.notification-bell:hover,
+.notification-bell:focus-visible {
     color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.notification-bell--active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.18);
 }
 
 .notification-bell__badge {
     position: absolute;
-    top: -6px;
-    right: -8px;
-    min-width: 1rem;
-    height: 1rem;
-    padding: 0 0.25rem;
+    top: 0.1rem;
+    right: 0.05rem;
+    min-width: 1.05rem;
+    height: 1.05rem;
+    padding: 0 0.2rem;
     border-radius: 999px;
-    background: var(--claro-red);
-    color: #fff;
-    font-size: 0.65rem;
+    background: #fff;
+    color: var(--claro-red);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    font-size: 0.6rem;
     font-weight: 700;
+    line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    pointer-events: none;
 }
 
 .navbar-user-menu {
