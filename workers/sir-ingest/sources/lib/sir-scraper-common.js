@@ -271,6 +271,12 @@ async function waitForFrame(page, frameName, timeoutMs) {
   throw new Error(`Frame not found: ${frameName}`);
 }
 
+/** Indica erro Playwright de frame recarregado/desconectado. */
+export function isFrameDetachedError(err) {
+  const message = err instanceof Error ? err.message : String(err);
+  return message.includes("Frame was detached") || message.includes("frame was detached");
+}
+
 /** Aguarda tabela SIR carregar (vazia ou com linhas de dados). */
 export async function waitForScrapeTable(tableFrame, timeoutMs) {
   const recordPattern = /(?:RAL|REC|DSR|TCQ)-\d+\/\d{4}/i;
@@ -278,22 +284,48 @@ export async function waitForScrapeTable(tableFrame, timeoutMs) {
   await table.waitFor({ state: "attached", timeout: timeoutMs });
 
   const deadline = Date.now() + timeoutMs;
+  let stablePasses = 0;
+  let lastSignature = null;
+
   while (Date.now() < deadline) {
     const rows = table.locator("tbody > tr");
     const rowCount = await rows.count();
-    if (rowCount === 0) return;
+    let signature = `empty:${rowCount}`;
 
-    for (let index = 0; index < rowCount; index += 1) {
-      const row = rows.nth(index);
-      const cellCount = await row.locator("td").count();
-      if (cellCount >= 7) return;
+    if (rowCount > 0) {
+      for (let index = 0; index < rowCount; index += 1) {
+        const row = rows.nth(index);
+        const cellCount = await row.locator("td").count();
+        if (cellCount >= 7) {
+          signature = `ready:${rowCount}:${cellCount}`;
+          break;
+        }
 
-      const rowText = await row.innerText();
-      if (recordPattern.test(rowText)) return;
+        const rowText = await row.innerText();
+        if (recordPattern.test(rowText)) {
+          signature = `ready:${rowCount}:${rowText.slice(0, 24)}`;
+          break;
+        }
+      }
+    }
+
+    if (signature === lastSignature) {
+      stablePasses += 1;
+      if (stablePasses >= 2) return;
+    } else {
+      stablePasses = 0;
+      lastSignature = signature;
     }
 
     await tableFrame.waitForTimeout(250);
   }
+}
+
+/** Retorna frame da tabela após aguardar carregamento estável. */
+export async function prepareScrapeTable(page, timeoutMs) {
+  const tableFrame = await getTableFrame(page, timeoutMs);
+  await waitForScrapeTable(tableFrame, timeoutMs);
+  return tableFrame;
 }
 
 /** Seleciona tipo de registro no filtro SIR e confirma. */
@@ -505,6 +537,39 @@ export async function extractRalDetailsFromRow(row) {
   const rowTitle = await row.evaluate((element) => element.getAttribute("title")?.trim() || "");
   if (rowTitle) return rowTitle;
   return extractDetailsFromRow(row);
+}
+
+/** Extrai snapshot das linhas da listaTable em uma única leitura DOM. */
+export async function scrapeListaTableSnapshot(tableFrame, rowSelector) {
+  return tableFrame.evaluate((selector) => {
+    function scrapeCellText(cell) {
+      if (!cell) return "";
+      const listaFont = cell.querySelector("font.listaCelulaFont");
+      if (listaFont?.textContent?.trim()) return listaFont.textContent.trim();
+      const linkFont = cell.querySelector("a font");
+      if (linkFont?.textContent?.trim()) return linkFont.textContent.trim();
+      const link = cell.querySelector("a");
+      if (link?.textContent?.trim()) return link.textContent.trim();
+      return (cell.textContent || "")
+        .replace(/\u00a0/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    const table = document.querySelector("table.listaTable");
+    if (!table) return [];
+
+    return Array.from(table.querySelectorAll(selector)).map((row) => {
+      const cells = Array.from(row.querySelectorAll(":scope > td"));
+      const designationLink = cells[0]?.querySelector("a");
+      return {
+        texts: cells.map(scrapeCellText),
+        rowTitle: row.getAttribute("title")?.trim() || "",
+        designationTitle: designationLink?.getAttribute("title")?.trim() || "",
+        cellCount: cells.length,
+      };
+    });
+  }, rowSelector);
 }
 
 /** Varre células da linha e retorna o title mais longo (detalhes SIR). */

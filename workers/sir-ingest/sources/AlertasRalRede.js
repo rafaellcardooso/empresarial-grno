@@ -1,25 +1,24 @@
 import {
   assertCredentials,
-  extractRalDetailsFromRow,
-  getCellText,
-  getDesignationFromCell,
   getDbConnection,
-  getTableFrame,
+  isFrameDetachedError,
   loadBaseConfig,
   loadSeenItems,
   logCycleSummary,
+  prepareScrapeTable,
   processRecordClosures,
   runWithRetry,
   saveErrorPageHtml,
   saveSeenItems,
+  scrapeListaTableSnapshot,
   SirBrowserSession,
   startPollingLoop,
   submitRecordTypeFilter,
-  waitForScrapeTable,
 } from "./lib/sir-scraper-common.js";
 
 const LOG_PREFIX = "[RAL]";
 const RAL_NUM_PATTERN = /^RAL-\d+\/\d{4}$/i;
+const RAL_ROW_SELECTOR = 'tbody > tr[class*="listaLinha"]';
 
 const config = loadBaseConfig({
   seenItemsFile: "states/dadosAntigosRal.json",
@@ -74,28 +73,12 @@ function isRalRecord(numRecup) {
   return RAL_NUM_PATTERN.test(String(numRecup || "").trim());
 }
 
-/** Localiza num_recup RAL entre as células da linha. */
-async function findRalNumRecupInRow(row) {
-  const cells = row.locator("td");
-  const cellCount = await cells.count();
+/** Extrai campos de uma linha da snapshot da tabela RAL. */
+function parseRalSnapshotRow(row) {
+  const { texts, rowTitle, designationTitle, cellCount } = row;
+  const numRecup = texts.find((text) => isRalRecord(text))?.trim() ?? "";
 
-  for (let index = 0; index < cellCount; index += 1) {
-    const text = await getCellText(cells.nth(index));
-    if (isRalRecord(text)) {
-      return { numRecup: text.trim() };
-    }
-  }
-
-  return null;
-}
-
-/** Extrai campos de uma linha da tabela RAL no SIR. */
-async function parseRalRow(row) {
-  const cells = row.locator("td");
-  const cellCount = await cells.count();
-  const ralMatch = await findRalNumRecupInRow(row);
-
-  if (!ralMatch) {
+  if (!numRecup) {
     throw new Error(`Skipped row — not RAL (${cellCount} columns)`);
   }
 
@@ -104,35 +87,37 @@ async function parseRalRow(row) {
   }
 
   return {
-    numRecup: ralMatch.numRecup,
-    designation: await getDesignationFromCell(cells.nth(0)),
-    type: await getCellText(cells.nth(1)),
-    anomalyCode: await getCellText(cells.nth(2)),
-    openedAt: await getCellText(cells.nth(4)),
-    duration: await getCellText(cells.nth(5)),
-    executorCf: await getCellText(cells.nth(7)),
-    details: await extractRalDetailsFromRow(row),
+    numRecup,
+    designation: designationTitle || texts[0] || "",
+    type: texts[1] || "",
+    anomalyCode: texts[2] || "",
+    openedAt: texts[4] || "",
+    duration: texts[5] || "",
+    executorCf: texts[7] || "",
+    details: rowTitle || null,
   };
 }
 
 /** Processa linhas da tabela RAL, persiste no banco e detecta encerramentos. */
 async function processRalTable(page, seenItems) {
-  const tableFrame = await getTableFrame(page, config.elementTimeoutMs);
-  await waitForScrapeTable(tableFrame, config.elementTimeoutMs);
-  const rows = tableFrame
-    .locator("table.listaTable")
-    .first()
-    .locator('tbody > tr[class*="listaLinha"]');
-  const rowCount = await rows.count();
+  const tableFrame = await prepareScrapeTable(page, config.elementTimeoutMs);
+  let snapshot;
+  try {
+    snapshot = await scrapeListaTableSnapshot(tableFrame, RAL_ROW_SELECTOR);
+  } catch (err) {
+    if (isFrameDetachedError(err)) {
+      throw new Error("Frame was detached while reading RAL table snapshot");
+    }
+    throw err;
+  }
 
   const currentIds = [];
   let hasNewItems = false;
   let rowErrors = 0;
 
-  for (let i = 0; i < rowCount; i += 1) {
-    const row = rows.nth(i);
+  for (const row of snapshot) {
     try {
-      const ral = await parseRalRow(row);
+      const ral = parseRalSnapshotRow(row);
       if (!ral.numRecup) continue;
 
       currentIds.push(ral.numRecup);

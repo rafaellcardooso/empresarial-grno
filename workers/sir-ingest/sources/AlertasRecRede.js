@@ -1,23 +1,23 @@
 import {
   assertCredentials,
-  extractDetailsFromRow,
-  getCellText,
   getDbConnection,
-  getTableFrame,
+  isFrameDetachedError,
   loadBaseConfig,
   loadSeenItems,
   logCycleSummary,
+  prepareScrapeTable,
   processRecordClosures,
   runWithRetry,
   saveErrorPageHtml,
   saveSeenItems,
+  scrapeListaTableSnapshot,
   SirBrowserSession,
   startPollingLoop,
   submitRecordTypeFilter,
-  waitForScrapeTable,
 } from "./lib/sir-scraper-common.js";
 
 const LOG_PREFIX = "[REC]";
+const REC_ROW_SELECTOR = "tbody > tr";
 
 const config = loadBaseConfig({
   seenItemsFile: "states/dadosAntigosREC.json",
@@ -65,51 +65,53 @@ async function upsertRec(rec) {
 
 /** Indica registro REC/DSR/TCQ pelo prefixo do num_recup. */
 function isRecGroupRecord(numRecup) {
-  return /^(REC|DSR|TCQ)-\d+\/\d{4}$/i.test(String(numRecup).trim());
+  return /^(REC|DSR|TCQ)-\d+\/\d{4}$/i.test(String(numRecup || "").trim());
 }
 
-/** Extrai campos de uma linha da tabela REC/DSR/TCQ no SIR. */
-async function parseRecRow(row) {
-  const cells = row.locator("td");
-  const cellCount = await cells.count();
+/** Extrai campos de uma linha da snapshot da tabela REC/DSR/TCQ. */
+function parseRecSnapshotRow(row) {
+  const { texts, rowTitle, cellCount } = row;
   if (cellCount < 7) {
     throw new Error(`Incomplete REC row (${cellCount} columns, expected >= 7)`);
   }
 
-  const numRecup = await getCellText(cells.nth(2));
+  const numRecup = texts[2] || "";
   if (!isRecGroupRecord(numRecup)) {
     throw new Error(`Skipped row — not REC/DSR/TCQ (${numRecup || "empty"})`);
   }
 
-  const detailsTitle = await extractDetailsFromRow(row);
-
   return {
     numRecup,
-    priority: await getCellText(cells.nth(0)),
-    points: await getCellText(cells.nth(1)),
-    client: await getCellText(cells.nth(3)),
-    designation: await getCellText(cells.nth(4)),
-    openedAt: await getCellText(cells.nth(5)),
-    executorCf: await getCellText(cells.nth(6)),
-    detailsTitle,
+    priority: texts[0] || "",
+    points: texts[1] || "",
+    client: texts[3] || "",
+    designation: texts[4] || "",
+    openedAt: texts[5] || "",
+    executorCf: texts[6] || "",
+    detailsTitle: rowTitle || null,
   };
 }
 
 /** Processa linhas da tabela REC, persiste no banco e detecta encerramentos. */
 async function processRecTable(page, seenItems) {
-  const tableFrame = await getTableFrame(page, config.elementTimeoutMs);
-  await waitForScrapeTable(tableFrame, config.elementTimeoutMs);
-  const rows = tableFrame.locator("table.listaTable").first().locator("tbody > tr");
-  const rowCount = await rows.count();
+  const tableFrame = await prepareScrapeTable(page, config.elementTimeoutMs);
+  let snapshot;
+  try {
+    snapshot = await scrapeListaTableSnapshot(tableFrame, REC_ROW_SELECTOR);
+  } catch (err) {
+    if (isFrameDetachedError(err)) {
+      throw new Error("Frame was detached while reading REC table snapshot");
+    }
+    throw err;
+  }
 
   const currentIds = [];
   let hasNewItems = false;
   let rowErrors = 0;
 
-  for (let i = 0; i < rowCount; i += 1) {
-    const row = rows.nth(i);
+  for (const row of snapshot) {
     try {
-      const rec = await parseRecRow(row);
+      const rec = parseRecSnapshotRow(row);
       currentIds.push(rec.numRecup);
       const itemKey = `${config.recordType}:${rec.numRecup} | ${rec.client}`;
 
