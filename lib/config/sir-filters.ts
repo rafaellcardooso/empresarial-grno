@@ -62,6 +62,32 @@ export function buildSirFilterHref(basePath: string, filters: SirCfFilterParams 
   return query ? `${basePath}?${query}` : basePath;
 }
 
+/** Monta URL de exportação CSV SIR preservando filtros (sem paginação). */
+export function buildSirExportHref(
+  basePath: string,
+  filters: Omit<SirCfFilterParams, "page"> = {},
+): string {
+  const params = new URLSearchParams();
+  if (filters.status && filters.status !== "ativo") params.set("status", filters.status);
+  if (filters.tipo) params.set("tipo", filters.tipo);
+  if (filters.cf) params.set("cf", filters.cf);
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}
+
+/** Monta URL de exportação CSV REC preservando filtros (sem paginação). */
+export function buildRecExportHref(
+  basePath: string,
+  filters: Omit<SirRecFilterParams, "page"> = {},
+): string {
+  const params = new URLSearchParams();
+  if (filters.status && filters.status !== "ativo") params.set("status", filters.status);
+  if (filters.tipo) params.set("tipo", filters.tipo);
+  if (filters.cf) params.set("cf", filters.cf);
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}
+
 /** Alterna filtro de CF: clique no ativo remove o filtro. */
 export function cfFilterToggleHref(
   basePath: string,

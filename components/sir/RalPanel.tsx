@@ -1,6 +1,7 @@
 "use client";
 
 import { ContentCard } from "@/components/ui/ContentCard";
+import { CardHeaderActions, ExportCsvLink } from "@/components/ui/CardHeaderActions";
 import { SirFilterToolbar, type SirFilterChipItem } from "@/components/sir/SirFilterToolbar";
 import { SirRecordsTable } from "@/components/sir/SirRecordsTable";
 import { TablePagination } from "@/components/ui/TablePagination";
@@ -31,6 +32,7 @@ type RalPanelProps = {
   activeCf?: string;
   currentPage: number;
   pageSize: number;
+  exportHref: string;
 };
 
 function ralPageHref(
@@ -88,6 +90,7 @@ export function RalPanel({
   activeCf,
   currentPage,
   pageSize,
+  exportHref,
 }: RalPanelProps) {
   const tipoLabel = ralTipoFilterLabel(activeTipo);
   const statusLabel = sirStatusLabelForScope("ral", activeStatus);
@@ -136,7 +139,14 @@ export function RalPanel({
     <>
       <SirFilterToolbar statusChips={statusChips} tipoChips={tipoChips} />
 
-      <ContentCard title={buildRalTitle(total, statusLabel, tipoLabel, activeCf)}>
+      <ContentCard
+        title={buildRalTitle(total, statusLabel, tipoLabel, activeCf)}
+        headerAside={
+          <CardHeaderActions>
+            <ExportCsvLink href={exportHref} />
+          </CardHeaderActions>
+        }
+      >
         <SirRecordsTable
           columns={RAL_TABLE_COLUMNS}
           rows={rows}

@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SirPanel } from "@/components/sir/SirPanel";
+import { buildRecExportHref, buildSirExportHref } from "@/lib/config/sir-filters";
 import { SIR_LIST_PAGE_SIZE } from "@/lib/config/sir-pagination";
 import { countRals, countRecs, listActiveRals, listActiveRecs } from "@/lib/queries/sir";
 
@@ -56,6 +57,8 @@ export default async function Page() {
           ralTotal={ralTotal}
           recTotal={recTotal}
           pageSize={SIR_LIST_PAGE_SIZE}
+          ralExportHref={buildSirExportHref("/api/export/sir/rals", { status: "ativo" })}
+          recExportHref={buildRecExportHref("/api/export/sir/recs", { status: "ativo" })}
         />
       )}
     </>

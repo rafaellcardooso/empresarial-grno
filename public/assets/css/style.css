@@ -797,6 +797,44 @@ body {
   text-transform: uppercase;
 }
 
+.content-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.card-header-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--line-clr);
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  text-decoration: none;
+  color: var(--text-clr);
+  background-color: var(--surface-clr);
+  white-space: nowrap;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.card-header-action:hover {
+  border-color: rgba(227, 6, 19, 0.35);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-clr);
+}
+
+.card-header-action:focus-visible {
+  outline: 2px solid rgba(227, 6, 19, 0.35);
+  outline-offset: 2px;
+}
+
 .metric-card__label {
   font-size: var(--text-xs);
   font-weight: 600;

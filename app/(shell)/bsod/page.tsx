@@ -3,6 +3,7 @@ import { BsodInventoryTable } from "@/components/bsod/BsodInventoryTable";
 import {
   bsodFilterSummary,
   bsodUrlStateFromParams,
+  buildBsodExportHref,
   parseBsodSearchParams,
 } from "@/lib/config/bsod-filters";
 import { countBsodHealth, listBsodCmts, listBsodNodes, listPmeBsod } from "@/lib/queries/bsod";
@@ -48,7 +49,11 @@ export default async function Page({ searchParams }: PageProps) {
           nodeOptions={nodeOptions}
           activeState={urlState}
         />
-        <BsodInventoryTable rows={rows} filterSummary={bsodFilterSummary(urlState)} />
+        <BsodInventoryTable
+          rows={rows}
+          filterSummary={bsodFilterSummary(urlState)}
+          exportHref={buildBsodExportHref(urlState)}
+        />
       </>
     );
   } catch (err) {

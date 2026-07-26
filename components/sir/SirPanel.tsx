@@ -1,7 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { ContentCard } from "@/components/ui/ContentCard";
+import {
+  CardHeaderActions,
+  CardHeaderLink,
+  ExportCsvLink,
+} from "@/components/ui/CardHeaderActions";
 import { FilterMetricCard } from "@/components/ui/FilterMetricCard";
 import { SirRecordsTable } from "@/components/sir/SirRecordsTable";
 import { TablePagination } from "@/components/ui/TablePagination";
@@ -20,6 +24,8 @@ type SirPanelProps = {
   ralTotal: number;
   recTotal: number;
   pageSize: number;
+  ralExportHref: string;
+  recExportHref: string;
 };
 
 /** Painel SIR com KPIs por escopo/status e tabelas RAL/REC ordenáveis. */
@@ -33,6 +39,8 @@ export function SirPanel({
   ralTotal,
   recTotal,
   pageSize,
+  ralExportHref,
+  recExportHref,
 }: SirPanelProps) {
   return (
     <>
@@ -75,11 +83,12 @@ export function SirPanel({
         <ContentCard
           title={`${METRIC_LABELS.sir.ral} — ABERTAS (${ralTotal})`}
           headerAside={
-            ralTotal > pageSize ? (
-              <Link href="/sir/rals" className="small fw-normal">
-                Ver todas
-              </Link>
-            ) : undefined
+            <CardHeaderActions>
+              {ralTotal > pageSize ? (
+                <CardHeaderLink href="/sir/rals">Ver todas</CardHeaderLink>
+              ) : null}
+              <ExportCsvLink href={ralExportHref} />
+            </CardHeaderActions>
           }
         >
           <SirRecordsTable
@@ -100,11 +109,12 @@ export function SirPanel({
       <ContentCard
         title={`${METRIC_LABELS.sir.recScope} — ABERTOS (${recTotal})`}
         headerAside={
-          recTotal > pageSize ? (
-            <Link href="/sir/recs" className="small fw-normal">
-              Ver todos
-            </Link>
-          ) : undefined
+          <CardHeaderActions>
+            {recTotal > pageSize ? (
+              <CardHeaderLink href="/sir/recs">Ver todos</CardHeaderLink>
+            ) : null}
+            <ExportCsvLink href={recExportHref} />
+          </CardHeaderActions>
         }
       >
         <SirRecordsTable

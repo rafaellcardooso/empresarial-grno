@@ -4,6 +4,9 @@ export const SIR_LIST_PAGE_SIZE = 50;
 /** Limite máximo de registros por página (UI e API). */
 export const SIR_LIST_MAX_PAGE_SIZE = 200;
 
+/** Limite máximo de linhas em exportação CSV SIR. */
+export const SIR_EXPORT_MAX_ROWS = 5000;
+
 /** Normaliza número de página a partir da query string (mínimo 1). */
 export function sirPageFromParam(param?: string | null): number {
   const page = Number(param);

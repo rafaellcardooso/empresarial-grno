@@ -1,6 +1,7 @@
 "use client";
 
 import { ContentCard } from "@/components/ui/ContentCard";
+import { CardHeaderActions, ExportCsvLink } from "@/components/ui/CardHeaderActions";
 import { SirFilterToolbar, type SirFilterChipItem } from "@/components/sir/SirFilterToolbar";
 import { SirRecordsTable } from "@/components/sir/SirRecordsTable";
 import { TablePagination } from "@/components/ui/TablePagination";
@@ -26,6 +27,7 @@ type RecPanelProps = {
   activeCf?: string;
   currentPage: number;
   pageSize: number;
+  exportHref: string;
 };
 
 function recPageHref(
@@ -83,6 +85,7 @@ export function RecPanel({
   activeCf,
   currentPage,
   pageSize,
+  exportHref,
 }: RecPanelProps) {
   const tipoLabel = recTipoFilterLabel(activeTipo);
   const statusLabel = sirStatusLabelForScope("rec", activeStatus);
@@ -122,7 +125,14 @@ export function RecPanel({
     <>
       <SirFilterToolbar statusChips={statusChips} tipoChips={tipoChips} />
 
-      <ContentCard title={buildRecTitle(total, statusLabel, tipoLabel, activeCf)}>
+      <ContentCard
+        title={buildRecTitle(total, statusLabel, tipoLabel, activeCf)}
+        headerAside={
+          <CardHeaderActions>
+            <ExportCsvLink href={exportHref} />
+          </CardHeaderActions>
+        }
+      >
         <SirRecordsTable
           columns={REC_TABLE_COLUMNS}
           rows={rows}

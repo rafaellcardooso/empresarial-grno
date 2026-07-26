@@ -1,6 +1,7 @@
 "use client";
 
 import { ContentCard } from "@/components/ui/ContentCard";
+import { CardHeaderActions, ExportCsvLink } from "@/components/ui/CardHeaderActions";
 import { formatNumberPtBr } from "@/lib/format/number";
 import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
 import { SortableDataTable, type SortableColumn } from "@/components/ui/SortableDataTable";
@@ -12,6 +13,7 @@ type BsodInventoryTableProps = {
   rows: PmeBsodRow[];
   activeFilter?: BsodFilterKey;
   filterSummary?: string;
+  exportHref: string;
 };
 
 const TABLE_COLUMNS: SortableColumn[] = [
@@ -30,7 +32,12 @@ const TABLE_COLUMNS: SortableColumn[] = [
 ];
 
 /** Tabela de inventário PME filtrada por KPI. */
-export function BsodInventoryTable({ rows, activeFilter, filterSummary }: BsodInventoryTableProps) {
+export function BsodInventoryTable({
+  rows,
+  activeFilter,
+  filterSummary,
+  exportHref,
+}: BsodInventoryTableProps) {
   const suffix = filterSummary ?? (activeFilter ? filterLabel(activeFilter) : undefined);
 
   return (
@@ -39,6 +46,11 @@ export function BsodInventoryTable({ rows, activeFilter, filterSummary }: BsodIn
         suffix
           ? `${METRIC_LABELS.bsod.inventario} — ${suffix} (${rows.length})`
           : `${METRIC_LABELS.bsod.inventario} (${rows.length})`
+      }
+      headerAside={
+        <CardHeaderActions>
+          <ExportCsvLink href={exportHref} />
+        </CardHeaderActions>
       }
     >
       <SortableDataTable

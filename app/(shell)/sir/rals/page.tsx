@@ -2,7 +2,7 @@ import { CfRankingList } from "@/components/sir/CfRankingList";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RalPanel } from "@/components/sir/RalPanel";
 import { StatCard } from "@/components/ui/StatCard";
-import { cfFilterFromParam } from "@/lib/config/sir-filters";
+import { cfFilterFromParam, buildSirExportHref } from "@/lib/config/sir-filters";
 import { sirStatusLabelForScope, sirStatusFromParam } from "@/lib/config/sir-status";
 import { SIR_LIST_PAGE_SIZE, sirListOffset, sirPageFromParam } from "@/lib/config/sir-pagination";
 import { isRalTipoKey, ralTipoValueFromParam } from "@/lib/config/ral-types";
@@ -104,6 +104,11 @@ export default async function Page({ searchParams }: PageProps) {
         activeCf={activeCf}
         currentPage={currentPage}
         pageSize={pageSize}
+        exportHref={buildSirExportHref("/api/export/sir/rals", {
+          status: activeStatus,
+          tipo: activeTipo,
+          cf: activeCf,
+        })}
       />
     </>
   );

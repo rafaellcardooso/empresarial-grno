@@ -125,3 +125,16 @@ export function bsodFilterSummary(state: BsodUrlState): string | undefined {
   if (state.filtro === "sem_vlan") parts.push(METRIC_LABELS.bsod.semVlan);
   return parts.length ? parts.join(" · ") : undefined;
 }
+
+/** Monta URL de exportação CSV BSOD preservando filtros ativos. */
+export function buildBsodExportHref(state: BsodUrlState = {}): string {
+  const params = new URLSearchParams();
+  if (state.saude) params.set("saude", state.saude);
+  if (state.cmts) params.set("cmts", state.cmts);
+  if (state.node) params.set("node", state.node);
+  if (state.filtro && VLAN_FILTERS.has(state.filtro as BsodVlanFilterKey)) {
+    params.set("filtro", state.filtro);
+  }
+  const query = params.toString();
+  return query ? `/api/export/bsod?${query}` : "/api/export/bsod";
+}
