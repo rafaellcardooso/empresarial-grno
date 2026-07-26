@@ -4,13 +4,33 @@ export type RecTipoDefinition = {
   key: RecTipoKey;
   prefix: string;
   label: string;
+  chipLabel: string;
+  filterClass: string;
 };
 
 /** Tipos REC/DSR/TCQ derivados do prefixo de num_recup. */
 export const REC_TIPOS: RecTipoDefinition[] = [
-  { key: "rec", prefix: "REC", label: "REC" },
-  { key: "dsr", prefix: "DSR", label: "DSR" },
-  { key: "tcq", prefix: "TCQ", label: "TCQ" },
+  {
+    key: "rec",
+    prefix: "REC",
+    label: "REC",
+    chipLabel: "REC",
+    filterClass: "sir-filter-chip--rec-rec",
+  },
+  {
+    key: "dsr",
+    prefix: "DSR",
+    label: "DSR",
+    chipLabel: "DSR",
+    filterClass: "sir-filter-chip--rec-dsr",
+  },
+  {
+    key: "tcq",
+    prefix: "TCQ",
+    label: "TCQ",
+    chipLabel: "TCQ",
+    filterClass: "sir-filter-chip--rec-tcq",
+  },
 ];
 
 const REC_TIPO_BY_KEY = new Map(REC_TIPOS.map((tipo) => [tipo.key, tipo]));

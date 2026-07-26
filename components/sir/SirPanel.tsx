@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { ContentCard } from "@/components/ui/ContentCard";
 import { FilterMetricCard } from "@/components/ui/FilterMetricCard";
 import { SirRecordsTable } from "@/components/sir/SirRecordsTable";
+import { TablePagination } from "@/components/ui/TablePagination";
 import { RAL_TABLE_COLUMNS, REC_TABLE_COLUMNS } from "@/lib/config/sir-tables";
 import { sirRecScopeStatusKpiLabel, sirScopeStatusKpiLabel } from "@/lib/config/sir-status";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
@@ -15,6 +17,9 @@ type SirPanelProps = {
   ralClosedCount: number;
   recOpenCount: number;
   recClosedCount: number;
+  ralTotal: number;
+  recTotal: number;
+  pageSize: number;
 };
 
 /** Painel SIR com KPIs por escopo/status e tabelas RAL/REC ordenáveis. */
@@ -25,6 +30,9 @@ export function SirPanel({
   ralClosedCount,
   recOpenCount,
   recClosedCount,
+  ralTotal,
+  recTotal,
+  pageSize,
 }: SirPanelProps) {
   return (
     <>
@@ -64,22 +72,52 @@ export function SirPanel({
       </div>
 
       <div className="mb-3">
-        <ContentCard title={`${METRIC_LABELS.sir.ral} — ABERTAS (${rals.length})`}>
+        <ContentCard
+          title={`${METRIC_LABELS.sir.ral} — ABERTAS (${ralTotal})`}
+          headerAside={
+            ralTotal > pageSize ? (
+              <Link href="/sir/rals" className="small fw-normal">
+                Ver todas
+              </Link>
+            ) : undefined
+          }
+        >
           <SirRecordsTable
             columns={RAL_TABLE_COLUMNS}
             rows={rals}
             recordLabel="RAL"
             empty="Nenhuma RAL aberta."
           />
+          <TablePagination
+            currentPage={1}
+            pageSize={pageSize}
+            totalItems={ralTotal}
+            buildPageHref={(page) => (page <= 1 ? "/sir/rals" : `/sir/rals?page=${page}`)}
+          />
         </ContentCard>
       </div>
 
-      <ContentCard title={`${METRIC_LABELS.sir.recScope} — ABERTOS (${recs.length})`}>
+      <ContentCard
+        title={`${METRIC_LABELS.sir.recScope} — ABERTOS (${recTotal})`}
+        headerAside={
+          recTotal > pageSize ? (
+            <Link href="/sir/recs" className="small fw-normal">
+              Ver todos
+            </Link>
+          ) : undefined
+        }
+      >
         <SirRecordsTable
           columns={REC_TABLE_COLUMNS}
           rows={recs}
           recordLabel="REC"
           empty="Nenhum registro aberto."
+        />
+        <TablePagination
+          currentPage={1}
+          pageSize={pageSize}
+          totalItems={recTotal}
+          buildPageHref={(page) => (page <= 1 ? "/sir/recs" : `/sir/recs?page=${page}`)}
         />
       </ContentCard>
     </>

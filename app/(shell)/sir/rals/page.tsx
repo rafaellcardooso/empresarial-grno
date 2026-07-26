@@ -4,6 +4,7 @@ import { RalPanel } from "@/components/sir/RalPanel";
 import { StatCard } from "@/components/ui/StatCard";
 import { cfFilterFromParam } from "@/lib/config/sir-filters";
 import { sirStatusLabelForScope, sirStatusFromParam } from "@/lib/config/sir-status";
+import { SIR_LIST_PAGE_SIZE, sirListOffset, sirPageFromParam } from "@/lib/config/sir-pagination";
 import { isRalTipoKey, ralTipoValueFromParam } from "@/lib/config/ral-types";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
 import { countRals, countRalsByCf, countRalsByTipo, listRals } from "@/lib/queries/sir";
@@ -12,37 +13,48 @@ export const revalidate = 30;
 export const metadata = { title: "RAL" };
 
 type PageProps = {
-  searchParams: Promise<{ tipo?: string; cf?: string; status?: string }>;
+  searchParams: Promise<{ tipo?: string; cf?: string; status?: string; page?: string }>;
 };
 
 /** Resumo e tabela de RAL com filtros por status, tipo e CF. */
 export default async function Page({ searchParams }: PageProps) {
-  const { tipo, cf, status } = await searchParams;
+  const { tipo, cf, status, page } = await searchParams;
   const activeStatus = sirStatusFromParam(status);
   const activeTipo = isRalTipoKey(tipo) ? tipo : undefined;
   const tipoFilter = ralTipoValueFromParam(tipo);
   const activeCf = cfFilterFromParam(cf);
-  const queryOptions = { status: activeStatus, tipo: tipoFilter, cf: activeCf };
+  const currentPage = sirPageFromParam(page);
+  const pageSize = SIR_LIST_PAGE_SIZE;
+  const queryOptions = {
+    status: activeStatus,
+    tipo: tipoFilter,
+    cf: activeCf,
+    limit: pageSize,
+    offset: sirListOffset(currentPage, pageSize),
+  };
 
   let rows: Record<string, unknown>[] = [];
   let cfRal: { cf_executante: string; total: number }[] = [];
   let totalCount = 0;
+  let totalAllTipos = 0;
   let openCount = 0;
   let closedCount = 0;
   let byTipo: Record<string, number> = {};
   let error: string | null = null;
 
   try {
-    const [ralRows, total, open, closed, byCf, tipoCounts] = await Promise.all([
+    const [ralRows, total, totalAll, open, closed, byCf, tipoCounts] = await Promise.all([
       listRals(queryOptions),
       countRals(queryOptions),
+      countRals({ status: activeStatus, cf: activeCf }),
       countRals({ ...queryOptions, status: "ativo" }),
       countRals({ ...queryOptions, status: "encerrado" }),
       countRalsByCf(activeStatus),
-      countRalsByTipo(activeStatus),
+      countRalsByTipo(activeStatus, activeCf),
     ]);
     rows = ralRows as Record<string, unknown>[];
     totalCount = total;
+    totalAllTipos = totalAll;
     openCount = open;
     closedCount = closed;
     cfRal = byCf;
@@ -83,12 +95,15 @@ export default async function Page({ searchParams }: PageProps) {
       <RalPanel
         rows={rows}
         total={totalCount}
+        totalAllTipos={totalAllTipos}
         byTipo={byTipo}
         openCount={openCount}
         closedCount={closedCount}
         activeStatus={activeStatus}
         activeTipo={activeTipo}
         activeCf={activeCf}
+        currentPage={currentPage}
+        pageSize={pageSize}
       />
     </>
   );

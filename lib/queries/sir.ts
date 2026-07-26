@@ -1,5 +1,6 @@
 import type { RowDataPacket } from "mysql2";
 import { recTipoLikePrefix, recTipoPrefixFromParam } from "@/lib/config/rec-types";
+import { SIR_LIST_MAX_PAGE_SIZE } from "@/lib/config/sir-pagination";
 import { sirRecordStatusFromFilter, type SirStatusFilter } from "@/lib/config/sir-status";
 import { sirQuery } from "@/lib/db/sir";
 import { SIR_TABLES, type RalRecord, type RecRecord } from "@/lib/models";
@@ -24,12 +25,16 @@ export type SirRalQueryOptions = {
   status?: SirStatusFilter;
   tipo?: string;
   cf?: string;
+  limit?: number;
+  offset?: number;
 };
 
 export type SirRecQueryOptions = {
   status?: SirStatusFilter;
   cf?: string;
   tipo?: string;
+  limit?: number;
+  offset?: number;
 };
 
 /** Monta cláusula SQL de status para listagens SIR. */
@@ -78,12 +83,24 @@ const SIR_ABERTURA_ORDER_EXPR = `COALESCE(
   STR_TO_DATE(abertura, '%d/%m/%Y %H:%i')
 )`;
 
-/** Cláusula ORDER BY abertura ASC, registros sem data ao final. */
-const SIR_ORDER_BY_ABERTURA_ASC = `
+/** Cláusula ORDER BY abertura DESC (mais recente primeiro), registros sem data ao final. */
+const SIR_ORDER_BY_ABERTURA_DESC = `
   ORDER BY
     CASE WHEN abertura IS NULL OR TRIM(abertura) = '' THEN 1 ELSE 0 END,
-    ${SIR_ABERTURA_ORDER_EXPR} ASC
+    ${SIR_ABERTURA_ORDER_EXPR} DESC
 `;
+
+/** Anexa LIMIT/OFFSET validados quando informados nas opções de listagem. */
+function appendListLimitClause(sql: string, options?: { limit?: number; offset?: number }): string {
+  if (options?.limit == null) return sql;
+  const limit = Math.min(Math.max(Math.floor(options.limit), 1), SIR_LIST_MAX_PAGE_SIZE);
+  let next = `${sql} LIMIT ${limit}`;
+  const offset = options.offset ?? 0;
+  if (offset > 0) {
+    next += ` OFFSET ${Math.floor(offset)}`;
+  }
+  return next;
+}
 
 /** Conta RALs conforme filtros de status, tipo e CF. */
 export async function countRals(options?: SirRalQueryOptions): Promise<number> {
@@ -142,7 +159,7 @@ export async function countActiveRecs(options?: { cf?: string; tipo?: string }):
   return countRecs({ ...options, status: "ativo" });
 }
 
-/** Lista RALs conforme filtros de status, tipo e CF. */
+/** Lista RALs conforme filtros de status, tipo e CF, ordenadas por abertura decrescente. */
 export async function listRals(options?: SirRalQueryOptions): Promise<RalRecord[]> {
   const status = options?.status ?? "ativo";
   const params: unknown[] = [];
@@ -161,21 +178,24 @@ export async function listRals(options?: SirRalQueryOptions): Promise<RalRecord[
     params.push(options.cf);
   }
 
-  sql += SIR_ORDER_BY_ABERTURA_ASC;
+  sql += SIR_ORDER_BY_ABERTURA_DESC;
+  sql = appendListLimitClause(sql, options);
 
   const rows = await sirQuery<(RalRecord & RowDataPacket)[]>(sql, params);
   return serializeRows(rows);
 }
 
-/** Lista RALs com status ativo, ordenadas por abertura. */
+/** Lista RALs com status ativo, ordenadas por abertura decrescente. */
 export async function listActiveRals(options?: {
   tipo?: string;
   cf?: string;
+  limit?: number;
+  offset?: number;
 }): Promise<RalRecord[]> {
   return listRals({ ...options, status: "ativo" });
 }
 
-/** Lista RECs conforme filtros de status, tipo e CF. */
+/** Lista RECs conforme filtros de status, tipo e CF, ordenadas por abertura decrescente. */
 export async function listRecs(options?: SirRecQueryOptions): Promise<RecRecord[]> {
   const status = options?.status ?? "ativo";
   const params: unknown[] = [];
@@ -195,16 +215,19 @@ export async function listRecs(options?: SirRecQueryOptions): Promise<RecRecord[
     params.push(options.cf);
   }
 
-  sql += SIR_ORDER_BY_ABERTURA_ASC;
+  sql += SIR_ORDER_BY_ABERTURA_DESC;
+  sql = appendListLimitClause(sql, options);
 
   const rows = await sirQuery<(RecRecord & RowDataPacket)[]>(sql, params);
   return serializeRows(rows);
 }
 
-/** Lista RECs com status ativo, ordenadas por abertura. */
+/** Lista RECs com status ativo, ordenadas por abertura decrescente. */
 export async function listActiveRecs(options?: {
   cf?: string;
   tipo?: string;
+  limit?: number;
+  offset?: number;
 }): Promise<RecRecord[]> {
   return listRecs({ ...options, status: "ativo" });
 }
@@ -248,8 +271,13 @@ export async function getRecByNum(numRecup: string): Promise<RecRecord | null> {
 }
 
 /** Retorna contagem de RECs agrupadas por prefixo (REC/DSR/TCQ). */
-export async function countRecsByTipo(status: SirStatusFilter = "ativo"): Promise<RecTipoCount[]> {
+export async function countRecsByTipo(
+  status: SirStatusFilter = "ativo",
+  cf?: string,
+): Promise<RecTipoCount[]> {
   const { sql, params } = buildStatusClause(status);
+  const cfSql = cf ? " AND cf_executante = ?" : "";
+  const cfParams = cf ? [cf] : [];
   const rows = await sirQuery<RowDataPacket[]>(
     `SELECT
        CASE
@@ -259,10 +287,10 @@ export async function countRecsByTipo(status: SirStatusFilter = "ativo"): Promis
        END AS rec_tipo,
        COUNT(num_recup) AS total
      FROM ${SIR_TABLES.recs}
-     WHERE 1=1${sql}
+     WHERE 1=1${sql}${cfSql}
      GROUP BY rec_tipo
      ORDER BY total DESC`,
-    params,
+    [...params, ...cfParams],
   );
 
   return rows.map((row) => ({
@@ -272,15 +300,20 @@ export async function countRecsByTipo(status: SirStatusFilter = "ativo"): Promis
 }
 
 /** Retorna contagem de RALs agrupadas por tipo. */
-export async function countRalsByTipo(status: SirStatusFilter = "ativo"): Promise<RalTipoCount[]> {
+export async function countRalsByTipo(
+  status: SirStatusFilter = "ativo",
+  cf?: string,
+): Promise<RalTipoCount[]> {
   const { sql, params } = buildStatusClause(status);
+  const cfSql = cf ? " AND cf_executante = ?" : "";
+  const cfParams = cf ? [cf] : [];
   const rows = await sirQuery<RowDataPacket[]>(
     `SELECT tipo_ral, COUNT(num_recup) AS total
      FROM ${SIR_TABLES.rals}
-     WHERE 1=1${sql}
+     WHERE 1=1${sql}${cfSql}
      GROUP BY tipo_ral
      ORDER BY total DESC`,
-    params,
+    [...params, ...cfParams],
   );
 
   return rows.map((row) => ({

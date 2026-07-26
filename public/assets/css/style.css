@@ -587,6 +587,140 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.sir-filter-toolbar__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .sir-filter-toolbar__group {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+.sir-filter-toolbar__heading {
+  flex-shrink: 0;
+  min-width: 3.5rem;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--secondary-text-clr);
+}
+
+.sir-filter-toolbar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sir-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.7rem 0.35rem 0.65rem;
+  border: 1px solid var(--line-clr);
+  border-radius: 999px;
+  background-color: var(--surface-clr);
+  text-decoration: none;
+  color: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.sir-filter-chip:hover {
+  border-color: rgba(227, 6, 19, 0.35);
+  color: inherit;
+}
+
+.sir-filter-chip--active {
+  border-color: var(--accent-clr);
+  background-color: rgba(227, 6, 19, 0.06);
+  box-shadow: 0 0 0 1px rgba(227, 6, 19, 0.1);
+  font-weight: 600;
+}
+
+.sir-filter-chip__label {
+  white-space: nowrap;
+}
+
+.sir-filter-chip__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background-color: rgba(0, 0, 0, 0.06);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-bs-theme="dark"] .sir-filter-chip__count {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sir-filter-chip--ral-coletor {
+  border-left: 3px solid #0d6efd;
+}
+
+.sir-filter-chip--ral-backbone {
+  border-left: 3px solid #343a40;
+}
+
+.sir-filter-chip--ral-acesso-cliente {
+  border-left: 3px solid #fd7e14;
+}
+
+.sir-filter-chip--ral-qualidade {
+  border-left: 3px solid #997404;
+}
+
+.sir-filter-chip--ral-ppc {
+  border-left: 3px solid #198754;
+}
+
+.sir-filter-chip--ral-fotonica {
+  border-left: 3px solid #d63384;
+}
+
+.sir-filter-chip--ral-programada {
+  border-left: 3px solid #198754;
+}
+
+.sir-filter-chip--rec-rec {
+  border-left: 3px solid #0d6efd;
+}
+
+.sir-filter-chip--rec-dsr {
+  border-left: 3px solid #6f42c1;
+}
+
+.sir-filter-chip--rec-tcq {
+  border-left: 3px solid #fd7e14;
+}
+
+.sir-filter-chip--ral-coletor.sir-filter-chip--active,
+.sir-filter-chip--ral-backbone.sir-filter-chip--active,
+.sir-filter-chip--ral-acesso-cliente.sir-filter-chip--active,
+.sir-filter-chip--ral-qualidade.sir-filter-chip--active,
+.sir-filter-chip--ral-ppc.sir-filter-chip--active,
+.sir-filter-chip--ral-fotonica.sir-filter-chip--active,
+.sir-filter-chip--ral-programada.sir-filter-chip--active,
+.sir-filter-chip--rec-rec.sir-filter-chip--active,
+.sir-filter-chip--rec-dsr.sir-filter-chip--active,
+.sir-filter-chip--rec-tcq.sir-filter-chip--active {
+  border-color: var(--accent-clr);
+}
+
 .sortable-th-btn {
   border: 0;
   background: transparent;

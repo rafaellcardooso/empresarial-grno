@@ -1,8 +1,9 @@
 "use client";
 
 import { ContentCard } from "@/components/ui/ContentCard";
-import { FilterMetricCard } from "@/components/ui/FilterMetricCard";
+import { SirFilterToolbar, type SirFilterChipItem } from "@/components/sir/SirFilterToolbar";
 import { SirRecordsTable } from "@/components/sir/SirRecordsTable";
+import { TablePagination } from "@/components/ui/TablePagination";
 import { buildSirFilterHref } from "@/lib/config/sir-filters";
 import {
   RAL_TIPOS,
@@ -10,36 +11,46 @@ import {
   getRalTipoDefinition,
   ralTipoFilterLabel,
 } from "@/lib/config/ral-types";
-import { sirStatusLabelForScope, type SirStatusFilter } from "@/lib/config/sir-status";
+import {
+  SIR_STATUS_FILTER_ORDER,
+  sirStatusLabelForScope,
+  type SirStatusFilter,
+} from "@/lib/config/sir-status";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
 import { RAL_TABLE_COLUMNS } from "@/lib/config/sir-tables";
-import { formatNumberPtBr } from "@/lib/format/number";
 
 type RalPanelProps = {
   rows: Record<string, unknown>[];
   total: number;
+  totalAllTipos: number;
   byTipo: Record<string, number>;
   openCount: number;
   closedCount: number;
   activeStatus: SirStatusFilter;
   activeTipo?: RalTipoKey;
   activeCf?: string;
+  currentPage: number;
+  pageSize: number;
 };
 
-const RAL_STATUS_FILTERS: SirStatusFilter[] = ["ativo", "encerrado", "todos"];
-
-function ralFilterHref(
+function ralPageHref(
+  page: number,
   filters: {
     status?: SirStatusFilter;
     tipo?: RalTipoKey;
     cf?: string;
   } = {},
 ): string {
-  return buildSirFilterHref("/sir/rals", filters);
+  return buildSirFilterHref("/sir/rals", { ...filters, page });
+}
+
+function statusChipLabel(filter: SirStatusFilter): string {
+  const label = sirStatusLabelForScope("ral", filter);
+  return label.charAt(0) + label.slice(1).toLowerCase();
 }
 
 function buildRalTitle(
-  rowsCount: number,
+  totalCount: number,
   statusLabel: string,
   tipoLabel?: string,
   cf?: string,
@@ -47,7 +58,7 @@ function buildRalTitle(
   const parts = [METRIC_LABELS.sir.ral, statusLabel];
   if (tipoLabel) parts.push(tipoLabel);
   if (cf) parts.push(cf);
-  return `${parts.join(" — ")} (${rowsCount})`;
+  return `${parts.join(" — ")} (${totalCount})`;
 }
 
 function ralStatusCount(status: SirStatusFilter, openCount: number, closedCount: number): number {
@@ -68,77 +79,75 @@ function ralEmptyMessage(status: SirStatusFilter, tipoLabel?: string, cf?: strin
 export function RalPanel({
   rows,
   total,
+  totalAllTipos,
   byTipo,
   openCount,
   closedCount,
   activeStatus,
   activeTipo,
   activeCf,
+  currentPage,
+  pageSize,
 }: RalPanelProps) {
   const tipoLabel = ralTipoFilterLabel(activeTipo);
   const statusLabel = sirStatusLabelForScope("ral", activeStatus);
+  const listFilters = { status: activeStatus, tipo: activeTipo, cf: activeCf };
+
+  const statusChips: SirFilterChipItem[] = SIR_STATUS_FILTER_ORDER.map((status) => ({
+    key: status,
+    label: statusChipLabel(status),
+    count: ralStatusCount(status, openCount, closedCount),
+    href: ralPageHref(1, { status, tipo: activeTipo, cf: activeCf }),
+    active: activeStatus === status,
+  }));
+
+  const tipoChips: SirFilterChipItem[] = [
+    {
+      key: "all",
+      label: "Todos os tipos",
+      count: totalAllTipos,
+      href: ralPageHref(1, { status: activeStatus, cf: activeCf }),
+      active: !activeTipo,
+    },
+    ...RAL_TIPOS.map((tipo) => {
+      const count = byTipo[tipo.value] ?? 0;
+      return {
+        key: tipo.key,
+        label: tipo.chipLabel,
+        count,
+        href: ralPageHref(1, { status: activeStatus, tipo: tipo.key, cf: activeCf }),
+        active: activeTipo === tipo.key,
+        accentClass: tipo.filterClass,
+        hidden: count === 0 && activeTipo !== tipo.key,
+      };
+    }),
+    ...Object.entries(byTipo)
+      .filter(([value, count]) => count > 0 && !getRalTipoDefinition(value))
+      .map(([value, count]) => ({
+        key: value,
+        label: value,
+        count,
+        href: ralPageHref(1, { status: activeStatus, cf: activeCf }),
+        active: false,
+      })),
+  ];
 
   return (
     <>
-      <div className="row g-3 mb-3">
-        <div className="col-6 col-md-4 col-lg-3 col-xl-2">
-          <FilterMetricCard
-            label={METRIC_LABELS.sir.allTypes}
-            value={formatNumberPtBr(total)}
-            href={ralFilterHref({ status: activeStatus, cf: activeCf })}
-            active={!activeTipo}
-            variant="neutral"
-          />
-        </div>
-        {RAL_TIPOS.map((tipo) => {
-          const count = byTipo[tipo.value] ?? 0;
-          return (
-            <div className="col-6 col-md-4 col-lg-3 col-xl-2" key={tipo.key}>
-              <FilterMetricCard
-                label={tipo.label}
-                value={formatNumberPtBr(count)}
-                href={ralFilterHref({ status: activeStatus, tipo: tipo.key, cf: activeCf })}
-                active={activeTipo === tipo.key}
-                className={tipo.filterClass}
-              />
-            </div>
-          );
-        })}
-        {Object.entries(byTipo)
-          .filter(([value, count]) => count > 0 && !getRalTipoDefinition(value))
-          .map(([value, count]) => (
-            <div className="col-6 col-md-4 col-lg-3 col-xl-2" key={value}>
-              <FilterMetricCard
-                label={value}
-                value={formatNumberPtBr(count)}
-                href={ralFilterHref({ status: activeStatus, cf: activeCf })}
-                active={false}
-                variant="default"
-              />
-            </div>
-          ))}
-      </div>
+      <SirFilterToolbar statusChips={statusChips} tipoChips={tipoChips} />
 
-      <div className="row g-3 mb-3">
-        {RAL_STATUS_FILTERS.map((status) => (
-          <div className="col-6 col-md-4 col-lg-3 col-xl-2" key={status}>
-            <FilterMetricCard
-              label={sirStatusLabelForScope("ral", status)}
-              value={formatNumberPtBr(ralStatusCount(status, openCount, closedCount))}
-              href={ralFilterHref({ status, tipo: activeTipo, cf: activeCf })}
-              active={activeStatus === status}
-              variant={status === "encerrado" ? "default" : "neutral"}
-            />
-          </div>
-        ))}
-      </div>
-
-      <ContentCard title={buildRalTitle(rows.length, statusLabel, tipoLabel, activeCf)}>
+      <ContentCard title={buildRalTitle(total, statusLabel, tipoLabel, activeCf)}>
         <SirRecordsTable
           columns={RAL_TABLE_COLUMNS}
           rows={rows}
           recordLabel="RAL"
           empty={ralEmptyMessage(activeStatus, tipoLabel, activeCf)}
+        />
+        <TablePagination
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={total}
+          buildPageHref={(page) => ralPageHref(page, listFilters)}
         />
       </ContentCard>
     </>

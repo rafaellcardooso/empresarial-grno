@@ -3,6 +3,9 @@ import { SIR_RECORD_STATUS, type SirRecordStatus } from "@/lib/models/sir";
 
 export type SirStatusFilter = "ativo" | "encerrado" | "todos";
 
+/** Ordem dos filtros de status na UI (Todas → Abertas → Encerradas). */
+export const SIR_STATUS_FILTER_ORDER: SirStatusFilter[] = ["todos", "ativo", "encerrado"];
+
 export type SirRecordScope = "ral" | "rec";
 
 const SIR_STATUS_SCOPE_LABELS: Record<SirRecordScope, Record<SirStatusFilter, string>> = {

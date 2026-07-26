@@ -5,6 +5,7 @@ export type RalTipoDefinition = {
   key: RalTipoKey;
   value: string;
   label: string;
+  chipLabel: string;
   badgeClass: string;
   filterClass: string;
 };
@@ -15,50 +16,57 @@ export const RAL_TIPOS: RalTipoDefinition[] = [
     key: "coletor",
     value: "COLETOR",
     label: "COLETOR",
+    chipLabel: "Coletor",
     badgeClass: "ral-tipo-badge--coletor",
-    filterClass: "filter-metric-card--ral-coletor",
+    filterClass: "sir-filter-chip--ral-coletor",
   },
   {
     key: "backbone",
     value: "BACKBONE",
     label: "BACKBONE",
+    chipLabel: "Backbone",
     badgeClass: "ral-tipo-badge--backbone",
-    filterClass: "filter-metric-card--ral-backbone",
+    filterClass: "sir-filter-chip--ral-backbone",
   },
   {
     key: "acesso_cliente",
     value: "ACESSO CLIENTE",
     label: "ACESSO CLIENTE",
+    chipLabel: "Acesso cliente",
     badgeClass: "ral-tipo-badge--acesso-cliente",
-    filterClass: "filter-metric-card--ral-acesso-cliente",
+    filterClass: "sir-filter-chip--ral-acesso-cliente",
   },
   {
     key: "qualidade",
     value: "QUALIDADE",
     label: "QUALIDADE",
+    chipLabel: "Qualidade",
     badgeClass: "ral-tipo-badge--qualidade",
-    filterClass: "filter-metric-card--ral-qualidade",
+    filterClass: "sir-filter-chip--ral-qualidade",
   },
   {
     key: "ppc",
     value: "PPC",
     label: "PPC",
+    chipLabel: "PPC",
     badgeClass: "ral-tipo-badge--ppc",
-    filterClass: "filter-metric-card--ral-ppc",
+    filterClass: "sir-filter-chip--ral-ppc",
   },
   {
     key: "fotonica",
     value: "FOTÔNICA",
     label: "FOTÔNICA",
+    chipLabel: "Fotônica",
     badgeClass: "ral-tipo-badge--fotonica",
-    filterClass: "filter-metric-card--ral-fotonica",
+    filterClass: "sir-filter-chip--ral-fotonica",
   },
   {
     key: "programada",
     value: "PROGRAMADA",
     label: "PROGRAMADA",
+    chipLabel: "Programada",
     badgeClass: "ral-tipo-badge--programada",
-    filterClass: "filter-metric-card--ral-programada",
+    filterClass: "sir-filter-chip--ral-programada",
   },
 ];
 

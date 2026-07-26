@@ -1,40 +1,51 @@
 "use client";
 
 import { ContentCard } from "@/components/ui/ContentCard";
-import { FilterMetricCard } from "@/components/ui/FilterMetricCard";
+import { SirFilterToolbar, type SirFilterChipItem } from "@/components/sir/SirFilterToolbar";
 import { SirRecordsTable } from "@/components/sir/SirRecordsTable";
+import { TablePagination } from "@/components/ui/TablePagination";
 import { buildRecFilterHref } from "@/lib/config/sir-filters";
 import { REC_TIPOS, type RecTipoKey, recTipoFilterLabel } from "@/lib/config/rec-types";
-import { sirStatusLabelForScope, type SirStatusFilter } from "@/lib/config/sir-status";
+import {
+  SIR_STATUS_FILTER_ORDER,
+  sirStatusLabelForScope,
+  type SirStatusFilter,
+} from "@/lib/config/sir-status";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
 import { REC_TABLE_COLUMNS } from "@/lib/config/sir-tables";
-import { formatNumberPtBr } from "@/lib/format/number";
 
 type RecPanelProps = {
   rows: Record<string, unknown>[];
   total: number;
+  totalAllTipos: number;
   byTipo: Record<string, number>;
   openCount: number;
   closedCount: number;
   activeStatus: SirStatusFilter;
   activeTipo?: RecTipoKey;
   activeCf?: string;
+  currentPage: number;
+  pageSize: number;
 };
 
-const REC_STATUS_FILTERS: SirStatusFilter[] = ["ativo", "encerrado", "todos"];
-
-function recFilterHref(
+function recPageHref(
+  page: number,
   filters: {
     status?: SirStatusFilter;
     tipo?: RecTipoKey;
     cf?: string;
   } = {},
 ): string {
-  return buildRecFilterHref("/sir/recs", filters);
+  return buildRecFilterHref("/sir/recs", { ...filters, page });
+}
+
+function statusChipLabel(filter: SirStatusFilter): string {
+  const label = sirStatusLabelForScope("rec", filter);
+  return label.charAt(0) + label.slice(1).toLowerCase();
 }
 
 function buildRecTitle(
-  rowsCount: number,
+  totalCount: number,
   statusLabel: string,
   tipoLabel?: string,
   cf?: string,
@@ -42,7 +53,7 @@ function buildRecTitle(
   const parts = [METRIC_LABELS.sir.rec, statusLabel];
   if (tipoLabel) parts.push(tipoLabel);
   if (cf) parts.push(cf);
-  return `${parts.join(" — ")} (${rowsCount})`;
+  return `${parts.join(" — ")} (${totalCount})`;
 }
 
 function recStatusCount(status: SirStatusFilter, openCount: number, closedCount: number): number {
@@ -63,61 +74,66 @@ function recEmptyMessage(status: SirStatusFilter, tipoLabel?: string, cf?: strin
 export function RecPanel({
   rows,
   total,
+  totalAllTipos,
   byTipo,
   openCount,
   closedCount,
   activeStatus,
   activeTipo,
   activeCf,
+  currentPage,
+  pageSize,
 }: RecPanelProps) {
   const tipoLabel = recTipoFilterLabel(activeTipo);
   const statusLabel = sirStatusLabelForScope("rec", activeStatus);
+  const listFilters = { status: activeStatus, tipo: activeTipo, cf: activeCf };
+
+  const statusChips: SirFilterChipItem[] = SIR_STATUS_FILTER_ORDER.map((status) => ({
+    key: status,
+    label: statusChipLabel(status),
+    count: recStatusCount(status, openCount, closedCount),
+    href: recPageHref(1, { status, tipo: activeTipo, cf: activeCf }),
+    active: activeStatus === status,
+  }));
+
+  const tipoChips: SirFilterChipItem[] = [
+    {
+      key: "all",
+      label: "Todos os tipos",
+      count: totalAllTipos,
+      href: recPageHref(1, { status: activeStatus, cf: activeCf }),
+      active: !activeTipo,
+    },
+    ...REC_TIPOS.map((tipo) => {
+      const count = byTipo[tipo.prefix] ?? 0;
+      return {
+        key: tipo.key,
+        label: tipo.chipLabel,
+        count,
+        href: recPageHref(1, { status: activeStatus, tipo: tipo.key, cf: activeCf }),
+        active: activeTipo === tipo.key,
+        accentClass: tipo.filterClass,
+        hidden: count === 0 && activeTipo !== tipo.key,
+      };
+    }),
+  ];
 
   return (
     <>
-      <div className="row g-3 mb-3">
-        <div className="col-6 col-md-4 col-lg-3">
-          <FilterMetricCard
-            label={METRIC_LABELS.sir.allTypes}
-            value={formatNumberPtBr(total)}
-            href={recFilterHref({ status: activeStatus, cf: activeCf })}
-            active={!activeTipo}
-            variant="neutral"
-          />
-        </div>
-        {REC_TIPOS.map((tipo) => (
-          <div className="col-6 col-md-4 col-lg-3" key={tipo.key}>
-            <FilterMetricCard
-              label={tipo.label}
-              value={formatNumberPtBr(byTipo[tipo.prefix] ?? 0)}
-              href={recFilterHref({ status: activeStatus, tipo: tipo.key, cf: activeCf })}
-              active={activeTipo === tipo.key}
-              variant="default"
-            />
-          </div>
-        ))}
-      </div>
+      <SirFilterToolbar statusChips={statusChips} tipoChips={tipoChips} />
 
-      <div className="row g-3 mb-3">
-        {REC_STATUS_FILTERS.map((status) => (
-          <div className="col-6 col-md-4 col-lg-3" key={status}>
-            <FilterMetricCard
-              label={sirStatusLabelForScope("rec", status)}
-              value={formatNumberPtBr(recStatusCount(status, openCount, closedCount))}
-              href={recFilterHref({ status, tipo: activeTipo, cf: activeCf })}
-              active={activeStatus === status}
-              variant={status === "encerrado" ? "default" : "neutral"}
-            />
-          </div>
-        ))}
-      </div>
-
-      <ContentCard title={buildRecTitle(rows.length, statusLabel, tipoLabel, activeCf)}>
+      <ContentCard title={buildRecTitle(total, statusLabel, tipoLabel, activeCf)}>
         <SirRecordsTable
           columns={REC_TABLE_COLUMNS}
           rows={rows}
           recordLabel="REC"
           empty={recEmptyMessage(activeStatus, tipoLabel, activeCf)}
+        />
+        <TablePagination
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={total}
+          buildPageHref={(page) => recPageHref(page, listFilters)}
         />
       </ContentCard>
     </>

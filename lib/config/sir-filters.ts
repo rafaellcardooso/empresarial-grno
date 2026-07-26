@@ -6,12 +6,14 @@ export type SirCfFilterParams = {
   tipo?: RalTipoKey;
   cf?: string;
   status?: SirStatusFilter;
+  page?: number;
 };
 
 export type SirRecFilterParams = {
   tipo?: RecTipoKey;
   cf?: string;
   status?: SirStatusFilter;
+  page?: number;
 };
 
 /** Decodifica CF da query string `cf`. */
@@ -31,6 +33,7 @@ export function buildRecFilterHref(basePath: string, filters: SirRecFilterParams
   if (filters.status && filters.status !== "ativo") params.set("status", filters.status);
   if (filters.tipo) params.set("tipo", filters.tipo);
   if (filters.cf) params.set("cf", filters.cf);
+  if (filters.page && filters.page > 1) params.set("page", String(filters.page));
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;
 }
@@ -54,6 +57,7 @@ export function buildSirFilterHref(basePath: string, filters: SirCfFilterParams 
   if (filters.status && filters.status !== "ativo") params.set("status", filters.status);
   if (filters.tipo) params.set("tipo", filters.tipo);
   if (filters.cf) params.set("cf", filters.cf);
+  if (filters.page && filters.page > 1) params.set("page", String(filters.page));
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;
 }

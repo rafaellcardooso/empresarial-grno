@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SirPanel } from "@/components/sir/SirPanel";
+import { SIR_LIST_PAGE_SIZE } from "@/lib/config/sir-pagination";
 import { countRals, countRecs, listActiveRals, listActiveRecs } from "@/lib/queries/sir";
 
 export const revalidate = 30;
@@ -13,12 +14,14 @@ export default async function Page() {
   let ralClosedCount = 0;
   let recOpenCount = 0;
   let recClosedCount = 0;
+  let ralTotal = 0;
+  let recTotal = 0;
   let error: string | null = null;
 
   try {
     const [ralRows, recRows, ralOpen, ralClosed, recOpen, recClosed] = await Promise.all([
-      listActiveRals(),
-      listActiveRecs(),
+      listActiveRals({ limit: SIR_LIST_PAGE_SIZE, offset: 0 }),
+      listActiveRecs({ limit: SIR_LIST_PAGE_SIZE, offset: 0 }),
       countRals({ status: "ativo" }),
       countRals({ status: "encerrado" }),
       countRecs({ status: "ativo" }),
@@ -30,6 +33,8 @@ export default async function Page() {
     ralClosedCount = ralClosed;
     recOpenCount = recOpen;
     recClosedCount = recClosed;
+    ralTotal = ralOpen;
+    recTotal = recOpen;
   } catch (err) {
     error = err instanceof Error ? err.message : String(err);
   }
@@ -48,6 +53,9 @@ export default async function Page() {
           ralClosedCount={ralClosedCount}
           recOpenCount={recOpenCount}
           recClosedCount={recClosedCount}
+          ralTotal={ralTotal}
+          recTotal={recTotal}
+          pageSize={SIR_LIST_PAGE_SIZE}
         />
       )}
     </>
