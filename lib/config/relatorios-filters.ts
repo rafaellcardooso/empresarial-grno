@@ -1,5 +1,4 @@
 import type { TratativaReportFilters } from "@/lib/models/tratativa-report";
-import { tratativaReportScopeFromParam } from "@/lib/config/relatorios-tratativa";
 
 const DEFAULT_RANGE_DAYS = 30;
 const MAX_RANGE_DAYS = 366;
@@ -34,7 +33,6 @@ export function endExclusiveFromInclusiveDate(date: Date): Date {
 export function parseTratativaReportParams(params: {
   de?: string;
   ate?: string;
-  kind?: string;
 }): TratativaReportFilters {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -62,7 +60,7 @@ export function parseTratativaReportParams(params: {
   return {
     from,
     to,
-    recordKind: tratativaReportScopeFromParam(params.kind),
+    recordKind: "BSOD",
   };
 }
 
@@ -71,11 +69,8 @@ export function buildTratativaReportHref(filters: TratativaReportFilters): strin
   const params = new URLSearchParams();
   params.set("de", formatRelatorioDateParam(filters.from));
   params.set("ate", formatRelatorioDateParam(filters.to));
-  if (filters.recordKind !== "BSOD") {
-    params.set("kind", filters.recordKind);
-  }
   const query = params.toString();
-  return query ? `/relatorios/tratativas?${query}` : "/relatorios/tratativas";
+  return `/relatorios/tratativas?${query}`;
 }
 
 /** Rótulo compacto do período selecionado (pt-BR). */

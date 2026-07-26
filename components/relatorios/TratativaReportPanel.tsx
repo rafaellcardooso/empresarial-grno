@@ -8,7 +8,6 @@ import { RelatorioRankedBarChart } from "@/components/relatorios/RelatorioRanked
 import { ContentCard } from "@/components/ui/ContentCard";
 import { RELATORIOS_COPY } from "@/lib/config/relatorios-copy";
 import { relatorioPeriodLabel } from "@/lib/config/relatorios-filters";
-import { tratativaReportScopeLabel } from "@/lib/config/relatorios-tratativa";
 import type { TratativaReportData, TratativaReportFilters } from "@/lib/models/tratativa-report";
 import {
   buildTratativaFunnelSteps,
@@ -73,10 +72,7 @@ export function TratativaReportPanel({
           <p className="text-body-secondary small mb-0">{RELATORIOS_COPY.tratativasSectionLead}</p>
         </div>
         <span className="relatorio-dashboard__period-badge">
-          {RELATORIOS_COPY.periodSummary(
-            relatorioPeriodLabel(filters.from, filters.to),
-            tratativaReportScopeLabel(filters.recordKind),
-          )}
+          {relatorioPeriodLabel(filters.from, filters.to)}
         </span>
       </header>
 

@@ -7,23 +7,17 @@ import {
   formatRelatorioDateParam,
 } from "@/lib/config/relatorios-filters";
 import { RELATORIOS_COPY } from "@/lib/config/relatorios-copy";
-import {
-  tratativaReportScopeFromParam,
-  tratativaReportScopeLabel,
-  tratativaReportScopeOptions,
-} from "@/lib/config/relatorios-tratativa";
 import type { TratativaReportFilters } from "@/lib/models/tratativa-report";
 
 type TratativaReportFiltersFormProps = {
   filters: TratativaReportFilters;
 };
 
-/** Formulário de período e escopo para relatório de tratativas. */
+/** Formulário de período para relatório de tratativas BSOD. */
 export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFormProps) {
   const router = useRouter();
   const [from, setFrom] = useState(formatRelatorioDateParam(filters.from));
   const [to, setTo] = useState(formatRelatorioDateParam(filters.to));
-  const [kind, setKind] = useState(filters.recordKind);
 
   const applyPreset = (days: number) => {
     const end = new Date();
@@ -34,7 +28,7 @@ export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFo
       buildTratativaReportHref({
         from: start,
         to: end,
-        recordKind: kind,
+        recordKind: "BSOD",
       }),
     );
   };
@@ -47,7 +41,7 @@ export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFo
       buildTratativaReportHref({
         from: fromDate,
         to: toDate,
-        recordKind: tratativaReportScopeFromParam(kind),
+        recordKind: "BSOD",
       }),
     );
   };
@@ -55,7 +49,7 @@ export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFo
   return (
     <form className="relatorio-tratativa-filters" onSubmit={handleSubmit}>
       <div className="row g-2 align-items-end">
-        <div className="col-sm-6 col-md-3">
+        <div className="col-sm-6 col-md-4">
           <label className="form-label relatorio-export__label" htmlFor="tratativa-de">
             De
           </label>
@@ -67,7 +61,7 @@ export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFo
             onChange={(event) => setFrom(event.target.value)}
           />
         </div>
-        <div className="col-sm-6 col-md-3">
+        <div className="col-sm-6 col-md-4">
           <label className="form-label relatorio-export__label" htmlFor="tratativa-ate">
             Até
           </label>
@@ -79,24 +73,7 @@ export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFo
             onChange={(event) => setTo(event.target.value)}
           />
         </div>
-        <div className="col-sm-6 col-md-3">
-          <label className="form-label relatorio-export__label" htmlFor="tratativa-kind">
-            {RELATORIOS_COPY.recordKindLabel}
-          </label>
-          <select
-            id="tratativa-kind"
-            className="form-select form-select-sm"
-            value={kind}
-            onChange={(event) => setKind(tratativaReportScopeFromParam(event.target.value))}
-          >
-            {tratativaReportScopeOptions().map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="col-sm-6 col-md-3 d-flex gap-2">
+        <div className="col-sm-6 col-md-4 d-flex gap-2">
           <button type="submit" className="btn btn-primary btn-sm flex-grow-1">
             {RELATORIOS_COPY.applyFilters}
           </button>
@@ -125,9 +102,6 @@ export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFo
         >
           {RELATORIOS_COPY.presetDays(90)}
         </button>
-        <span className="relatorio-tratativa-filters__scope">
-          {tratativaReportScopeLabel(filters.recordKind)}
-        </span>
       </div>
     </form>
   );

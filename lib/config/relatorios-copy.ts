@@ -19,11 +19,8 @@ export const RELATORIOS_COPY = {
   tratativasSectionTitle: "Resumo operacional",
   tratativasSectionLead:
     "Indicadores do fluxo de tratativa no período — do chamado assumido até a conclusão.",
-  periodLabel: "Período",
-  recordKindLabel: "Tipo de registro",
   applyFilters: "Atualizar",
   presetDays: (days: number) => `Últimos ${days} dias`,
-  periodSummary: (period: string, scope: string) => `${period} · ${scope}`,
   dailyChartTitle: "Eventos por dia",
   dailyChartLead: "VTs, validações e conclusões registradas em cada dia.",
   eventMixTitle: "Distribuição por etapa",
