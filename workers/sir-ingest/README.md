@@ -33,7 +33,7 @@ Filtro SIR no select: **`REC/DSR/TCQ`** (não DSQ). Classificação REC/DSR/TCQ 
 
 ### Produção
 
-Guia completo: [deploy/README.md](../../deploy/README.md).
+Guia completo: [deploy/README.md](../../deploy/README.md) · [docs/2026-07-26-operacao.md](../../docs/2026-07-26-operacao.md).
 
 **Primeiro deploy:** `.env` com `SIR_DB_*` iguais ao `.env.local` + credenciais SIR + `npm install && npm run install:browsers` (como `datacenter`).
 

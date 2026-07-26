@@ -1,5 +1,7 @@
 # Deploy — produção
 
+> Índice: [docs/README.md](../docs/README.md) · Checklist: [docs/2026-07-26-deploy-producao.md](../docs/2026-07-26-deploy-producao.md)
+
 Guia para servidor Linux (ex.: **SRV-APP-DEV**), repo em `/usr/local/empresarial`, usuário de serviço **`datacenter`**, app na porta **3003**.
 
 Todos os comandos abaixo assumem:
@@ -47,6 +49,7 @@ npm install
 ```bash
 cp .env.example .env.local
 # Editar: SIR_DB_*, HFC_DB_*, AUTH_SECRET, APP_PUBLIC_URL (URL real do app)
+# GRB_BASE_URL, CRITEL_BASE_URL (rede interna GRB)
 
 cd workers/sir-ingest
 cp .env.example .env
@@ -155,6 +158,7 @@ sudo systemctl restart empresarial-next
 | `workers/sir-ingest/`            | `cd workers/sir-ingest && npm install && cd ../..` + `sudo systemctl restart sir-ingest-ral sir-ingest-rec` |
 | `migrations/sir/`                | `npm run db:migrate` (Next e workers podem continuar rodando)                                               |
 | `.env.example` (novas chaves)    | Atualizar `.env.local` e `workers/sir-ingest/.env`; `npm run env:check`                                     |
+| `migrations/sir/` (006–008)      | `npm run db:migrate` — tratativas BSOD/SIR                                                                  |
 
 **Atalho** (pull + build + restart dos 3 serviços):
 
@@ -216,4 +220,4 @@ APIs legado (bot Telegram): `/api/rals`, `/api/recs` (somente **ATIVO**). BFF in
 
 ## Dev local
 
-Ver [README.md](../README.md) e skill `.cursor/skills/emp-db-setup/SKILL.md`. Em dev pode usar `db:import` com snapshot; **não** em prod.
+Ver [README.md](../README.md), [docs/2026-07-26-operacao.md](../docs/2026-07-26-operacao.md) e skill `.cursor/skills/emp-db-setup/SKILL.md`. Em dev pode usar `db:import` com snapshot; **não** em prod.
