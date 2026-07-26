@@ -22,7 +22,7 @@ Credenciais MySQL via `SIR_DB_*` no `.env` (mesmas da raiz `.env.local`).
 sources/          AlertasRalRede.js / AlertasRecRede.js
 sources/lib/      sir-scraper-common.js (Playwright + sessão)
 states/           JSON de ciclo + tmp/ (runtime Playwright) + error/
-telegram/         bot (lê EMPRESARIAL_API_URL → Next /api)
+telegram/         bot operacional + notify datacenter (HTTP → Next /api)
 deploy/systemd/   units (logs → journal)
 .playwright-browsers/   Chromium instalado (gitignored)
 ```
@@ -95,6 +95,32 @@ curl -s http://127.0.0.1:3003/api/rals | jq length
 npm run start:ral
 npm run start:rec
 ```
+
+### Telegram (dois bots)
+
+```bash
+cd workers/sir-ingest/telegram
+python3 -m venv venv
+venv/bin/pip install -r requirements.txt
+venv/bin/python3 main-ops-bot.py
+venv/bin/python3 notify-datacenter.py
+```
+
+| Processo               | Env                                                            | Função                                   |
+| ---------------------- | -------------------------------------------------------------- | ---------------------------------------- |
+| `main-ops-bot.py`      | `TELEGRAM_OPS_BOT_TOKEN`                                       | `/sir`, `/rotinas` (contagem por estado) |
+| `notify-datacenter.py` | `TELEGRAM_DATACENTER_BOT_TOKEN`, `TELEGRAM_DATACENTER_CHAT_ID` | Push RAL/REC CF datacenter               |
+
+Simulacao de mensagens (sem alterar estado):
+
+```bash
+cd workers/sir-ingest
+telegram/venv/bin/python3 telegram/simulate-datacenter-notify.py --dry-run
+telegram/venv/bin/python3 telegram/simulate-datacenter-notify.py
+```
+
+Units prod: `deploy/systemd/sir-telegram-ops.service`, `sir-telegram-datacenter.service`.  
+Units lab (`User=rcard`): `deploy/systemd/lab/sir-telegram-ops-lab.service`, `sir-telegram-datacenter-lab.service`.
 
 Para promover a `/usr/local/sir-ingest` (requer root):
 

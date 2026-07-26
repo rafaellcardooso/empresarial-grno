@@ -29,6 +29,10 @@ Units systemd (copiar uma vez):
 - `deploy/systemd/empresarial-next.service`
 - `workers/sir-ingest/deploy/systemd/sir-ingest-ral.service`
 - `workers/sir-ingest/deploy/systemd/sir-ingest-rec.service`
+- `workers/sir-ingest/deploy/systemd/sir-telegram-ops.service`
+- `workers/sir-ingest/deploy/systemd/sir-telegram-datacenter.service`
+
+**Lab (WSL / dev — `User=rcard`):** units em `deploy/systemd/lab/` e `workers/sir-ingest/deploy/systemd/lab/` (sufixo `-lab`). Ver seção [Systemd — lab](#systemd--lab) abaixo.
 
 ---
 
@@ -109,7 +113,7 @@ cd /usr/local/empresarial
 sudo cp workers/sir-ingest/deploy/systemd/*.service /etc/systemd/system/
 sudo cp deploy/systemd/empresarial-next.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable sir-ingest-ral sir-ingest-rec empresarial-next
+sudo systemctl enable sir-ingest-ral sir-ingest-rec empresarial-next sir-telegram-ops sir-telegram-datacenter
 ```
 
 ### 7. Build Next e subir serviços
@@ -117,7 +121,7 @@ sudo systemctl enable sir-ingest-ral sir-ingest-rec empresarial-next
 ```bash
 cd /usr/local/empresarial
 npm run build
-sudo systemctl start sir-ingest-ral sir-ingest-rec empresarial-next
+sudo systemctl start sir-ingest-ral sir-ingest-rec empresarial-next sir-telegram-ops sir-telegram-datacenter
 ```
 
 Ou: `sudo systemctl enable --now …` na primeira vez.
@@ -193,18 +197,59 @@ Mudança **só na UI** → não precisa restart dos workers.
 
 ## Serviços systemd
 
-| Unit               | Processo                  | Porta / efeito                             |
-| ------------------ | ------------------------- | ------------------------------------------ |
-| `empresarial-next` | `npm run start` → Next 15 | **3003** (leitura SIR + HFC)               |
-| `sir-ingest-ral`   | `AlertasRalRede.js`       | Grava `rals`                               |
-| `sir-ingest-rec`   | `AlertasRecRede.js`       | Grava `recs` (filtro SIR: **REC/DSR/TCQ**) |
+| Unit                      | Processo                  | Porta / efeito                             |
+| ------------------------- | ------------------------- | ------------------------------------------ |
+| `empresarial-next`        | `npm run start` → Next 15 | **3003** (leitura SIR + HFC)               |
+| `sir-ingest-ral`          | `AlertasRalRede.js`       | Grava `rals`                               |
+| `sir-ingest-rec`          | `AlertasRecRede.js`       | Grava `recs` (filtro SIR: **REC/DSR/TCQ**) |
+| `sir-telegram-ops`        | `main-ops-bot.py`         | Bot operacional (`/sir`, `/rotinas`)       |
+| `sir-telegram-datacenter` | `notify-datacenter.py`    | Push RAL/REC CF datacenter                 |
 
 Logs:
 
 ```bash
 sudo journalctl -u empresarial-next -f
 sudo journalctl -u sir-ingest-ral -u sir-ingest-rec -f
+sudo journalctl -u sir-telegram-ops -u sir-telegram-datacenter -f
 ```
+
+---
+
+## Systemd — lab
+
+Units com sufixo `-lab`, **`User=rcard`**, para WSL ou máquina de dev (mesmos paths em `/usr/local/empresarial`).
+
+| Unit                          | Processo               | Diferença vs prod                       |
+| ----------------------------- | ---------------------- | --------------------------------------- |
+| `empresarial-next-lab`        | `npm run dev`          | Hot reload; `.env.local` opcional (`-`) |
+| `sir-ingest-ral-lab`          | `AlertasRalRede.js`    | Igual ingest; usuário `rcard`           |
+| `sir-ingest-rec-lab`          | `AlertasRecRede.js`    | Igual ingest; usuário `rcard`           |
+| `sir-telegram-ops-lab`        | `main-ops-bot.py`      | Depende de `empresarial-next-lab`       |
+| `sir-telegram-datacenter-lab` | `notify-datacenter.py` | Depende de Next + ingest lab            |
+
+Instalação (uma vez):
+
+```bash
+cd /usr/local/empresarial
+sudo cp deploy/systemd/lab/empresarial-next-lab.service /etc/systemd/system/
+sudo cp workers/sir-ingest/deploy/systemd/lab/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab
+# Telegram (após pip install -r workers/sir-ingest/telegram/requirements.txt):
+sudo systemctl enable sir-telegram-ops-lab sir-telegram-datacenter-lab
+sudo systemctl start empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab
+sudo systemctl start sir-telegram-ops-lab sir-telegram-datacenter-lab
+```
+
+Conferir:
+
+```bash
+systemctl status empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab
+journalctl -u sir-telegram-ops-lab -u sir-telegram-datacenter-lab -n 30 --no-pager
+curl -s http://127.0.0.1:3003/api/saude | jq
+```
+
+**Não** misturar units lab e prod no mesmo host (mesma porta 3003 e mesmos states do ingest).
 
 ---
 

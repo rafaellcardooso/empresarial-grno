@@ -9,12 +9,14 @@ description: >-
 
 ## Arquivos principais
 
-| Arquivo                                        | Função                               |
-| ---------------------------------------------- | ------------------------------------ |
-| `workers/sir-ingest/sources/AlertasRalRede.js` | Scraper RAL                          |
-| `workers/sir-ingest/sources/AlertasRecRede.js` | Scraper REC                          |
-| `workers/sir-ingest/telegram/functions/sir.py` | Bot consome `/api/rals`, `/api/recs` |
-| `lib/queries/sir.ts`                           | Leitura Next                         |
+| Arquivo                                            | Função                           |
+| -------------------------------------------------- | -------------------------------- |
+| `workers/sir-ingest/sources/AlertasRalRede.js`     | Scraper RAL                      |
+| `workers/sir-ingest/sources/AlertasRecRede.js`     | Scraper REC                      |
+| `workers/sir-ingest/telegram/main-ops-bot.py`      | Bot operacional (/sir, /rotinas) |
+| `workers/sir-ingest/telegram/notify-datacenter.py` | Alertas push CF datacenter       |
+| `workers/sir-ingest/telegram/functions/sir.py`     | Handlers /sir                    |
+| `lib/queries/sir.ts`                               | Leitura Next                     |
 
 ## Fluxo comum (cada ciclo)
 
