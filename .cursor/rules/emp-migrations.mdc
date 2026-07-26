@@ -36,6 +36,7 @@ npm run dev
 3. Atualizar queries em `lib/queries/sir.ts` e upsert nos workers se necessário.
 4. Rodar `npm run db:migrate`.
 5. **Nunca** editar migration já aplicada em ambiente compartilhado — criar revisão nova.
+6. Se deploy em prod exige passo manual além de `db:migrate`: entrada em `docs/operacao-prod/` + índice README (Lab/Prod). Mencionar no checklist `docs/2026-07-26-deploy-producao.md` se for release.
 
 ## Convenções de coluna
 

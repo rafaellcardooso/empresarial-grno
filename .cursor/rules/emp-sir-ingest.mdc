@@ -43,6 +43,6 @@ alwaysApply: false
 3. UPSERT atualiza campos mutáveis (duração, CF, detalhes quando disponíveis).
 4. Falha de scrape **não** encerra em massa sem confirmação (`CICLOS_VAZIOS_PARA_ENCERRAR`).
 5. MySQL: ping + reconnect; sem overlap de ciclos (`isCycleRunning`).
-6. Bot Telegram é processo aparte — não acoplar ao scraper.
+6. Bot Telegram é processo aparte — não acoplar ao scraper. Rule `emp-telegram`; deploy: `docs/operacao-prod/`.
 
 Revisão detalhada: skill `emp-revisar-sir-ingest`.

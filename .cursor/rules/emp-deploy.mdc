@@ -1,0 +1,14 @@
+---
+description: Deploy systemd e release (sem reinventar docs)
+globs: deploy/**/*
+alwaysApply: false
+---
+
+# Deploy
+
+- Checklist: `docs/2026-07-26-deploy-producao.md` (não criar markdown longo em `deploy/`).
+- Pendências manuais: `docs/operacao-prod/README.md` — aplicar entradas **Prod: pendente** antes de systemd/bots.
+- App Next: `deploy/systemd/empresarial-next.service`; lab: `deploy/systemd/lab/empresarial-next-lab.service`.
+- Ingest + Telegram: `workers/sir-ingest/deploy/systemd/`; lab: `.../lab/*-lab.service`.
+- Align de env: rule `emp-env` + skill `emp-align-env`; secrets nunca copiar lab → prod.
+- Release rotineira: skill `emp-deploy-producao`.

@@ -58,7 +58,7 @@ Lista completa, APIs, env e troubleshooting: **[docs/](docs/README.md)** · **[o
 
 ## Deploy (produção)
 
-Checklist: **[docs/2026-07-26-deploy-producao.md](docs/2026-07-26-deploy-producao.md)** · runbook: **[deploy/README.md](deploy/README.md)**
+Checklist: **[docs/2026-07-26-deploy-producao.md](docs/2026-07-26-deploy-producao.md)** · runbook: **[deploy/README.md](deploy/README.md)** · **pendências lab/prod:** **[docs/operacao-prod/](docs/operacao-prod/README.md)**
 
 ```bash
 cd /usr/local/empresarial

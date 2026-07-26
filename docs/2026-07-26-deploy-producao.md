@@ -6,6 +6,8 @@ Checklist para servidor Linux (ex.: **SRV-APP-DEV**), repo em `/usr/local/empres
 
 Runbook completo, tabela de troubleshooting e referência de serviços: **[deploy/README.md](../deploy/README.md)**.
 
+**Antes do passo 6 (systemd) ou de subir bots Telegram:** consulte **[operacao-prod/README.md](operacao-prod/README.md)** — entradas com **Prod: pendente** têm comandos extras (migrations 006–008, env GRB, venv Python, units `sir-telegram-*`) além do loop genérico abaixo.
+
 ---
 
 ## 1. Pré-requisitos
@@ -93,12 +95,24 @@ Se Chromium faltar: `sudo npx playwright install-deps chromium` neste diretório
 
 ## 6. Systemd (uma vez)
 
+Ingest + Next:
+
 ```bash
 cd /usr/local/empresarial
-sudo cp workers/sir-ingest/deploy/systemd/*.service /etc/systemd/system/
+sudo cp workers/sir-ingest/deploy/systemd/sir-ingest-ral.service /etc/systemd/system/
+sudo cp workers/sir-ingest/deploy/systemd/sir-ingest-rec.service /etc/systemd/system/
 sudo cp deploy/systemd/empresarial-next.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable sir-ingest-ral sir-ingest-rec empresarial-next
+```
+
+Telegram (venv + tokens antes — roteiro completo): [operacao-prod/2026-07-26-telegram-sir-bots.md](operacao-prod/2026-07-26-telegram-sir-bots.md).
+
+```bash
+sudo cp workers/sir-ingest/deploy/systemd/sir-telegram-ops.service /etc/systemd/system/
+sudo cp workers/sir-ingest/deploy/systemd/sir-telegram-datacenter.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable sir-telegram-ops sir-telegram-datacenter
 ```
 
 ---
@@ -131,6 +145,10 @@ UI (autenticado): `/sir`, `/bsod`, `/grb` (TELNET), `/grb/critel`, `/relatorios`
 
 ## 9. Atualização rotineira (release)
 
+**Release 2026-07-25/26 (primeira vez em prod):** seguir a ordem em [operacao-prod/README.md](operacao-prod/README.md#ordem-sugerida--release-2026-07-2526-prod-pendente) (migrations → GRB env + build → Telegram).
+
+Loop genérico após delta manual aplicado:
+
 ```bash
 cd /usr/local/empresarial
 git pull origin main
@@ -142,17 +160,26 @@ sudo systemctl restart empresarial-next
 | O que mudou                      | Ação extra                                                              |
 | -------------------------------- | ----------------------------------------------------------------------- |
 | Só `app/`, `components/`, `lib/` | Build + restart **Next**                                                |
-| `workers/sir-ingest/`            | `cd workers/sir-ingest && npm install` + restart **RAL/REC**            |
+| `workers/sir-ingest/` (scrape)   | `cd workers/sir-ingest && npm install` + restart **RAL/REC**            |
+| `workers/sir-ingest/telegram/`   | `venv/bin/pip install -r requirements.txt` + restart **sir-telegram-*** |
 | `migrations/sir/`                | `npm run db:migrate`                                                    |
 | `.env.example` (novas chaves)    | Atualizar `.env.local` e `workers/sir-ingest/.env`; `npm run env:check` |
 
-Atalho (pull + build + restart dos 3 serviços):
+Atalho (pull + build + restart Next + ingest):
 
 ```bash
 cd /usr/local/empresarial
 git pull origin main && npm install && npm run build
 (cd workers/sir-ingest && npm install)
 sudo systemctl restart empresarial-next sir-ingest-ral sir-ingest-rec
+```
+
+Telegram (se mudou `telegram/` ou `requirements.txt`):
+
+```bash
+cd /usr/local/empresarial/workers/sir-ingest/telegram
+venv/bin/pip install -r requirements.txt
+sudo systemctl restart sir-telegram-ops sir-telegram-datacenter
 ```
 
 ---
@@ -172,6 +199,8 @@ Migrations já aplicadas **não** revertem automaticamente — avaliar manualmen
 
 ## 11. Referências
 
+- **Pendências lab/prod:** [operacao-prod/README.md](operacao-prod/README.md)
+- Bots Telegram SIR: [2026-07-26-bots-telegram.md](2026-07-26-bots-telegram.md)
 - Troubleshooting detalhado: [deploy/README.md](../deploy/README.md#troubleshooting-erros-comuns)
 - Operação diária e APIs: [2026-07-26-operacao.md](2026-07-26-operacao.md)
 - Skill de banco dev: `.cursor/skills/emp-db-setup/SKILL.md`

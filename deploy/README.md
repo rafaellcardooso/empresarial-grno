@@ -1,8 +1,10 @@
 # Deploy — produção
 
-> Índice: [docs/README.md](../docs/README.md) · Checklist: [docs/2026-07-26-deploy-producao.md](../docs/2026-07-26-deploy-producao.md)
+> Índice: [docs/README.md](../docs/README.md) · Checklist: [docs/2026-07-26-deploy-producao.md](../docs/2026-07-26-deploy-producao.md) · **Pendências:** [docs/operacao-prod/README.md](../docs/operacao-prod/README.md)
 
 Guia para servidor Linux (ex.: **SRV-APP-DEV**), repo em `/usr/local/empresarial`, usuário de serviço **`datacenter`**, app na porta **3003**.
+
+**Antes de systemd ou bots Telegram:** consulte [docs/operacao-prod/README.md](../docs/operacao-prod/README.md) — entradas com **Prod: pendente** (release 2026-07-26).
 
 Todos os comandos abaixo assumem:
 
@@ -146,6 +148,8 @@ Logs OK: `"status":"ok"` e `"rowErrors":0` no evento `scrape_cycle`.
 
 ## Atualização de release (deploy rotineiro)
 
+**Primeira aplicação da release 2026-07-25/26:** ordem em [docs/operacao-prod/README.md](../docs/operacao-prod/README.md) (migrations → GRB → Telegram).
+
 Após `git pull`, **sempre** na raiz do repo:
 
 ```bash
@@ -156,13 +160,14 @@ npm run build
 sudo systemctl restart empresarial-next
 ```
 
-| O que mudou no commit            | Ação extra                                                                                                  |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Só `app/`, `components/`, `lib/` | Build + restart **Next** (acima)                                                                            |
-| `workers/sir-ingest/`            | `cd workers/sir-ingest && npm install && cd ../..` + `sudo systemctl restart sir-ingest-ral sir-ingest-rec` |
-| `migrations/sir/`                | `npm run db:migrate` (Next e workers podem continuar rodando)                                               |
-| `.env.example` (novas chaves)    | Atualizar `.env.local` e `workers/sir-ingest/.env`; `npm run env:check`                                     |
-| `migrations/sir/` (006–008)      | `npm run db:migrate` — tratativas BSOD/SIR                                                                  |
+| O que mudou no commit            | Ação extra                                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Só `app/`, `components/`, `lib/` | Build + restart **Next** (acima)                                                                                   |
+| `workers/sir-ingest/` (scrape)   | `cd workers/sir-ingest && npm install && cd ../..` + `sudo systemctl restart sir-ingest-ral sir-ingest-rec`        |
+| `workers/sir-ingest/telegram/`   | `telegram/venv/bin/pip install -r requirements.txt` + restart **sir-telegram-ops** **sir-telegram-datacenter**     |
+| `migrations/sir/`                | `npm run db:migrate` (Next e workers podem continuar rodando)                                                      |
+| `.env.example` (novas chaves)    | Atualizar `.env.local` e `workers/sir-ingest/.env`; `npm run env:check`                                            |
+| `migrations/sir/` (006–008)      | Ver [operacao-prod/2026-07-26-tratativas-migrations.md](../docs/operacao-prod/2026-07-26-tratativas-migrations.md) |
 
 **Atalho** (pull + build + restart dos 3 serviços):
 

@@ -33,7 +33,7 @@ Filtro SIR no select: **`REC/DSR/TCQ`** (não DSQ). Classificação REC/DSR/TCQ 
 
 ### Produção
 
-Guia completo: [deploy/README.md](../../deploy/README.md) · [docs/2026-07-26-operacao.md](../../docs/2026-07-26-operacao.md).
+Guia completo: [deploy/README.md](../../deploy/README.md) · [docs/2026-07-26-operacao.md](../../docs/2026-07-26-operacao.md) · **Pendências prod:** [docs/operacao-prod/README.md](../../docs/operacao-prod/README.md).
 
 **Primeiro deploy:** `.env` com `SIR_DB_*` iguais ao `.env.local` + credenciais SIR + `npm install && npm run install:browsers` (como `datacenter`).
 
@@ -142,6 +142,8 @@ telegram/venv/bin/python3 telegram/simulate-datacenter-notify.py
 
 Units prod: `deploy/systemd/sir-telegram-ops.service`, `sir-telegram-datacenter.service`.  
 Units lab (`User=rcard`): `deploy/systemd/lab/sir-telegram-ops-lab.service`, `sir-telegram-datacenter-lab.service`.
+
+Roteiro prod (primeira vez): [docs/operacao-prod/2026-07-26-telegram-sir-bots.md](../../docs/operacao-prod/2026-07-26-telegram-sir-bots.md) · mapa units: [docs/2026-07-26-bots-telegram.md](../../docs/2026-07-26-bots-telegram.md).
 
 Para promover a `/usr/local/sir-ingest` (requer root):
 

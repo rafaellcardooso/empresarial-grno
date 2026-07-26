@@ -23,9 +23,11 @@ Monorepo em `/usr/local/empresarial`. **Next.js só lê**; **workers gravam** no
 - BSOD/PME: ler `tbl_inventory_pme` (enrich continua no `hfc-sls`).
 - Porta padrão: **3003** (`npm run dev` / `npm start`).
 - Documentação: `docs/README.md` (índice) · deploy: `docs/2026-07-26-deploy-producao.md` + `deploy/README.md`.
+- Mudança de deploy/ops: atualizar `docs/2026-07-26-deploy-producao.md` e/ou `docs/2026-07-26-operacao.md`.
+- Passos manuais no host (units, venv, migrations, tokens): entrada em `docs/operacao-prod/` + índice README (Lab/Prod).
 
 ## Antes de mudar frontend
 
 Priorizar estabilidade do ingest (`AlertasRalRede.js`, `AlertasRecRede.js`) e contrato das tabelas `rals` / `recs` com `lib/queries/sir.ts`.
 
-Skills: `.cursor/skills/emp-revisar-sir-ingest/`, `emp-align-env/`, `emp-db-setup/`. Env: rule `emp-env`, `npm run env:check`. Comentários: rule `emp-comments`.
+Skills: `emp-deploy-producao`, `emp-revisar-sir-ingest`, `emp-align-env`, `emp-db-setup`. Rules: `emp-env`, `emp-deploy`, `emp-telegram`, `emp-docs`. Env: `npm run env:check`. Comentários: rule `emp-comments`.

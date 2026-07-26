@@ -9,6 +9,8 @@ alwaysApply: false
 - Tudo em `docs/`; nomes datados `AAAA-MM-DD-tema-kebab.md` (português, kebab-case).
 - Atualizar `docs/README.md` ao criar ou revisar doc relevante.
 - Produção: `docs/2026-07-26-deploy-producao.md`; operação: `docs/2026-07-26-operacao.md`.
+- **Ações manuais lab/prod:** `docs/operacao-prod/AAAA-MM-DD-tema.md` + índice `docs/operacao-prod/README.md` (status Lab/Prod). Usar quando a mudança exige systemd, venv Python, migrations, disable de unit legada, etc.
+- **Planos estáveis** (aprovados / em implementação): `docs/plans/AAAA-MM-DD-tema.md` + índice `docs/plans/README.md`. Rascunhos do Cursor ficam fora do repo (`~/.cursor/plans/`).
 - Runbook estendido de deploy permanece em `deploy/README.md` — manter sincronizado com o checklist em `docs/`.
 - Ao alterar doc operacional: atualizar cabeçalho `Última revisão: **AAAA-MM-DD**` e a linha do índice em `docs/README.md` (nome do arquivo pode permanecer).
 - Sem secrets reais (placeholders). README na raiz só resume e aponta para `docs/`.
