@@ -1,0 +1,31 @@
+---
+description: Limite de linhas por arquivo, função e componente
+globs: **/*.{ts,tsx,js,mjs}
+alwaysApply: true
+---
+
+# Tamanho de código
+
+Manter unidades pequenas facilita revisão e reduz acoplamento.
+
+## Limites (soft — dividir ao ultrapassar)
+
+| Unidade                        | Máximo         | Ação ao estourar                                       |
+| ------------------------------ | -------------- | ------------------------------------------------------ |
+| Arquivo `.ts` / `.tsx` / `.js` | **350** linhas | Extrair módulo, hook ou subpasta                       |
+| Função / handler exportado     | **60** linhas  | Extrair helpers privados no mesmo arquivo ou `lib/`    |
+| Componente React               | **200** linhas | Extrair subcomponentes ou hook (`useX`)                |
+| Route Handler (`route.ts`)     | **80** linhas  | Mover lógica para `lib/queries/` ou `lib/…/service.ts` |
+| Migration SQL                  | **120** linhas | Nova migration numerada (não inflar a anterior)        |
+
+Exceções justificáveis: configs gerados, listas de colunas/export, arquivos legados do worker — mesmo assim preferir split quando tocar no arquivo.
+
+## Como dividir
+
+- **Queries**: um arquivo por domínio (`sir.ts`, `bsod.ts`, `tratativas.ts`); helpers SQL inline só se couberem em ≤15 linhas.
+- **UI**: toolbar, tabela e modal em arquivos separados (`SirFilterToolbar`, `SirRecordsTable`, `AcionamentoModal`).
+- **API**: handler fino — validação + uma chamada de query + `NextResponse`.
+
+## Schema cross-repo (hfc-sls)
+
+Empresarial **só lê** `hfc-sls`. Coluna nova em `tbl_*`: confirmar migration aplicada no ambiente antes de referenciar; até lá, JOIN em tabela existente (ex.: `c.address` antes de `i.address` existir).

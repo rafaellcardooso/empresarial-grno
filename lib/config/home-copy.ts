@@ -14,7 +14,7 @@ export const HOME_COPY = {
   },
   relatorios: {
     title: "Relatórios",
-    description: "Exportação e consultas históricas de RAL, REC e inventário BSOD.",
+    description: "Análises operacionais e exportação CSV de RAL, REC e inventário PME.",
   },
   configuracoes: {
     title: "Configurações",

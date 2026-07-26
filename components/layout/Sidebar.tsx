@@ -13,17 +13,15 @@ type SidebarNavButtonProps = {
   icon?: string;
   active: boolean;
   badge?: number;
-  onNavigate?: () => void;
 };
 
 /** Botão de navegação do menu lateral. */
-function SidebarNavButton({ href, label, icon, active, badge, onNavigate }: SidebarNavButtonProps) {
+function SidebarNavButton({ href, label, icon, active, badge }: SidebarNavButtonProps) {
   return (
     <Link
       href={href}
       className={`sidebar-nav-btn ${active ? "sidebar-nav-btn--active" : ""}`}
       aria-current={active ? "page" : undefined}
-      onClick={onNavigate}
     >
       <span className="sidebar-nav-btn__main">
         {icon ? <i className={`bi ${icon} sidebar-nav-btn__icon`} aria-hidden="true" /> : null}
@@ -85,7 +83,6 @@ export function Sidebar() {
               icon={item.icon}
               active={isNavItemActive(pathname, item.href)}
               badge={itemBadge(item)}
-              onNavigate={closeMobileSidebar}
             />
           );
         })}

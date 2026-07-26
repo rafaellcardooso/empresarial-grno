@@ -30,7 +30,7 @@ export const APP_TOUR_STEPS: DriveStep[] = [
     element: "[data-tour='notifications']",
     popover: {
       title: "Notificações",
-      description: "Receba avisos da equipe GRNO neste painel.",
+      description: "Clique no sino para ver os últimos avisos da equipe GRNO.",
       side: "bottom",
     },
   },
@@ -38,7 +38,7 @@ export const APP_TOUR_STEPS: DriveStep[] = [
     element: "[data-tour='user-menu']",
     popover: {
       title: "Sua conta",
-      description: "Altere senha, veja notificações ou encerre a sessão.",
+      description: "Altere senha, acesse aprovações (staff) ou encerre a sessão.",
       side: "bottom",
     },
   },

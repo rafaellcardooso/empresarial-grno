@@ -26,8 +26,11 @@ Import: `import { RalRecord, RecRecord, SIR_TABLES } from '@/lib/models'`.
 ## MySQL `hfc-sls` (BSOD / PME)
 
 - Pool read-only: `lib/db/hfc.ts` · queries: `lib/queries/bsod.ts`.
-- `tbl_inventory_pme` — inventário PME (VLAN BSOD, contrato, nó).
+- `tbl_inventory_pme` — inventário PME (VLAN BSOD, contrato, nó, profile).
+- `tbl_inventory_cables` — modems por node; **`address`** do Xpertrak (fallback no JOIN).
 - `tbl_monitor_pme` — saúde SNMP por MAC (`status`, `tx`, `rx`, `mer`, `time`); usar última leitura por MAC.
+
+Endereço na listagem BSOD: `COALESCE(i.address, c.address)` — PME enriquecido (`inventory_pme_enrich` no hfc-sls) com fallback via cables.
 
 ## Dev sem SIR remoto
 
