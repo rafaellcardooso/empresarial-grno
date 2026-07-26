@@ -1,6 +1,5 @@
 import { GRB_DEFAULT_TELNET_ARG0, buildGrbTelnetPageUrl } from "@/lib/config/grb";
-
-const GRB_FETCH_TIMEOUT_MS = 120_000;
+import { fetchGrbTelnetText } from "@/lib/grb/telnet-fetch";
 
 /** Baixa HTML do executar_comandos_telnet.php para o equipamento informado. */
 export async function fetchGrbConsoleHtml(
@@ -14,21 +13,5 @@ export async function fetchGrbConsoleHtml(
     idRede: params.idRede,
   });
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GRB_FETCH_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(url, {
-      cache: "no-store",
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`GRB respondeu HTTP ${response.status}.`);
-    }
-
-    return response.text();
-  } finally {
-    clearTimeout(timeout);
-  }
+  return fetchGrbTelnetText(url);
 }

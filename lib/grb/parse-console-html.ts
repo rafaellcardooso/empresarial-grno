@@ -4,6 +4,21 @@ export type GrbProxyTokens = {
   arg2?: string;
 };
 
+/** Extrai mensagem de erro do bloco divMsg do GRB, se presente. */
+export function extractGrbPageError(html: string): string | null {
+  const match = html.match(/id=["']divMsg["'][^>]*>[\s\S]*?<big>([\s\S]*?)<\/big>/i);
+  if (!match?.[1]) return null;
+
+  let text = match[1].replace(/<[^>]+>/g, "");
+  text = text
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+  text = text.replace(/\s+/g, " ").trim();
+  return text || null;
+}
+
 /** Extrai tokens arg0–arg2 do bloco submit_enviar no HTML do console GRB. */
 export function extractGrbProxyTokens(html: string): GrbProxyTokens | null {
   const arg0Match = html.match(/url\s*\+=\s*"&arg0=([^"]+)"/i);

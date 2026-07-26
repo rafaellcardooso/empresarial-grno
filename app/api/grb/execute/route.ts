@@ -1,19 +1,24 @@
 import { NextResponse } from "next/server";
-import {
-  getGrbCommandPreset,
-  isGrbPingCommandPreset,
-  validateGrbTestInput,
-  GRB_DEFAULT_COMMAND_PRESET_ID,
-} from "@/lib/config/grb";
 import { getSession } from "@/lib/auth/session";
-import { executeGrbTelnet } from "@/lib/grb/execute-telnet";
+import { GRB_DEFAULT_ID_REDE, isGrbCircuitIpValid } from "@/lib/config/grb";
+import {
+  getTelnetCommandPreset,
+  isNokiaVprnBgpPreset,
+  TELNET_DEFAULT_PING_PRESET_ID,
+} from "@/lib/config/grb-telnet-commands";
+import { presetNeedsVprnList } from "@/lib/config/grb-telnet-ui";
+import { assertGrbTelnetAuthConfigured } from "@/lib/grb/telnet-fetch";
+import { executeTelnetPreset, isGrbIpv6Valid, isTelnetStaffPreset } from "@/lib/grb/execute-telnet";
 
 type GrbExecuteBody = {
   eqpto?: string;
   idRede?: number;
   ipNetwork?: string;
+  ipv6Network?: string;
   networkInterface?: string;
   vrfName?: string;
+  vprnRouterInstance?: string;
+  vprnServiceId?: string;
   word?: string;
   commandPresetId?: string;
 };
@@ -22,37 +27,86 @@ function parseExecuteBody(body: GrbExecuteBody) {
   const eqpto = body.eqpto?.trim();
   if (!eqpto) return { error: "Parâmetro eqpto é obrigatório." };
 
-  const commandPresetId = body.commandPresetId?.trim() || GRB_DEFAULT_COMMAND_PRESET_ID;
-  const preset = getGrbCommandPreset(commandPresetId);
+  const commandPresetId = body.commandPresetId?.trim() || TELNET_DEFAULT_PING_PRESET_ID;
+  const preset = getTelnetCommandPreset(commandPresetId);
+  if (!preset) return { error: "Comando telnet inválido." };
+
   const ipNetwork = body.ipNetwork?.trim() ?? "";
+  const ipv6Network = body.ipv6Network?.trim() ?? "";
   const networkInterface = body.networkInterface?.trim() ?? "";
   const vrfName = body.vrfName?.trim() ?? "";
+  const vprnRouterInstance = body.vprnRouterInstance?.trim() ?? "";
+  const vprnServiceId = body.vprnServiceId?.trim() ?? "";
   const word = body.word?.trim() ?? "";
 
-  const validationErrors = validateGrbTestInput(preset, ipNetwork, networkInterface, vrfName, word);
-  if (validationErrors.length > 0) {
-    return { error: validationErrors.join(" ") };
+  if (preset.requiresIp && !isGrbCircuitIpValid(ipNetwork)) {
+    return { error: "Informe um IPv4 válido." };
+  }
+  if (preset.requiresIpv6 && !isGrbIpv6Valid(ipv6Network)) {
+    return { error: "Informe um IPv6 válido." };
+  }
+  if (preset.requiresInterface && !networkInterface) {
+    return { error: "Informe a interface." };
+  }
+  if (preset.requiresVrf && !vrfName && !vprnRouterInstance && !vprnServiceId) {
+    return { error: "Informe a VRF/VPRN." };
+  }
+  if (preset.requiresWord && !word) {
+    return { error: "Informe o campo WORD." };
+  }
+  if (
+    isNokiaVprnBgpPreset(preset.id) &&
+    !vprnServiceId &&
+    !/^\d+$/.test(vrfName) &&
+    !/^\d+$/.test(vprnRouterInstance) &&
+    !/:\d+$/.test(vrfName) &&
+    !/:\d+$/.test(vprnRouterInstance)
+  ) {
+    return {
+      error: "Informe o service-id, o nome VPRN (ex.: PRODUCTION:7776) ou selecione na lista.",
+    };
+  }
+  if (
+    presetNeedsVprnList(preset, eqpto) &&
+    !isNokiaVprnBgpPreset(preset.id) &&
+    !vprnRouterInstance &&
+    !vrfName
+  ) {
+    return { error: "Informe o router-instance (VPRN)." };
   }
 
   const idRede = Number(body.idRede);
   return {
     data: {
       eqpto,
-      idRede: Number.isFinite(idRede) ? idRede : 0,
+      idRede: Number.isFinite(idRede) ? idRede : GRB_DEFAULT_ID_REDE,
       ipNetwork,
+      ipv6Network,
       networkInterface,
       vrfName,
+      vprnRouterInstance,
+      vprnServiceId,
       word,
       commandPresetId,
+      preset,
     },
   };
 }
 
-/** Executa comando telnet no GRB e devolve apenas a saída capturada. */
+/** Executa preset telnet no GRB e devolve comando e saída. */
 export async function POST(request: Request) {
   const grbBaseUrl = process.env.GRB_BASE_URL?.trim();
   if (!grbBaseUrl) {
     return NextResponse.json({ error: "GRB não configurado." }, { status: 503 });
+  }
+
+  try {
+    assertGrbTelnetAuthConfigured();
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "GRB telnet não configurado." },
+      { status: 503 },
+    );
   }
 
   let body: GrbExecuteBody;
@@ -68,16 +122,24 @@ export async function POST(request: Request) {
   }
 
   const session = await getSession();
-  const preset = getGrbCommandPreset(parsed.data.commandPresetId);
-  if (session?.role !== "STAFF" && !isGrbPingCommandPreset(preset)) {
+  if (isTelnetStaffPreset(parsed.data.preset) && session?.role !== "STAFF") {
     return NextResponse.json({ error: "Comando não permitido para seu perfil." }, { status: 403 });
   }
 
   try {
-    const result = await executeGrbTelnet({
+    const result = await executeTelnetPreset({
       grbBaseUrl,
       pageArg0: process.env.GRB_TELNET_ARG0,
-      ...parsed.data,
+      eqpto: parsed.data.eqpto,
+      idRede: parsed.data.idRede,
+      ipNetwork: parsed.data.ipNetwork,
+      ipv6Network: parsed.data.ipv6Network,
+      networkInterface: parsed.data.networkInterface,
+      vrfName: parsed.data.vrfName,
+      vprnRouterInstance: parsed.data.vprnRouterInstance,
+      vprnServiceId: parsed.data.vprnServiceId,
+      word: parsed.data.word,
+      commandPresetId: parsed.data.commandPresetId,
     });
 
     return NextResponse.json(result);

@@ -16,6 +16,8 @@ function decodeGrbHtmlFragment(fragment: string): string {
     .replace(/\\"/g, '"')
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/&nbsp;/gi, " ")
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
     .replace(/&amp;/gi, "&")
@@ -29,7 +31,7 @@ function extractDivResultadoInnerHtml(body: string): string | null {
     /getElementById\s*\(\s*['"]div_resultado['"]\s*\)\.innerHTML\s*\+=\s*"((?:\\.|[^"\\])*)"/gi,
     /getElementById\s*\(\s*['"]div_resultado['"]\s*\)\.innerHTML\s*=\s*"((?:\\.|[^"\\])*)"/gi,
     /getElementById\s*\(\s*['"]div_resultado['"]\s*\)\.innerHTML\s*\+=\s*'((?:\\.|[^'\\])*)'/gi,
-    /getElementById\s*\(\s*['"]div_resultado['"]\s*\)\.innerHTML\s*=\s*'((?:\\.|[^'\\])*)'/gi,
+    /getElementById\s*\(\s*['"]div_resultado['"]\s*\)\.innerHTML\s*=\s*'((?:\\.|[^"\\])*)'/gi,
   ];
 
   const chunks: string[] = [];

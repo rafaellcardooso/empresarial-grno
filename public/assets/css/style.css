@@ -581,6 +581,116 @@ body {
   word-break: break-word;
 }
 
+.grb-panel__vprn-box {
+  background: color-mix(in srgb, var(--secondary-text-clr) 4%, var(--surface-clr));
+  border: 1px solid var(--line-clr);
+  border-radius: calc(var(--border-radius-md) - 4px);
+  padding: 0.75rem;
+}
+
+.grb-panel__vprn-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.grb-panel__vprn-search {
+  flex: 1 1 12rem;
+  max-width: 18rem;
+  min-width: 10rem;
+}
+
+.grb-panel__vprn-selected {
+  align-items: center;
+  background: color-mix(in srgb, var(--primary-clr, #0d6efd) 8%, var(--surface-clr));
+  border: 1px solid color-mix(in srgb, var(--primary-clr, #0d6efd) 24%, var(--line-clr));
+  border-radius: calc(var(--border-radius-md) - 6px);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.grb-panel__vprn-selected-main {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  min-width: 0;
+}
+
+.grb-panel__vprn-selected-label {
+  color: var(--secondary-text-clr);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.grb-panel__vprn-selected-name {
+  font-size: var(--text-sm);
+  word-break: break-all;
+}
+
+.grb-panel__vprn-selected-meta {
+  color: var(--secondary-text-clr);
+  font-size: var(--text-xs);
+}
+
+.grb-panel__vprn-table-wrap {
+  border: 1px solid var(--line-clr);
+  border-radius: calc(var(--border-radius-md) - 6px);
+  margin-bottom: 0.5rem;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.grb-panel__vprn-table thead th {
+  background: var(--surface-clr);
+  border-bottom-width: 1px;
+  color: var(--secondary-text-clr);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  position: sticky;
+  top: 0;
+  text-transform: uppercase;
+  z-index: 1;
+}
+
+.grb-panel__vprn-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--text-sm);
+  word-break: break-all;
+}
+
+.grb-panel__vprn-row--active {
+  background: color-mix(in srgb, var(--primary-clr, #0d6efd) 10%, var(--surface-clr));
+}
+
+.grb-panel__vprn-footer {
+  align-items: center;
+  border-top: 1px solid var(--line-clr);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+}
+
+.grb-panel__vprn-manual {
+  border-top: 1px solid var(--line-clr);
+  padding-top: 0.75rem;
+}
+
+.grb-panel__vprn-manual--solo {
+  border-top: 0;
+  padding-top: 0;
+}
+
 .critel-panel__form {
   display: flex;
   flex-direction: column;

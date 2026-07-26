@@ -1,34 +1,41 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { GrbTelnetVprnField } from "@/components/grb/GrbTelnetVprnField";
 import { ContentCard } from "@/components/ui/ContentCard";
 import { useSession } from "@/components/layout/SessionProvider";
 import {
   GRB_CUSTOM_EQUIPMENT_VALUE,
   GRB_CUSTOM_INTERFACE_VALUE,
-  GRB_DEFAULT_COMMAND_PRESET_ID,
   GRB_DEFAULT_ID_REDE,
-  GRB_EQUIPMENT_PRESETS,
   GRB_INTERFACE_EMPTY_VALUE,
-  GRB_RECENT_TESTS_KEY,
-  GRB_RECENT_TESTS_LIMIT,
-  buildGrbCommandPreview,
-  buildGrbConsoleProxyPath,
-  getGrbCommandPreset,
-  getGrbCommandPresetsForRole,
-  validateGrbTestInput,
-  type GrbRecentTest,
 } from "@/lib/config/grb";
+import {
+  eqptoPlatform,
+  getTelnetState,
+  TELNET_UF_ORDER,
+  ufForEqpto,
+} from "@/lib/config/grb-telnet-catalog";
+import {
+  isNokiaVprnBgpPreset,
+  TELNET_DEFAULT_PING_PRESET_ID,
+} from "@/lib/config/grb-telnet-commands";
+import {
+  FIELD_LABELS,
+  fieldPrompt,
+  fieldsForEqpto,
+  presetNeedsVprnList,
+  presetUiLabel,
+  previewTelnetCommand,
+  telnetCommandGroupsForRoleAndEqpto,
+  telnetCommandsForRoleAndEqpto,
+  vrfFieldPrompt,
+  type TelnetCommandField,
+} from "@/lib/config/grb-telnet-ui";
+import { resolveVprnServiceId, type VprnEntry } from "@/lib/grb/telnet-vprn";
 
 type GrbTelnetPanelProps = {
   baseUrl: string;
-  telnetArg0: string;
-};
-
-type FormErrors = {
-  eqpto?: string;
-  general?: string[];
-  baseUrl?: string;
 };
 
 type ExecuteResult = {
@@ -36,68 +43,39 @@ type ExecuteResult = {
   output: string;
 };
 
-function loadRecentTests(): GrbRecentTest[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const raw = window.sessionStorage.getItem(GRB_RECENT_TESTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as GrbRecentTest[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRecentTest(entry: GrbRecentTest): GrbRecentTest[] {
-  const previous = loadRecentTests();
-  const next = [
-    entry,
-    ...previous.filter(
-      (item) =>
-        item.eqpto !== entry.eqpto ||
-        item.ipNetwork !== entry.ipNetwork ||
-        item.networkInterface !== entry.networkInterface ||
-        item.commandPresetId !== entry.commandPresetId,
-    ),
-  ].slice(0, GRB_RECENT_TESTS_LIMIT);
-
-  window.sessionStorage.setItem(GRB_RECENT_TESTS_KEY, JSON.stringify(next));
-  return next;
-}
-
-/** Formulário GRB integrado — executa telnet via API e exibe saída na página. */
-export function GrbTelnetPanel({ baseUrl, telnetArg0 }: GrbTelnetPanelProps) {
+/** Formulário TELNET GRB — UF, equipamento, comando e campos dinâmicos por plataforma. */
+export function GrbTelnetPanel({ baseUrl }: GrbTelnetPanelProps) {
   const { user } = useSession();
   const isStaff = user.role === "STAFF";
-  const commandPresets = useMemo(() => getGrbCommandPresetsForRole(user.role), [user.role]);
-  const [equipmentChoice, setEquipmentChoice] = useState(GRB_EQUIPMENT_PRESETS[0]?.value ?? "");
+  const [selectedUf, setSelectedUf] = useState("MA");
+  const [equipmentChoice, setEquipmentChoice] = useState("");
   const [customEquipment, setCustomEquipment] = useState("");
+  const [commandPresetId, setCommandPresetId] = useState(TELNET_DEFAULT_PING_PRESET_ID);
   const [ipNetwork, setIpNetwork] = useState("");
+  const [ipv6Network, setIpv6Network] = useState("");
+  const [vrfName, setVrfName] = useState("");
+  const [vprnRouterInstance, setVprnRouterInstance] = useState("");
+  const [vprnServiceId, setVprnServiceId] = useState("");
   const [interfaceChoice, setInterfaceChoice] = useState(GRB_INTERFACE_EMPTY_VALUE);
   const [customInterface, setCustomInterface] = useState("");
   const [interfaceOptions, setInterfaceOptions] = useState<string[]>([]);
   const [interfacesLoading, setInterfacesLoading] = useState(false);
   const [interfacesError, setInterfacesError] = useState<string | null>(null);
-  const [vrfName, setVrfName] = useState("");
   const [word, setWord] = useState("");
-  const [commandPresetId, setCommandPresetId] = useState(GRB_DEFAULT_COMMAND_PRESET_ID);
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [recentTests, setRecentTests] = useState<GrbRecentTest[]>([]);
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [vprnEntries, setVprnEntries] = useState<VprnEntry[]>([]);
+  const [vprnPage, setVprnPage] = useState(0);
+  const [vprnLoading, setVprnLoading] = useState(false);
+  const [vprnError, setVprnError] = useState<string | null>(null);
+  const [vprnManual, setVprnManual] = useState(false);
+  const [vprnFilter, setVprnFilter] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executeError, setExecuteError] = useState<string | null>(null);
   const [executeResult, setExecuteResult] = useState<ExecuteResult | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  useEffect(() => {
-    setRecentTests(loadRecentTests());
-  }, []);
-
-  useEffect(() => {
-    if (!commandPresets.some((preset) => preset.id === commandPresetId)) {
-      setCommandPresetId(GRB_DEFAULT_COMMAND_PRESET_ID);
-    }
-  }, [commandPresets, commandPresetId]);
+  const stateConfig = getTelnetState(selectedUf);
+  const catalogEqptos = useMemo(() => stateConfig?.eqptos ?? [], [stateConfig]);
 
   const eqpto = useMemo(() => {
     if (equipmentChoice === GRB_CUSTOM_EQUIPMENT_VALUE) {
@@ -112,6 +90,86 @@ export function GrbTelnetPanel({ baseUrl, telnetArg0 }: GrbTelnetPanelProps) {
     }
     return interfaceChoice.trim();
   }, [customInterface, interfaceChoice]);
+
+  const platform = eqpto ? eqptoPlatform(eqpto) : (stateConfig?.platform ?? "nokia");
+  const availableCommands = useMemo(
+    () => (eqpto ? telnetCommandsForRoleAndEqpto(user.role, eqpto) : []),
+    [eqpto, user.role],
+  );
+  const commandGroups = useMemo(
+    () => (eqpto ? telnetCommandGroupsForRoleAndEqpto(user.role, eqpto) : []),
+    [eqpto, user.role],
+  );
+  const commandPreset = useMemo(
+    () => availableCommands.find((preset) => preset.id === commandPresetId) ?? availableCommands[0],
+    [availableCommands, commandPresetId],
+  );
+
+  const activeFields = useMemo(
+    () => (commandPreset && eqpto ? fieldsForEqpto(commandPreset, eqpto) : []),
+    [commandPreset, eqpto],
+  );
+
+  const commandPreview = useMemo(
+    () =>
+      previewTelnetCommand({
+        presetId: commandPreset?.id ?? commandPresetId,
+        eqpto,
+        ip: ipNetwork,
+        ipv6: ipv6Network,
+        vrf: vrfName,
+        vprnRouterInstance,
+        vprnServiceId,
+        interface: networkInterface,
+        word,
+      }),
+    [
+      commandPreset?.id,
+      commandPresetId,
+      eqpto,
+      ipNetwork,
+      ipv6Network,
+      networkInterface,
+      vrfName,
+      vprnRouterInstance,
+      vprnServiceId,
+      word,
+    ],
+  );
+
+  const needsVprnList = commandPreset && eqpto ? presetNeedsVprnList(commandPreset, eqpto) : false;
+  const needsVprnServiceId =
+    commandPreset && eqpto ? isNokiaVprnBgpPreset(commandPreset.id) : false;
+
+  useEffect(() => {
+    if (catalogEqptos.length > 0 && !equipmentChoice) {
+      setEquipmentChoice(catalogEqptos[0] ?? "");
+    }
+  }, [catalogEqptos, equipmentChoice]);
+
+  useEffect(() => {
+    if (!availableCommands.some((preset) => preset.id === commandPresetId)) {
+      setCommandPresetId(availableCommands[0]?.id ?? TELNET_DEFAULT_PING_PRESET_ID);
+    }
+  }, [availableCommands, commandPresetId]);
+
+  useEffect(() => {
+    setVprnEntries([]);
+    setVprnPage(0);
+    setVprnError(null);
+    setVprnManual(false);
+    setVprnFilter("");
+    setVprnRouterInstance("");
+    setVprnServiceId("");
+    setVrfName("");
+    setIpv6Network("");
+    setInterfaceChoice(GRB_INTERFACE_EMPTY_VALUE);
+    setCustomInterface("");
+  }, [eqpto, commandPresetId]);
+
+  useEffect(() => {
+    setVprnPage(0);
+  }, [vprnFilter]);
 
   useEffect(() => {
     if (!baseUrl.trim() || !eqpto) {
@@ -156,77 +214,94 @@ export function GrbTelnetPanel({ baseUrl, telnetArg0 }: GrbTelnetPanelProps) {
     return () => controller.abort();
   }, [baseUrl, eqpto]);
 
-  const commandPreset = useMemo(() => getGrbCommandPreset(commandPresetId), [commandPresetId]);
-
-  const commandPreview = useMemo(
-    () =>
-      buildGrbCommandPreview({
-        preset: commandPreset,
-        ipNetwork,
-        networkInterface,
-        vrfName,
-        word,
-      }),
-    [commandPreset, ipNetwork, networkInterface, vrfName, word],
-  );
-
-  const validate = (): FormErrors => {
-    const next: FormErrors = {};
-
-    if (!baseUrl.trim()) {
-      next.baseUrl = "Configure GRB_BASE_URL no ambiente da aplicação.";
-    }
-
-    if (!eqpto) {
-      next.eqpto = "Informe o equipamento de rede.";
-    }
-
-    const general = validateGrbTestInput(commandPreset, ipNetwork, networkInterface, vrfName, word);
-    if (general.length > 0) {
-      next.general = general;
-    }
-
-    return next;
+  const handleUfChange = (uf: string) => {
+    setSelectedUf(uf);
+    const nextState = getTelnetState(uf);
+    setEquipmentChoice(nextState?.eqptos[0] ?? GRB_CUSTOM_EQUIPMENT_VALUE);
+    setCustomEquipment("");
+    setFormError(null);
+    setExecuteError(null);
+    setExecuteResult(null);
   };
 
-  const buildConsoleProxyPath = () =>
-    buildGrbConsoleProxyPath({
-      baseUrl: baseUrl.trim(),
-      arg0: telnetArg0,
-      eqpto,
-      idRede: GRB_DEFAULT_ID_REDE,
-      ipNetwork: ipNetwork.trim(),
-      networkInterface: networkInterface.trim(),
-      vrfName: vrfName.trim(),
-      word: word.trim(),
-      selCmds: commandPreset.templateValue,
-      comando: commandPreview.ready ? commandPreview.resolvedValue : undefined,
-    });
+  const handleLoadVprn = async () => {
+    if (!eqpto || !baseUrl.trim()) return;
 
-  const persistRecentTest = () => {
-    const entry: GrbRecentTest = {
-      eqpto,
-      idRede: GRB_DEFAULT_ID_REDE,
-      ipNetwork: ipNetwork.trim(),
-      networkInterface: networkInterface.trim(),
-      vrfName: vrfName.trim(),
-      word: word.trim(),
-      commandPresetId,
-      openedAt: new Date().toISOString(),
-    };
-    setRecentTests(saveRecentTest(entry));
+    setVprnLoading(true);
+    setVprnError(null);
+
+    try {
+      const params = new URLSearchParams({
+        eqpto,
+        id_rede: String(GRB_DEFAULT_ID_REDE),
+      });
+      const response = await fetch(`/api/grb/vprn?${params.toString()}`);
+      const payload = (await response.json()) as {
+        entries?: VprnEntry[];
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Falha ao carregar VPRNs.");
+      }
+
+      const entries = Array.isArray(payload.entries) ? payload.entries : [];
+      setVprnEntries(entries);
+      setVprnPage(0);
+      setVprnFilter("");
+      setVprnManual(entries.length === 0);
+
+      if (entries.length === 0) {
+        setVprnError("Nenhum VPRN encontrado. Informe manualmente.");
+      }
+    } catch (error) {
+      setVprnEntries([]);
+      setVprnManual(true);
+      setVprnError(error instanceof Error ? error.message : "Falha ao carregar VPRNs.");
+    } finally {
+      setVprnLoading(false);
+    }
+  };
+
+  const handleClearVprnSelection = () => {
+    setVprnRouterInstance("");
+    setVprnServiceId("");
+    setVrfName("");
+  };
+
+  const handleSelectVprn = (entry: VprnEntry) => {
+    setVprnRouterInstance(entry.name);
+    setVprnServiceId(entry.serviceId);
+    setVrfName(entry.name);
+    setVprnManual(false);
+  };
+
+  const handleVprnManualChange = (value: string) => {
+    setVprnRouterInstance(value);
+    setVrfName(value);
+    setVprnServiceId(resolveVprnServiceId(value, vprnEntries));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    const nextErrors = validate();
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-
-    setIsExecuting(true);
+    setFormError(null);
     setExecuteError(null);
     setExecuteResult(null);
+
+    if (!baseUrl.trim()) {
+      setFormError("Configure GRB_BASE_URL no ambiente da aplicação.");
+      return;
+    }
+    if (!eqpto) {
+      setFormError("Informe o equipamento.");
+      return;
+    }
+    if (!commandPreset) {
+      setFormError("Selecione o comando.");
+      return;
+    }
+
+    setIsExecuting(true);
 
     try {
       const response = await fetch("/api/grb/execute", {
@@ -236,34 +311,27 @@ export function GrbTelnetPanel({ baseUrl, telnetArg0 }: GrbTelnetPanelProps) {
           eqpto,
           idRede: GRB_DEFAULT_ID_REDE,
           ipNetwork: ipNetwork.trim(),
+          ipv6Network: ipv6Network.trim(),
           networkInterface: networkInterface.trim(),
           vrfName: vrfName.trim(),
+          vprnRouterInstance: vprnRouterInstance.trim(),
+          vprnServiceId: vprnServiceId.trim(),
           word: word.trim(),
-          commandPresetId,
+          commandPresetId: commandPreset.id,
         }),
       });
 
       const payload = (await response.json()) as ExecuteResult & { error?: string };
       if (!response.ok) {
-        throw new Error(payload.error ?? "Falha ao executar teste.");
+        throw new Error(payload.error ?? "Falha ao executar comando.");
       }
 
       setExecuteResult({ command: payload.command, output: payload.output });
-      persistRecentTest();
     } catch (error) {
-      setExecuteError(error instanceof Error ? error.message : "Falha ao executar teste.");
+      setExecuteError(error instanceof Error ? error.message : "Falha ao executar comando.");
     } finally {
       setIsExecuting(false);
     }
-  };
-
-  const handleOpenConsole = () => {
-    const nextErrors = validate();
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-
-    persistRecentTest();
-    window.open(buildConsoleProxyPath(), "_blank", "noopener,noreferrer");
   };
 
   const handleCopy = async (value: string, label: string) => {
@@ -276,40 +344,168 @@ export function GrbTelnetPanel({ baseUrl, telnetArg0 }: GrbTelnetPanelProps) {
     }
   };
 
-  const applyRecentTest = (entry: GrbRecentTest) => {
-    const preset = GRB_EQUIPMENT_PRESETS.find((item) => item.value === entry.eqpto);
+  const renderField = (field: TelnetCommandField) => {
+    if (field === "vrf" && needsVprnList) {
+      const vprnHint = commandPreset
+        ? vrfFieldPrompt(commandPreset, eqpto)
+        : fieldPrompt("vrf", eqpto);
 
-    if (preset) {
-      setEquipmentChoice(preset.value);
-      setCustomEquipment("");
-    } else {
-      setEquipmentChoice(GRB_CUSTOM_EQUIPMENT_VALUE);
-      setCustomEquipment(entry.eqpto);
+      return (
+        <GrbTelnetVprnField
+          key={field}
+          hint={vprnHint}
+          eqpto={eqpto}
+          isExecuting={isExecuting}
+          needsVprnServiceId={needsVprnServiceId}
+          vprnRouterInstance={vprnRouterInstance}
+          vprnServiceId={vprnServiceId}
+          vprnEntries={vprnEntries}
+          vprnPage={vprnPage}
+          vprnLoading={vprnLoading}
+          vprnError={vprnError}
+          vprnManual={vprnManual}
+          vprnFilter={vprnFilter}
+          onLoadVprn={handleLoadVprn}
+          onClearSelection={handleClearVprnSelection}
+          onSelectVprn={handleSelectVprn}
+          onManualChange={handleVprnManualChange}
+          onSetManual={setVprnManual}
+          onSetFilter={setVprnFilter}
+          onSetPage={setVprnPage}
+        />
+      );
     }
 
-    setIpNetwork(entry.ipNetwork);
-    setVrfName(entry.vrfName);
-    setWord(entry.word);
-    setCommandPresetId(entry.commandPresetId);
-    setErrors({});
-    setExecuteError(null);
-    setExecuteResult(null);
-
-    const savedInterface = entry.networkInterface.trim();
-    if (!savedInterface) {
-      setInterfaceChoice(GRB_INTERFACE_EMPTY_VALUE);
-      setCustomInterface("");
-      return;
+    if (field === "ipv6") {
+      return (
+        <div key={field} className="col-md-6">
+          <label className="form-label grb-panel__label" htmlFor="grb-ipv6-network">
+            {FIELD_LABELS.ipv6}
+          </label>
+          <input
+            id="grb-ipv6-network"
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Ex.: 2001:db8::1"
+            value={ipv6Network}
+            onChange={(event) => setIpv6Network(event.target.value)}
+            autoComplete="off"
+            disabled={isExecuting}
+          />
+          <div className="form-text text-body-secondary">{fieldPrompt("ipv6", eqpto)}</div>
+        </div>
+      );
     }
 
-    if (interfaceOptions.includes(savedInterface)) {
-      setInterfaceChoice(savedInterface);
-      setCustomInterface("");
-      return;
+    if (field === "ip") {
+      return (
+        <div key={field} className="col-md-6">
+          <label className="form-label grb-panel__label" htmlFor="grb-ip-network">
+            {FIELD_LABELS.ip}
+          </label>
+          <input
+            id="grb-ip-network"
+            type="text"
+            inputMode="decimal"
+            className="form-control form-control-sm"
+            placeholder="Ex.: 10.20.30.40"
+            value={ipNetwork}
+            onChange={(event) => setIpNetwork(event.target.value)}
+            autoComplete="off"
+            disabled={isExecuting}
+          />
+          <div className="form-text text-body-secondary">{fieldPrompt("ip", eqpto)}</div>
+        </div>
+      );
     }
 
-    setInterfaceChoice(GRB_CUSTOM_INTERFACE_VALUE);
-    setCustomInterface(savedInterface);
+    if (field === "interface") {
+      return (
+        <div key={field} className="col-md-6">
+          <label className="form-label grb-panel__label" htmlFor="grb-interface">
+            {FIELD_LABELS.interface}
+          </label>
+          <select
+            id="grb-interface"
+            className="form-select form-select-sm"
+            value={interfaceChoice}
+            onChange={(event) => {
+              setInterfaceChoice(event.target.value);
+              if (event.target.value !== GRB_CUSTOM_INTERFACE_VALUE) {
+                setCustomInterface("");
+              }
+            }}
+            disabled={isExecuting || interfacesLoading || !eqpto}
+          >
+            <option value={GRB_INTERFACE_EMPTY_VALUE}>
+              {interfacesLoading ? "Carregando interfaces…" : "Selecione a interface…"}
+            </option>
+            {interfaceOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+            <option value={GRB_CUSTOM_INTERFACE_VALUE}>Outra interface…</option>
+          </select>
+          {interfaceChoice === GRB_CUSTOM_INTERFACE_VALUE ? (
+            <input
+              type="text"
+              className="form-control form-control-sm mt-2"
+              placeholder="Digite interface ou designação"
+              value={customInterface}
+              onChange={(event) => setCustomInterface(event.target.value)}
+              aria-label="Interface customizada"
+              disabled={isExecuting}
+            />
+          ) : null}
+          {interfacesError ? <div className="form-text text-danger">{interfacesError}</div> : null}
+          {!interfacesLoading && interfaceOptions.length > 0 ? (
+            <div className="form-text text-body-secondary">
+              {interfaceOptions.length} interfaces do {eqpto}
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (field === "vrf") {
+      return (
+        <div key={field} className="col-md-6">
+          <label className="form-label grb-panel__label" htmlFor="grb-vrf">
+            {FIELD_LABELS.vrf}
+          </label>
+          <input
+            id="grb-vrf"
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Nome da VRF"
+            value={vrfName}
+            onChange={(event) => setVrfName(event.target.value)}
+            autoComplete="off"
+            disabled={isExecuting}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div key={field} className="col-md-6">
+        <label className="form-label grb-panel__label" htmlFor="grb-word">
+          {FIELD_LABELS.word}
+        </label>
+        <input
+          id="grb-word"
+          type="text"
+          className="form-control form-control-sm"
+          placeholder={platform === "nokia" ? "Ex.: 5" : "WORD"}
+          value={word}
+          onChange={(event) => setWord(event.target.value)}
+          autoComplete="off"
+          disabled={isExecuting}
+        />
+        <div className="form-text text-body-secondary">{fieldPrompt("word", eqpto)}</div>
+      </div>
+    );
   };
 
   return (
@@ -321,255 +517,159 @@ export function GrbTelnetPanel({ baseUrl, telnetArg0 }: GrbTelnetPanelProps) {
         </div>
       ) : null}
 
-      <ContentCard title="Teste remoto" bodyClassName="p-3">
+      <ContentCard title="TELNET" bodyClassName="p-3">
         <p className="text-body-secondary small mb-3">
-          O teste roda pelo servidor Empresarial contra o GRB. A resposta telnet aparece abaixo, sem
-          abrir a página legada — use o link auxiliar só se precisar do console completo.
+          Selecione UF e equipamento, escolha o comando e preencha os campos. Equipamentos Nokia
+          usam router-instance (VPRN) quando aplicável
+          {isStaff
+            ? platform === "nokia"
+              ? "; STAFF vê interfaces e BGP SR OS."
+              : "; Cisco IOS exibe o catálogo GRB completo por categoria."
+            : "."}
         </p>
+
         <form className="grb-panel__form" onSubmit={handleSubmit}>
-          <div className="row g-3">
-            <div className="col-md-6">
-              <label className="form-label grb-panel__label" htmlFor="grb-equipment">
-                Equipamento (eqpto)
-              </label>
-              <select
-                id="grb-equipment"
-                className="form-select form-select-sm"
-                value={equipmentChoice}
-                onChange={(event) => {
-                  setEquipmentChoice(event.target.value);
-                  setInterfaceChoice(GRB_INTERFACE_EMPTY_VALUE);
-                  setCustomInterface("");
-                }}
-                disabled={isExecuting}
-              >
-                {GRB_EQUIPMENT_PRESETS.map((preset) => (
-                  <option key={preset.value} value={preset.value}>
-                    {preset.label}
-                  </option>
-                ))}
-                <option value={GRB_CUSTOM_EQUIPMENT_VALUE}>Outro equipamento…</option>
-              </select>
-              {equipmentChoice === GRB_CUSTOM_EQUIPMENT_VALUE ? (
-                <input
-                  type="text"
-                  className="form-control form-control-sm mt-2"
-                  placeholder="Ex.: AGG04.SLS"
-                  value={customEquipment}
-                  onChange={(event) => setCustomEquipment(event.target.value)}
-                  aria-label="Nome do equipamento"
-                  disabled={isExecuting}
-                />
-              ) : null}
-              {errors.eqpto ? <div className="form-text text-danger">{errors.eqpto}</div> : null}
-            </div>
-
-            <div className="col-md-4">
-              <label className="form-label grb-panel__label" htmlFor="grb-command">
-                Comando
-              </label>
-              <select
-                id="grb-command"
-                className="form-select form-select-sm"
-                value={commandPresetId}
-                onChange={(event) => setCommandPresetId(event.target.value)}
-                disabled={isExecuting}
-              >
-                {commandPresets.map((preset) => (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="col-md-4">
-              <label className="form-label grb-panel__label" htmlFor="grb-ip-network">
-                IP / Network
-              </label>
-              <input
-                id="grb-ip-network"
-                type="text"
-                inputMode="decimal"
-                className="form-control form-control-sm"
-                placeholder="Ex.: 10.20.30.40"
-                value={ipNetwork}
-                onChange={(event) => setIpNetwork(event.target.value)}
-                autoComplete="off"
-                disabled={isExecuting}
-              />
-            </div>
-
-            <div className="col-md-4">
-              <label className="form-label grb-panel__label" htmlFor="grb-interface">
-                Interface / designação
-              </label>
-              <select
-                id="grb-interface"
-                className="form-select form-select-sm"
-                value={interfaceChoice}
-                onChange={(event) => {
-                  setInterfaceChoice(event.target.value);
-                  if (event.target.value !== GRB_CUSTOM_INTERFACE_VALUE) {
-                    setCustomInterface("");
-                  }
-                }}
-                disabled={isExecuting || interfacesLoading || !eqpto}
-              >
-                <option value={GRB_INTERFACE_EMPTY_VALUE}>
-                  {interfacesLoading ? "Carregando interfaces…" : "Selecione a interface…"}
-                </option>
-                {interfaceOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-                <option value={GRB_CUSTOM_INTERFACE_VALUE}>Outra interface…</option>
-              </select>
-              {interfaceChoice === GRB_CUSTOM_INTERFACE_VALUE ? (
-                <input
-                  type="text"
-                  className="form-control form-control-sm mt-2"
-                  placeholder="Digite interface ou designação"
-                  value={customInterface}
-                  onChange={(event) => setCustomInterface(event.target.value)}
-                  aria-label="Interface customizada"
-                  disabled={isExecuting}
-                />
-              ) : null}
-              {interfacesError ? (
-                <div className="form-text text-danger">{interfacesError}</div>
-              ) : null}
-              {!interfacesLoading && interfaceOptions.length > 0 ? (
-                <div className="form-text text-body-secondary">
-                  {interfaceOptions.length} interfaces do {eqpto}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="col-md-4">
-              <label className="form-label grb-panel__label" htmlFor="grb-vrf">
-                VRF
-              </label>
-              <input
-                id="grb-vrf"
-                type="text"
-                className="form-control form-control-sm"
-                placeholder="Opcional"
-                value={vrfName}
-                onChange={(event) => setVrfName(event.target.value)}
-                autoComplete="off"
-                disabled={isExecuting}
-              />
-            </div>
-
-            <div className="col-md-8">
-              <label className="form-label grb-panel__label" htmlFor="grb-word">
-                WORD
-              </label>
-              <input
-                id="grb-word"
-                type="text"
-                className="form-control form-control-sm"
-                placeholder="Opcional — access-list, route-map, etc."
-                value={word}
-                onChange={(event) => setWord(event.target.value)}
-                autoComplete="off"
-                disabled={isExecuting}
-              />
-            </div>
-
-            <div className="col-md-4 d-flex align-items-end gap-2">
-              <button
-                type="submit"
-                className="btn btn-primary btn-sm flex-grow-1"
-                disabled={!baseUrl.trim() || isExecuting}
-              >
-                {isExecuting ? (
-                  <>
-                    <span
-                      className="spinner-border spinner-border-sm me-1"
-                      role="status"
-                      aria-hidden
-                    />
-                    Executando…
-                  </>
-                ) : (
-                  <>
-                    <i className="bi bi-play-fill me-1" aria-hidden />
-                    Executar teste
-                  </>
-                )}
-              </button>
+          <div className="mb-3">
+            <span className="form-label grb-panel__label d-block mb-2">UF / região</span>
+            <div className="d-flex flex-wrap gap-2">
+              {TELNET_UF_ORDER.map((uf) => {
+                const config = getTelnetState(uf);
+                return (
+                  <button
+                    key={uf}
+                    type="button"
+                    className={`btn btn-sm ${selectedUf === uf ? "btn-primary" : "btn-outline-secondary"}`}
+                    onClick={() => handleUfChange(uf)}
+                    disabled={isExecuting}
+                  >
+                    {config?.label ?? uf}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {errors.general?.map((message) => (
-            <div key={message} className="form-text text-danger mt-2">
-              {message}
-            </div>
-          ))}
-
-          {errors.baseUrl ? (
-            <div className="form-text text-danger mt-2">{errors.baseUrl}</div>
-          ) : null}
-
-          {isStaff ? (
-            <div className="mt-2">
+          <div className="mb-3">
+            <label className="form-label grb-panel__label" htmlFor="grb-equipment">
+              Equipamento
+            </label>
+            <div className="d-flex flex-wrap gap-2 mb-2">
+              {catalogEqptos.map((hostname) => (
+                <button
+                  key={hostname}
+                  type="button"
+                  className={`btn btn-sm ${
+                    equipmentChoice === hostname ? "btn-primary" : "btn-outline-secondary"
+                  }`}
+                  onClick={() => {
+                    setEquipmentChoice(hostname);
+                    setCustomEquipment("");
+                    setInterfaceChoice(GRB_INTERFACE_EMPTY_VALUE);
+                    setCustomInterface("");
+                  }}
+                  disabled={isExecuting}
+                >
+                  {hostname}
+                </button>
+              ))}
               <button
                 type="button"
-                className="btn btn-link btn-sm p-0 text-body-secondary"
-                onClick={handleOpenConsole}
-                disabled={isExecuting || !baseUrl.trim()}
+                className={`btn btn-sm ${
+                  equipmentChoice === GRB_CUSTOM_EQUIPMENT_VALUE
+                    ? "btn-primary"
+                    : "btn-outline-secondary"
+                }`}
+                onClick={() => setEquipmentChoice(GRB_CUSTOM_EQUIPMENT_VALUE)}
+                disabled={isExecuting}
               >
-                Abrir console GRB completo em nova aba
+                Outro hostname…
               </button>
             </div>
+            {equipmentChoice === GRB_CUSTOM_EQUIPMENT_VALUE ? (
+              <input
+                id="grb-equipment"
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="Ex.: AGG04.SLS"
+                value={customEquipment}
+                onChange={(event) => setCustomEquipment(event.target.value.toUpperCase())}
+                autoComplete="off"
+                disabled={isExecuting}
+              />
+            ) : null}
+            {eqpto ? (
+              <div className="form-text text-body-secondary mt-1">
+                Plataforma: <strong>{platform === "nokia" ? "Nokia SR OS" : "Cisco IOS"}</strong>
+                {ufForEqpto(eqpto) ? null : equipmentChoice === GRB_CUSTOM_EQUIPMENT_VALUE ? (
+                  <> — hostname livre</>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label grb-panel__label" htmlFor="grb-command">
+              Comando
+            </label>
+            <select
+              id="grb-command"
+              className="form-select form-select-sm"
+              value={commandPresetId}
+              onChange={(event) => setCommandPresetId(event.target.value)}
+              disabled={isExecuting || !eqpto}
+            >
+              {commandGroups.map((group) => (
+                <optgroup key={group.category} label={group.label}>
+                  {group.presets.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {presetUiLabel(preset, eqpto)}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          {activeFields.length > 0 ? (
+            <div className="row g-3 mb-3">{activeFields.map((field) => renderField(field))}</div>
           ) : null}
+
+          {formError ? <div className="form-text text-danger mb-2">{formError}</div> : null}
+
+          <button
+            type="submit"
+            className="btn btn-primary btn-sm"
+            disabled={!baseUrl.trim() || isExecuting || !eqpto}
+          >
+            {isExecuting ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden />
+                Executando…
+              </>
+            ) : (
+              <>
+                <i className="bi bi-play-fill me-1" aria-hidden />
+                Executar comando
+              </>
+            )}
+          </button>
         </form>
       </ContentCard>
 
       <ContentCard title="Comando montado" bodyClassName="p-3">
-        <div className="grb-panel__command-box">
-          <div className="grb-panel__command-meta">
-            <span
-              className={
-                commandPreview.ready
-                  ? "grb-panel__command-status grb-panel__command-status--ready"
-                  : "grb-panel__command-status grb-panel__command-status--pending"
-              }
-            >
-              {commandPreview.ready ? "Pronto para executar" : "Campos pendentes"}
-            </span>
-            {commandPreview.ready ? (
-              <button
-                type="button"
-                className="btn btn-outline-secondary btn-sm"
-                onClick={() => handleCopy(commandPreview.display, commandPreview.display)}
-              >
-                Copiar
-              </button>
-            ) : null}
-          </div>
-          <pre className="grb-panel__command-text mb-0">
-            {commandPreview.display || "Selecione um comando e preencha os campos."}
-          </pre>
-        </div>
-        {!commandPreview.ready ? (
-          <p className="text-body-secondary small mb-0 mt-2">
-            Faltam:{" "}
-            {commandPreview.missing
-              .map((field) => {
-                if (field === "ip") return "IP/Network";
-                if (field === "interface") return "interface/designação";
-                if (field === "vrf") return "VRF";
-                return "WORD";
-              })
-              .join(", ")}
-            .
-          </p>
+        <pre className="grb-panel__command-text mb-0">
+          {commandPreview || "Selecione equipamento e comando."}
+        </pre>
+        {commandPreview ? (
+          <button
+            type="button"
+            className="btn btn-outline-secondary btn-sm mt-2"
+            onClick={() => handleCopy(commandPreview, commandPreview)}
+          >
+            Copiar
+          </button>
         ) : null}
-        {copyFeedback && commandPreview.ready ? (
+        {copyFeedback ? (
           <div className="form-text text-success mt-2">Copiado: {copyFeedback}</div>
         ) : null}
       </ContentCard>
@@ -598,49 +698,6 @@ export function GrbTelnetPanel({ baseUrl, telnetArg0 }: GrbTelnetPanelProps) {
             Comando enviado: <code>{executeResult.command}</code>
           </p>
           <pre className="grb-panel__output mb-0">{executeResult.output}</pre>
-          {copyFeedback ? (
-            <div className="form-text text-success mt-2">Copiado: {copyFeedback}</div>
-          ) : null}
-        </ContentCard>
-      ) : null}
-
-      {recentTests.length > 0 ? (
-        <ContentCard title="Testes recentes nesta sessão" bodyClassName="p-0">
-          <div className="table-responsive">
-            <table className="table table-sm table-hover mb-0">
-              <thead>
-                <tr>
-                  <th>Equipamento</th>
-                  <th>Comando</th>
-                  <th>IP</th>
-                  <th>Interface</th>
-                  <th className="text-end">Ação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentTests.map((entry) => (
-                  <tr key={`${entry.openedAt}-${entry.eqpto}-${entry.ipNetwork}`}>
-                    <td>{entry.eqpto}</td>
-                    <td>{getGrbCommandPreset(entry.commandPresetId).label}</td>
-                    <td>
-                      <code>{entry.ipNetwork || "—"}</code>
-                    </td>
-                    <td>{entry.networkInterface || "—"}</td>
-                    <td className="text-end">
-                      <button
-                        type="button"
-                        className="btn btn-link btn-sm p-0"
-                        onClick={() => applyRecentTest(entry)}
-                        disabled={isExecuting}
-                      >
-                        Reutilizar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </ContentCard>
       ) : null}
     </div>
