@@ -2,13 +2,13 @@ import { GRB_CUSTOM_EQUIPMENT_VALUE } from "@/lib/config/grb";
 import type { TelnetPlatform } from "@/lib/config/grb-telnet-catalog";
 
 export type GrbTelnetEquipmentSectionProps = {
-  catalogEqptos: string[];
+  catalogEqptos: readonly string[];
   equipmentChoice: string;
   customEquipment: string;
   eqpto: string;
   platform: TelnetPlatform;
   isExecuting: boolean;
-  ufForEqpto: (hostname: string) => string | null;
+  ufForEqpto: (hostname: string) => string | undefined;
   onSelectCatalogEqpto: (hostname: string) => void;
   onEquipmentChoiceChange: (value: string) => void;
   onCustomEquipmentChange: (value: string) => void;

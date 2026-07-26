@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { GrbTelnetExecuteResult } from "@/components/grb/grb-telnet-form-types";
 import { useGrbTelnetInterfaces } from "@/components/grb/useGrbTelnetInterfaces";
+import { useGrbTelnetPanelSections } from "@/components/grb/useGrbTelnetPanelSections";
 import { useGrbTelnetVprn } from "@/components/grb/useGrbTelnetVprn";
 import {
   GRB_CUSTOM_EQUIPMENT_VALUE,
@@ -10,12 +11,7 @@ import {
   GRB_DEFAULT_ID_REDE,
   GRB_INTERFACE_EMPTY_VALUE,
 } from "@/lib/config/grb";
-import {
-  eqptoPlatform,
-  getTelnetState,
-  TELNET_UF_ORDER,
-  ufForEqpto,
-} from "@/lib/config/grb-telnet-catalog";
+import { eqptoPlatform, getTelnetState } from "@/lib/config/grb-telnet-catalog";
 import {
   isNokiaVprnBgpPreset,
   TELNET_DEFAULT_PING_PRESET_ID,
@@ -23,7 +19,6 @@ import {
 import {
   fieldsForEqpto,
   presetNeedsVprnList,
-  presetUiLabel,
   previewTelnetCommand,
   telnetCommandGroupsForRoleAndEqpto,
   telnetCommandsForRoleAndEqpto,
@@ -116,8 +111,8 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
         ip: ipNetwork,
         ipv6: ipv6Network,
         vrf: vrfName,
-        vprnRouterInstance: vprnRouterInstance,
-        vprnServiceId: vprnServiceId,
+        vprnRouterInstance,
+        vprnServiceId,
         interface: networkInterface,
         word,
       }),
@@ -134,6 +129,13 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
       word,
     ],
   );
+
+  const introSuffix = useMemo(() => {
+    if (!isStaff) return ".";
+    return platform === "nokia"
+      ? "; STAFF vê interfaces e BGP SR OS."
+      : "; Cisco IOS exibe o catálogo GRB completo por categoria.";
+  }, [isStaff, platform]);
 
   useEffect(() => {
     if (catalogEqptos.length > 0 && !equipmentChoice) {
@@ -153,7 +155,7 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     setCustomInterface("");
   }, [eqpto, commandPresetId]);
 
-  const handleUfChange = (uf: string) => {
+  const handleUfChange = useCallback((uf: string) => {
     setSelectedUf(uf);
     const nextState = getTelnetState(uf);
     setEquipmentChoice(nextState?.eqptos[0] ?? GRB_CUSTOM_EQUIPMENT_VALUE);
@@ -161,7 +163,7 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     setFormError(null);
     setExecuteError(null);
     setExecuteResult(null);
-  };
+  }, []);
 
   const handleInterfaceChoiceChange = useCallback((value: string) => {
     setInterfaceChoice(value);
@@ -176,6 +178,43 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     setInterfaceChoice(GRB_INTERFACE_EMPTY_VALUE);
     setCustomInterface("");
   }, []);
+
+  const { ufSection, equipmentSection, commandSection, commandFields } = useGrbTelnetPanelSections({
+    selectedUf,
+    isExecuting,
+    handleUfChange,
+    catalogEqptos,
+    equipmentChoice,
+    customEquipment,
+    eqpto,
+    platform,
+    handleSelectCatalogEqpto,
+    setEquipmentChoice,
+    setCustomEquipment,
+    commandPresetId,
+    setCommandPresetId,
+    commandGroups,
+    activeFields,
+    needsVprnList,
+    needsVprnServiceId,
+    commandPreset,
+    ipNetwork,
+    ipv6Network,
+    vrfName,
+    word,
+    interfaceChoice,
+    customInterface,
+    interfaceOptions,
+    interfacesLoading,
+    interfacesError,
+    vprnFieldState,
+    handleInterfaceChoiceChange,
+    setCustomInterface,
+    setIpNetwork,
+    setIpv6Network,
+    setVrfName,
+    setWord,
+  });
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -230,49 +269,18 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
   };
 
   return {
-    isStaff,
-    selectedUf,
-    equipmentChoice,
-    customEquipment,
-    commandPresetId,
-    setCommandPresetId,
-    catalogEqptos,
+    introSuffix,
     eqpto,
-    platform,
-    commandGroups,
-    commandPreset,
-    activeFields,
-    commandPreview,
-    needsVprnList,
-    needsVprnServiceId,
     formError,
     isExecuting,
+    commandPreview,
+    copyFeedback,
     executeError,
     executeResult,
-    copyFeedback,
-    ipNetwork,
-    ipv6Network,
-    vrfName,
-    word,
-    interfaceChoice,
-    customInterface,
-    interfaceOptions,
-    interfacesLoading,
-    interfacesError,
-    vprnFieldState,
-    presetUiLabel,
-    ufForEqpto,
-    telnetUfOrder: TELNET_UF_ORDER,
-    handleUfChange,
-    handleSelectCatalogEqpto,
-    setEquipmentChoice,
-    setCustomEquipment,
-    setIpNetwork,
-    setIpv6Network,
-    setVrfName,
-    setWord,
-    handleInterfaceChoiceChange,
-    setCustomInterface,
+    ufSection,
+    equipmentSection,
+    commandSection,
+    commandFields,
     handleSubmit,
     handleCopy,
   };
