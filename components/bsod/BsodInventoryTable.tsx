@@ -11,6 +11,7 @@ import type { PmeBsodRow } from "@/lib/queries/bsod";
 type BsodInventoryTableProps = {
   rows: PmeBsodRow[];
   activeFilter?: BsodFilterKey;
+  filterSummary?: string;
 };
 
 const TABLE_COLUMNS: SortableColumn[] = [
@@ -29,12 +30,14 @@ const TABLE_COLUMNS: SortableColumn[] = [
 ];
 
 /** Tabela de inventário PME filtrada por KPI. */
-export function BsodInventoryTable({ rows, activeFilter }: BsodInventoryTableProps) {
+export function BsodInventoryTable({ rows, activeFilter, filterSummary }: BsodInventoryTableProps) {
+  const suffix = filterSummary ?? (activeFilter ? filterLabel(activeFilter) : undefined);
+
   return (
     <ContentCard
       title={
-        activeFilter
-          ? `${METRIC_LABELS.bsod.inventario} — ${filterLabel(activeFilter)} (${rows.length})`
+        suffix
+          ? `${METRIC_LABELS.bsod.inventario} — ${suffix} (${rows.length})`
           : `${METRIC_LABELS.bsod.inventario} (${rows.length})`
       }
     >
@@ -43,6 +46,8 @@ export function BsodInventoryTable({ rows, activeFilter }: BsodInventoryTablePro
         columns={TABLE_COLUMNS}
         rows={rows as Record<string, unknown>[]}
         empty="Nenhum PME para o filtro selecionado."
+        defaultSort={{ key: "monitor_status", direction: "asc" }}
+        sortTieBreakers={["monitor_status", "cmts", "node", "mac"]}
         renderCell={renderBsodCell}
       />
     </ContentCard>

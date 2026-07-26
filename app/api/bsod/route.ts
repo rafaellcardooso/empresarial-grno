@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseBsodFilterParam } from "@/lib/config/bsod-filters";
+import { parseBsodSearchParams } from "@/lib/config/bsod-filters";
 import { listPmeBsod } from "@/lib/queries/bsod";
 
 export const dynamic = "force-dynamic";
@@ -9,9 +9,12 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   try {
     const data = await listPmeBsod({
-      ...parseBsodFilterParam(sp.get("filtro") ?? undefined),
-      cmts: sp.get("cmts") || undefined,
-      node: sp.get("node") || undefined,
+      ...parseBsodSearchParams({
+        filtro: sp.get("filtro") ?? undefined,
+        saude: sp.get("saude") ?? undefined,
+        cmts: sp.get("cmts") ?? undefined,
+        node: sp.get("node") ?? undefined,
+      }),
       ope: sp.get("ope") || undefined,
       limit: sp.get("limit") ? Number(sp.get("limit")) : 500,
     });

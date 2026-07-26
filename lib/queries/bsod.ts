@@ -42,6 +42,80 @@ const LATEST_MONITOR_SUBQUERY = `
   FROM tbl_monitor_pme
 `;
 
+const BSOD_FROM_JOIN = `
+  FROM tbl_inventory_pme i
+  LEFT JOIN (${LATEST_MONITOR_SUBQUERY}) m
+    ON UPPER(i.mac) = UPPER(m.mac) AND m.rn = 1
+`;
+
+type BsodWhereOptions = {
+  omit?: Array<"health" | "cmts" | "node" | "vlan" | "ope">;
+};
+
+/** Monta cláusulas WHERE compartilhadas das consultas BSOD. */
+function buildBsodWhere(
+  filters: BsodFilters = {},
+  options?: BsodWhereOptions,
+): {
+  sql: string;
+  params: unknown[];
+} {
+  const omit = new Set(options?.omit ?? []);
+  const where: string[] = [];
+  const params: unknown[] = [];
+
+  if (!omit.has("health") && filters.health === "online") {
+    where.push("m.status = 1");
+  }
+  if (!omit.has("health") && filters.health === "offline") {
+    where.push("m.status = 0");
+  }
+  if (!omit.has("health") && filters.health === "sem_leitura") {
+    where.push("m.status IS NULL");
+  }
+  if (!omit.has("vlan") && filters.vlan === "com_vlan") {
+    where.push("i.bsod_vlan > 0");
+  }
+  if (!omit.has("vlan") && filters.vlan === "sem_vlan") {
+    where.push("(i.bsod_vlan = 0 OR i.bsod_vlan IS NULL)");
+  }
+  if (!omit.has("cmts") && filters.cmts) {
+    where.push("i.cmts = ?");
+    params.push(filters.cmts);
+  }
+  if (!omit.has("node") && filters.node) {
+    where.push("i.node = ?");
+    params.push(filters.node);
+  }
+  if (!omit.has("ope") && filters.ope) {
+    where.push("i.ope = ?");
+    params.push(filters.ope);
+  }
+
+  return {
+    sql: where.length ? `WHERE ${where.join(" AND ")}` : "",
+    params,
+  };
+}
+
+/** Anexa condição extra a uma cláusula WHERE existente ou cria nova. */
+function appendWhereCondition(whereSql: string, condition: string): string {
+  if (!whereSql) return `WHERE ${condition}`;
+  return `${whereSql} AND ${condition}`;
+}
+
+export type BsodFacetCount = {
+  value: string;
+  total: number;
+};
+
+export type BsodHealthCounts = {
+  total: number;
+  online: number;
+  offline: number;
+  sem_leitura: number;
+};
+
 /** Converte código de status SNMP em rótulo de saúde. */
 function monitorStatusLabel(status: number | null | undefined): string {
   if (status === 1) return BSOD_STATUS_LABELS.online;
@@ -66,57 +140,89 @@ function mapPmeRow(row: RowDataPacket): PmeBsodRow {
   };
 }
 
-/** Lista PME do inventário com última leitura de saúde (tbl_monitor_pme). */
+/** Lista PME do inventário com offline primeiro, depois CMTS, node e MAC. */
 export async function listPmeBsod(filters: BsodFilters = {}) {
-  const where: string[] = [];
-  const params: unknown[] = [];
-
-  if (filters.health === "online") {
-    where.push("m.status = 1");
-  }
-  if (filters.health === "offline") {
-    where.push("m.status = 0");
-  }
-  if (filters.health === "sem_leitura") {
-    where.push("m.status IS NULL");
-  }
-  if (filters.vlan === "com_vlan") {
-    where.push("i.bsod_vlan > 0");
-  }
-  if (filters.vlan === "sem_vlan") {
-    where.push("(i.bsod_vlan = 0 OR i.bsod_vlan IS NULL)");
-  }
-  if (filters.cmts) {
-    where.push("i.cmts = ?");
-    params.push(filters.cmts);
-  }
-  if (filters.node) {
-    where.push("i.node = ?");
-    params.push(filters.node);
-  }
-  if (filters.ope) {
-    where.push("i.ope = ?");
-    params.push(filters.ope);
-  }
-
+  const { sql: whereSql, params } = buildBsodWhere(filters);
   const limit = Math.min(Math.max(filters.limit ?? 500, 1), 2000);
   const sql = `
     SELECT
       i.id, i.ope, i.cmts, i.mac, i.id_cable, i.node, i.contrato, i.profile,
       i.bsod_vlan, i.vlan,
       m.status AS monitor_status, m.tx, m.rx, m.mer, m.time AS monitor_time
-    FROM tbl_inventory_pme i
-    LEFT JOIN (${LATEST_MONITOR_SUBQUERY}) m
-      ON UPPER(i.mac) = UPPER(m.mac) AND m.rn = 1
-    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    ${BSOD_FROM_JOIN}
+    ${whereSql}
     ORDER BY
       CASE WHEN m.status = 0 THEN 0 WHEN m.status IS NULL THEN 1 ELSE 2 END,
-      i.cmts, i.node, i.mac
+      i.cmts ASC, i.node ASC, i.mac ASC
     LIMIT ${limit}
   `;
 
   const rows = await hfcQuery<RowDataPacket[]>(sql, params);
   return serializeRows(rows.map(mapPmeRow));
+}
+
+/** Conta PME por saúde respeitando filtros de CMTS, node e VLAN. */
+export async function countBsodHealth(
+  filters: Omit<BsodFilters, "health" | "limit"> = {},
+): Promise<BsodHealthCounts> {
+  const { sql: whereSql, params } = buildBsodWhere(filters, { omit: ["health"] });
+  const [row] = await hfcQuery<RowDataPacket[]>(
+    `SELECT
+       COUNT(*) AS total,
+       SUM(CASE WHEN m.status = 1 THEN 1 ELSE 0 END) AS online,
+       SUM(CASE WHEN m.status = 0 THEN 1 ELSE 0 END) AS offline,
+       SUM(CASE WHEN m.status IS NULL THEN 1 ELSE 0 END) AS sem_leitura
+     ${BSOD_FROM_JOIN}
+     ${whereSql}`,
+    params,
+  );
+
+  return {
+    total: Number(row?.total ?? 0),
+    online: Number(row?.online ?? 0),
+    offline: Number(row?.offline ?? 0),
+    sem_leitura: Number(row?.sem_leitura ?? 0),
+  };
+}
+
+/** Lista CMTS distintos com contagem, respeitando filtros exceto CMTS/node. */
+export async function listBsodCmts(
+  filters: Omit<BsodFilters, "cmts" | "node" | "limit"> = {},
+): Promise<BsodFacetCount[]> {
+  const { sql: whereSql, params } = buildBsodWhere(filters, { omit: ["cmts", "node"] });
+  const rows = await hfcQuery<RowDataPacket[]>(
+    `SELECT i.cmts AS value, COUNT(*) AS total
+     ${BSOD_FROM_JOIN}
+     ${appendWhereCondition(whereSql, "i.cmts IS NOT NULL AND TRIM(i.cmts) <> ''")}
+     GROUP BY i.cmts
+     ORDER BY i.cmts ASC`,
+    params,
+  );
+
+  return rows.map((row) => ({
+    value: String(row.value),
+    total: Number(row.total),
+  }));
+}
+
+/** Lista nodes distintos com contagem, opcionalmente restritos ao CMTS ativo. */
+export async function listBsodNodes(
+  filters: Omit<BsodFilters, "node" | "limit"> = {},
+): Promise<BsodFacetCount[]> {
+  const { sql: whereSql, params } = buildBsodWhere(filters, { omit: ["node"] });
+  const rows = await hfcQuery<RowDataPacket[]>(
+    `SELECT i.node AS value, COUNT(*) AS total
+     ${BSOD_FROM_JOIN}
+     ${appendWhereCondition(whereSql, "i.node IS NOT NULL AND TRIM(i.node) <> ''")}
+     GROUP BY i.node
+     ORDER BY i.node ASC`,
+    params,
+  );
+
+  return rows.map((row) => ({
+    value: String(row.value),
+    total: Number(row.total),
+  }));
 }
 
 /** Retorna totais do inventário PME e saúde agregada do monitoramento. */
@@ -127,12 +233,10 @@ export async function bsodSummary() {
        SUM(CASE WHEN i.bsod_vlan > 0 THEN 1 ELSE 0 END) AS com_vlan,
        SUM(CASE WHEN m.status = 1 THEN 1 ELSE 0 END) AS online,
        SUM(CASE WHEN m.status = 0 THEN 1 ELSE 0 END) AS offline,
-       SUM(CASE WHEN m.mac IS NULL THEN 1 ELSE 0 END) AS sem_leitura,
+       SUM(CASE WHEN m.status IS NULL THEN 1 ELSE 0 END) AS sem_leitura,
        COUNT(DISTINCT i.cmts) AS cmts,
        COUNT(DISTINCT i.node) AS nodes
-     FROM tbl_inventory_pme i
-     LEFT JOIN (${LATEST_MONITOR_SUBQUERY}) m
-       ON UPPER(i.mac) = UPPER(m.mac) AND m.rn = 1`,
+     ${BSOD_FROM_JOIN}`,
   );
 
   const total = Number(totals?.total ?? 0);
