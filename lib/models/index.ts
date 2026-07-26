@@ -13,3 +13,9 @@ export {
   type AppUserStatus,
 } from "@/lib/models/app-user";
 export { type AppNotificationRecord, type UserNotificationRecord } from "@/lib/models/notification";
+export { type AcionamentoContext, type AcionamentoTechnicianInput } from "@/lib/models/acionamento";
+export {
+  type ActiveTratativaRecord,
+  type TratativaPublic,
+  type TratativaRecordKind,
+} from "@/lib/models/tratativa";

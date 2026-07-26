@@ -67,7 +67,7 @@ export function SirRecordsTable({ columns, rows, recordLabel, empty }: SirRecord
         columns={columns}
         rows={rows}
         empty={empty}
-        renderCell={(key, value, row) => renderSirCell(key, value, row, openDetalhes)}
+        renderCell={(key, value, row) => renderSirCell(key, value, row, openDetalhes, recordLabel)}
       />
 
       <SirDetalhesPanel
@@ -86,6 +86,7 @@ function renderSirCell(
   value: unknown,
   row: Record<string, unknown>,
   onOpen: (numRecup: string) => void,
+  recordLabel: "RAL" | "REC",
 ) {
   if (key === "abertura" || key === "ultima_atualizacao") {
     return <DateTimeStacked value={value as string | null} />;
