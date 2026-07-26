@@ -46,13 +46,13 @@ Prettier + ESLint via **lint-staged** (pre-commit) e **commitlint** (Conventiona
 
 ## Páginas principais
 
-| Rota                             | Descrição                                           |
-| -------------------------------- | --------------------------------------------------- |
-| `/sir`, `/sir/rals`, `/sir/recs` | RAL/REC e tratativas                                |
-| `/bsod`                          | Inventário PME BSOD                                 |
-| `/grb`                           | TELNET GRB (ping para todos; demais comandos staff) |
-| `/grb/critel`                    | Gráficos Critel por designação                      |
-| `/relatorios`                    | Hub de relatórios e export CSV                      |
+| Rota                             | Descrição                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| `/sir`, `/sir/rals`, `/sir/recs` | RAL/REC e tratativas                                                            |
+| `/bsod`                          | Inventário PME BSOD                                                             |
+| `/grb`                           | TELNET GRB — Nokia (catálogo UF) ou Cisco IOS (hostname livre); ping para todos |
+| `/grb/critel`                    | Gráficos Critel por designação                                                  |
+| `/relatorios`                    | Hub de relatórios e export CSV                                                  |
 
 Lista completa, APIs, env e troubleshooting: **[docs/](docs/README.md)** · **[operação](docs/2026-07-26-operacao.md)**
 
