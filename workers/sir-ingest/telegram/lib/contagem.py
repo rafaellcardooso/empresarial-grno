@@ -1,33 +1,12 @@
 from __future__ import annotations
 
-from collections import defaultdict
-
-from lib.sir_regions import UF_ORDER, region_for_cf, region_label, uf_for_cf, uf_label
+from lib.sir_counting import (
+    aggregate_counts_by_region,
+    aggregate_counts_by_uf,
+    sum_totals,
+)
+from lib.sir_regions import UF_ORDER, region_label, uf_for_cf, uf_label
 from lib.telegram_format import ICON_STATS, bold, escape, field, join_lines, title
-
-
-def aggregate_counts_by_uf(count_rows: list[dict]) -> dict[str, int]:
-    totals: dict[str, int] = defaultdict(int)
-    for row in count_rows:
-        cf = str(row.get("cf_executante", ""))
-        total = int(row.get("total", 0))
-        totals[uf_for_cf(cf)] += total
-    return dict(totals)
-
-
-def aggregate_counts_by_region(count_rows: list[dict], uf: str) -> dict[str, int]:
-    totals: dict[str, int] = defaultdict(int)
-    target = uf.strip().upper()
-    for row in count_rows:
-        cf = str(row.get("cf_executante", ""))
-        if uf_for_cf(cf) != target:
-            continue
-        region = region_for_cf(cf)
-        if not region:
-            totals["?"] += int(row.get("total", 0))
-            continue
-        totals[region] += int(row.get("total", 0))
-    return dict(totals)
 
 
 def _count_line(ral_count: int, rec_count: int) -> str:
@@ -107,14 +86,13 @@ def format_cf_breakdown(count_rows: list[dict], record_label: str) -> str:
         )
 
     lines: list[str | None] = [title(f"{record_label} por CF executante", ICON_STATS), ""]
-    total = 0
+    total = sum_totals(count_rows)
     for row in sorted(
         count_rows,
         key=lambda item: (-int(item.get("total", 0)), str(item.get("cf_executante", ""))),
     ):
         cf = str(row.get("cf_executante", ""))
         count = int(row.get("total", 0))
-        total += count
         uf = uf_for_cf(cf)
         lines.append(f"{escape(cf)} ({escape(uf)}): <b>{count}</b>")
 

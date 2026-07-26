@@ -52,10 +52,15 @@ async function countByCf(
   status: SirStatusFilter = "ativo",
 ) {
   const { sql, params } = buildStatusClause(status);
+  const recTipoSql =
+    table === SIR_TABLES.recs
+      ? " AND (num_recup LIKE 'REC-%' OR num_recup LIKE 'DSR-%' OR num_recup LIKE 'TCQ-%')"
+      : "";
   const rows = await sirQuery<RowDataPacket[]>(
     `SELECT cf_executante, COUNT(num_recup) AS total
      FROM ${table}
-     WHERE cf_executante IS NOT NULL${sql}
+     WHERE cf_executante IS NOT NULL
+       AND TRIM(cf_executante) <> ''${recTipoSql}${sql}
      GROUP BY cf_executante
      ORDER BY total DESC`,
     params,

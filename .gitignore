@@ -51,6 +51,7 @@ workers/sir-ingest/telegram/venv/
 workers/sir-ingest/**/__pycache__/
 workers/sir-ingest/RalDetail_*.txt
 workers/sir-ingest/states/telegram-datacenter-notify.json
+workers/sir-ingest/states/telegram-tmp/
 
 # vercel
 .vercel

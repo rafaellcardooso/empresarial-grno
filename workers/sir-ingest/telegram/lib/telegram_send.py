@@ -29,6 +29,13 @@ def datacenter_chat_id() -> str:
     return chat_id
 
 
+def ops_chat_id() -> str:
+    chat_id = os.environ.get("TELEGRAM_OPS_CHAT_ID", "").strip()
+    if not chat_id:
+        raise RuntimeError("Defina TELEGRAM_OPS_CHAT_ID no workers/sir-ingest/.env")
+    return chat_id
+
+
 async def send_message(token: str, chat_id: str | int, text: str, *, parse_mode: str | None = "HTML") -> None:
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload: dict[str, object] = {"chat_id": chat_id, "text": text}
@@ -43,6 +50,42 @@ async def send_message(token: str, chat_id: str | int, text: str, *, parse_mode:
 
 async def send_datacenter_message(text: str) -> None:
     await send_message(datacenter_bot_token(), datacenter_chat_id(), text)
+
+
+async def send_ops_message(text: str) -> None:
+    await send_message(ops_bot_token(), ops_chat_id(), text)
+
+
+async def send_photo(
+    token: str,
+    chat_id: str | int,
+    file_path: Path,
+    caption: str = "",
+    *,
+    parse_mode: str | None = "HTML",
+) -> None:
+    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    form = aiohttp.FormData()
+    form.add_field("chat_id", str(chat_id))
+    if caption:
+        form.add_field("caption", caption)
+        if parse_mode:
+            form.add_field("parse_mode", parse_mode)
+    form.add_field(
+        "photo",
+        file_path.read_bytes(),
+        filename=file_path.name,
+        content_type="image/png",
+    )
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, data=form) as response:
+            body = await response.json()
+            if not body.get("ok"):
+                raise RuntimeError(body.get("description", "Falha ao enviar foto Telegram."))
+
+
+async def send_ops_photo(file_path: Path, caption: str = "") -> None:
+    await send_photo(ops_bot_token(), ops_chat_id(), file_path, caption)
 
 
 async def send_document(

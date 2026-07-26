@@ -24,6 +24,7 @@ from functions.sir import (
     send_sir_menu,
 )
 from keyboards import main_reply_keyboard
+from lib.management_dashboard import dashboard_interval_ms, run_management_dashboard_job
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -84,8 +85,30 @@ def resolve_ops_token() -> str:
     return token
 
 
+async def post_init(application: Application) -> None:
+    interval_ms = dashboard_interval_ms()
+    if interval_ms is None:
+        logger.info(
+            "Dashboard gerencial desabilitado (defina TELEGRAM_OPS_CHAT_ID e intervalo > 0)."
+        )
+        return
+    interval_sec = interval_ms / 1000
+    application.job_queue.run_repeating(
+        run_management_dashboard_job,
+        interval=interval_sec,
+        first=30,
+        name="management_dashboard",
+    )
+    logger.info("Dashboard gerencial agendado a cada %.0f s.", interval_sec)
+
+
 def main() -> None:
-    application = Application.builder().token(resolve_ops_token()).build()
+    application = (
+        Application.builder()
+        .token(resolve_ops_token())
+        .post_init(post_init)
+        .build()
+    )
 
     application.add_handler(CommandHandler("start", send_start))
     application.add_handler(CommandHandler("sir", send_sir_menu))

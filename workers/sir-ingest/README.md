@@ -106,10 +106,31 @@ venv/bin/python3 main-ops-bot.py
 venv/bin/python3 notify-datacenter.py
 ```
 
-| Processo               | Env                                                            | Função                                   |
-| ---------------------- | -------------------------------------------------------------- | ---------------------------------------- |
-| `main-ops-bot.py`      | `TELEGRAM_OPS_BOT_TOKEN`                                       | `/sir`, `/rotinas` (contagem por estado) |
-| `notify-datacenter.py` | `TELEGRAM_DATACENTER_BOT_TOKEN`, `TELEGRAM_DATACENTER_CHAT_ID` | Push RAL/REC CF datacenter               |
+| Processo               | Env                                                            | Função                                  |
+| ---------------------- | -------------------------------------------------------------- | --------------------------------------- |
+| `main-ops-bot.py`      | `TELEGRAM_OPS_BOT_TOKEN`, `TELEGRAM_OPS_CHAT_ID`               | `/sir`, `/rotinas`; dashboard gerencial |
+| `notify-datacenter.py` | `TELEGRAM_DATACENTER_BOT_TOKEN`, `TELEGRAM_DATACENTER_CHAT_ID` | Push RAL/REC CF datacenter              |
+
+Dashboard gerencial (push periódico no grupo ops):
+
+| Variável                             | Default             | Função                                         |
+| ------------------------------------ | ------------------- | ---------------------------------------------- |
+| `TELEGRAM_OPS_CHAT_ID`               | —                   | Chat/grupo de gerência (obrigatório para push) |
+| `TELEGRAM_OPS_DASHBOARD_INTERVAL_MS` | `21600000` (6 h)    | Intervalo entre envios                         |
+| `TELEGRAM_OPS_DASHBOARD_ENABLED`     | `true`              | `false` desliga o push                         |
+| `TELEGRAM_OPS_DASHBOARD_TZ`          | `America/Sao_Paulo` | Fuso do carimbo de data/hora                   |
+
+Conteúdo: PNG com resumo por estado e cidade, gráficos de barras por CF (todos) e legenda com totais; primeiro envio ~30 s após subir o bot.
+
+Envio imediato (lab):
+
+```bash
+cd workers/sir-ingest
+telegram/venv/bin/pip install -r telegram/requirements.txt
+telegram/venv/bin/python3 telegram/send-management-dashboard.py
+# só gerar PNG local:
+telegram/venv/bin/python3 telegram/send-management-dashboard.py --dry-run
+```
 
 Simulacao de mensagens (sem alterar estado):
 

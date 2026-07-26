@@ -50,6 +50,14 @@ async def fetch_rec_counts_by_cf() -> list[dict]:
     return data if isinstance(data, list) else []
 
 
+async def fetch_active_totals() -> tuple[int, int]:
+    ral_payload = await fetch_json("/rals?page=1&limit=1")
+    rec_payload = await fetch_json("/recs?page=1&limit=1")
+    ral_total = int(ral_payload.get("total_registros") or 0)
+    rec_total = int(rec_payload.get("total_registros") or 0)
+    return ral_total, rec_total
+
+
 async def fetch_ral_detail(num_recup: str) -> dict | None:
     payload = await fetch_json(f"/rals/{num_recup}")
     if payload.get("status") != "sucesso":
@@ -64,3 +72,10 @@ async def fetch_rec_detail(num_recup: str) -> dict | None:
         return None
     data = payload.get("data")
     return data if isinstance(data, dict) else None
+
+
+async def fetch_health() -> dict | None:
+    try:
+        return await fetch_json("/saude")
+    except Exception:
+        return None
