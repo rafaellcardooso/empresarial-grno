@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import type { GrbTelnetVprnFieldState } from "@/components/grb/GrbTelnetCommandFields";
+import type { GrbTelnetExecuteResult } from "@/components/grb/grb-telnet-form-types";
+import { useGrbTelnetInterfaces } from "@/components/grb/useGrbTelnetInterfaces";
+import { useGrbTelnetVprn } from "@/components/grb/useGrbTelnetVprn";
 import {
   GRB_CUSTOM_EQUIPMENT_VALUE,
   GRB_CUSTOM_INTERFACE_VALUE,
@@ -26,12 +28,9 @@ import {
   telnetCommandGroupsForRoleAndEqpto,
   telnetCommandsForRoleAndEqpto,
 } from "@/lib/config/grb-telnet-ui";
-import { resolveVprnServiceId, type VprnEntry } from "@/lib/grb/telnet-vprn";
+import { executeTelnetPreset } from "@/lib/grb/telnet-execute-client";
 
-export type GrbTelnetExecuteResult = {
-  command: string;
-  output: string;
-};
+export type { GrbTelnetExecuteResult } from "@/components/grb/grb-telnet-form-types";
 
 type UseGrbTelnetPanelInput = {
   baseUrl: string;
@@ -48,20 +47,9 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
   const [ipNetwork, setIpNetwork] = useState("");
   const [ipv6Network, setIpv6Network] = useState("");
   const [vrfName, setVrfName] = useState("");
-  const [vprnRouterInstance, setVprnRouterInstance] = useState("");
-  const [vprnServiceId, setVprnServiceId] = useState("");
   const [interfaceChoice, setInterfaceChoice] = useState(GRB_INTERFACE_EMPTY_VALUE);
   const [customInterface, setCustomInterface] = useState("");
-  const [interfaceOptions, setInterfaceOptions] = useState<string[]>([]);
-  const [interfacesLoading, setInterfacesLoading] = useState(false);
-  const [interfacesError, setInterfacesError] = useState<string | null>(null);
   const [word, setWord] = useState("");
-  const [vprnEntries, setVprnEntries] = useState<VprnEntry[]>([]);
-  const [vprnPage, setVprnPage] = useState(0);
-  const [vprnLoading, setVprnLoading] = useState(false);
-  const [vprnError, setVprnError] = useState<string | null>(null);
-  const [vprnManual, setVprnManual] = useState(false);
-  const [vprnFilter, setVprnFilter] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executeError, setExecuteError] = useState<string | null>(null);
@@ -104,6 +92,22 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     [commandPreset, eqpto],
   );
 
+  const needsVprnList = commandPreset && eqpto ? presetNeedsVprnList(commandPreset, eqpto) : false;
+  const needsVprnServiceId =
+    commandPreset && eqpto ? isNokiaVprnBgpPreset(commandPreset.id) : false;
+
+  const { interfaceOptions, interfacesLoading, interfacesError } = useGrbTelnetInterfaces({
+    baseUrl,
+    eqpto,
+  });
+
+  const { vprnRouterInstance, vprnServiceId, vprnFieldState } = useGrbTelnetVprn({
+    baseUrl,
+    eqpto,
+    commandPresetId,
+    onVrfNameChange: setVrfName,
+  });
+
   const commandPreview = useMemo(
     () =>
       previewTelnetCommand({
@@ -112,8 +116,8 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
         ip: ipNetwork,
         ipv6: ipv6Network,
         vrf: vrfName,
-        vprnRouterInstance,
-        vprnServiceId,
+        vprnRouterInstance: vprnRouterInstance,
+        vprnServiceId: vprnServiceId,
         interface: networkInterface,
         word,
       }),
@@ -131,10 +135,6 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     ],
   );
 
-  const needsVprnList = commandPreset && eqpto ? presetNeedsVprnList(commandPreset, eqpto) : false;
-  const needsVprnServiceId =
-    commandPreset && eqpto ? isNokiaVprnBgpPreset(commandPreset.id) : false;
-
   useEffect(() => {
     if (catalogEqptos.length > 0 && !equipmentChoice) {
       setEquipmentChoice(catalogEqptos[0] ?? "");
@@ -148,65 +148,10 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
   }, [availableCommands, commandPresetId]);
 
   useEffect(() => {
-    setVprnEntries([]);
-    setVprnPage(0);
-    setVprnError(null);
-    setVprnManual(false);
-    setVprnFilter("");
-    setVprnRouterInstance("");
-    setVprnServiceId("");
-    setVrfName("");
     setIpv6Network("");
     setInterfaceChoice(GRB_INTERFACE_EMPTY_VALUE);
     setCustomInterface("");
   }, [eqpto, commandPresetId]);
-
-  useEffect(() => {
-    setVprnPage(0);
-  }, [vprnFilter]);
-
-  useEffect(() => {
-    if (!baseUrl.trim() || !eqpto) {
-      setInterfaceOptions([]);
-      setInterfacesError(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    setInterfacesLoading(true);
-    setInterfacesError(null);
-
-    const params = new URLSearchParams({
-      eqpto,
-      id_rede: String(GRB_DEFAULT_ID_REDE),
-    });
-
-    fetch(`/api/grb/interfaces?${params.toString()}`, { signal: controller.signal })
-      .then(async (response) => {
-        const payload = (await response.json()) as {
-          interfaces?: string[];
-          error?: string;
-        };
-        if (!response.ok) {
-          throw new Error(payload.error ?? "Falha ao carregar interfaces.");
-        }
-        setInterfaceOptions(Array.isArray(payload.interfaces) ? payload.interfaces : []);
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        setInterfaceOptions([]);
-        setInterfacesError(
-          error instanceof Error ? error.message : "Falha ao carregar interfaces.",
-        );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setInterfacesLoading(false);
-        }
-      });
-
-    return () => controller.abort();
-  }, [baseUrl, eqpto]);
 
   const handleUfChange = (uf: string) => {
     setSelectedUf(uf);
@@ -217,67 +162,6 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     setExecuteError(null);
     setExecuteResult(null);
   };
-
-  const handleLoadVprn = useCallback(async () => {
-    if (!eqpto || !baseUrl.trim()) return;
-
-    setVprnLoading(true);
-    setVprnError(null);
-
-    try {
-      const params = new URLSearchParams({
-        eqpto,
-        id_rede: String(GRB_DEFAULT_ID_REDE),
-      });
-      const response = await fetch(`/api/grb/vprn?${params.toString()}`);
-      const payload = (await response.json()) as {
-        entries?: VprnEntry[];
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Falha ao carregar VPRNs.");
-      }
-
-      const entries = Array.isArray(payload.entries) ? payload.entries : [];
-      setVprnEntries(entries);
-      setVprnPage(0);
-      setVprnFilter("");
-      setVprnManual(entries.length === 0);
-
-      if (entries.length === 0) {
-        setVprnError("Nenhum VPRN encontrado. Informe manualmente.");
-      }
-    } catch (error) {
-      setVprnEntries([]);
-      setVprnManual(true);
-      setVprnError(error instanceof Error ? error.message : "Falha ao carregar VPRNs.");
-    } finally {
-      setVprnLoading(false);
-    }
-  }, [baseUrl, eqpto]);
-
-  const handleClearVprnSelection = useCallback(() => {
-    setVprnRouterInstance("");
-    setVprnServiceId("");
-    setVrfName("");
-  }, []);
-
-  const handleSelectVprn = useCallback((entry: VprnEntry) => {
-    setVprnRouterInstance(entry.name);
-    setVprnServiceId(entry.serviceId);
-    setVrfName(entry.name);
-    setVprnManual(false);
-  }, []);
-
-  const handleVprnManualChange = useCallback(
-    (value: string) => {
-      setVprnRouterInstance(value);
-      setVrfName(value);
-      setVprnServiceId(resolveVprnServiceId(value, vprnEntries));
-    },
-    [vprnEntries],
-  );
 
   const handleInterfaceChoiceChange = useCallback((value: string) => {
     setInterfaceChoice(value);
@@ -315,29 +199,19 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     setIsExecuting(true);
 
     try {
-      const response = await fetch("/api/grb/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eqpto,
-          idRede: GRB_DEFAULT_ID_REDE,
-          ipNetwork: ipNetwork.trim(),
-          ipv6Network: ipv6Network.trim(),
-          networkInterface: networkInterface.trim(),
-          vrfName: vrfName.trim(),
-          vprnRouterInstance: vprnRouterInstance.trim(),
-          vprnServiceId: vprnServiceId.trim(),
-          word: word.trim(),
-          commandPresetId: commandPreset.id,
-        }),
+      const result = await executeTelnetPreset({
+        eqpto,
+        idRede: GRB_DEFAULT_ID_REDE,
+        ipNetwork: ipNetwork.trim(),
+        ipv6Network: ipv6Network.trim(),
+        networkInterface: networkInterface.trim(),
+        vrfName: vrfName.trim(),
+        vprnRouterInstance: vprnRouterInstance.trim(),
+        vprnServiceId: vprnServiceId.trim(),
+        word: word.trim(),
+        commandPresetId: commandPreset.id,
       });
-
-      const payload = (await response.json()) as GrbTelnetExecuteResult & { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Falha ao executar comando.");
-      }
-
-      setExecuteResult({ command: payload.command, output: payload.output });
+      setExecuteResult(result);
     } catch (error) {
       setExecuteError(error instanceof Error ? error.message : "Falha ao executar comando.");
     } finally {
@@ -353,24 +227,6 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     } catch {
       setCopyFeedback(null);
     }
-  };
-
-  const vprnFieldState: GrbTelnetVprnFieldState = {
-    routerInstance: vprnRouterInstance,
-    serviceId: vprnServiceId,
-    entries: vprnEntries,
-    page: vprnPage,
-    loading: vprnLoading,
-    error: vprnError,
-    manual: vprnManual,
-    filter: vprnFilter,
-    onLoad: handleLoadVprn,
-    onClear: handleClearVprnSelection,
-    onSelect: handleSelectVprn,
-    onManualChange: handleVprnManualChange,
-    onSetManual: setVprnManual,
-    onSetFilter: setVprnFilter,
-    onSetPage: setVprnPage,
   };
 
   return {
