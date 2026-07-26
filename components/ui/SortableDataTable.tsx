@@ -19,6 +19,8 @@ type SortableDataTableProps = {
   empty?: string;
   className?: string;
   nowrap?: boolean;
+  defaultSort?: SortState | null;
+  sortTieBreakers?: string[];
   renderCell?: (key: string, value: unknown, row: Record<string, unknown>) => ReactNode;
 };
 
@@ -34,22 +36,26 @@ export function SortableDataTable({
   empty = UI_COPY.emptyDefault,
   className,
   nowrap = false,
+  defaultSort = null,
+  sortTieBreakers = [],
   renderCell,
 }: SortableDataTableProps) {
-  const [sort, setSort] = useState<SortState | null>(null);
+  const [sort, setSort] = useState<SortState | null>(defaultSort);
 
   const sortedRows = useMemo(() => {
-    if (!sort) return rows;
+    const activeSort = sort ?? defaultSort;
+    if (!activeSort) return rows;
     const copy = [...rows];
-    copy.sort((a, b) => compareValues(a[sort.key], b[sort.key], sort.direction));
+    copy.sort((a, b) => compareRows(a, b, activeSort.key, activeSort.direction, sortTieBreakers));
     return copy;
-  }, [rows, sort]);
+  }, [rows, sort, defaultSort, sortTieBreakers]);
 
   function toggleSort(key: string) {
     setSort((current) => {
-      if (current?.key !== key) return { key, direction: "asc" };
-      if (current.direction === "asc") return { key, direction: "desc" };
-      return null;
+      const active = current ?? defaultSort;
+      if (active?.key !== key) return { key, direction: "asc" };
+      if (active.direction === "asc") return { key, direction: "desc" };
+      return defaultSort;
     });
   }
 
@@ -65,7 +71,8 @@ export function SortableDataTable({
         <thead className="table-light">
           <tr>
             {columns.map((column) => {
-              const isActive = sort?.key === column.key;
+              const activeSort = sort ?? defaultSort;
+              const isActive = activeSort?.key === column.key;
               const sortable = column.sortable !== false;
               const thStyle = column.minWidth ? { minWidth: column.minWidth } : undefined;
               return (
@@ -82,7 +89,7 @@ export function SortableDataTable({
                     >
                       {column.label || "\u00A0"}
                       <span className="sortable-th-indicator" aria-hidden="true">
-                        {isActive ? (sort?.direction === "asc" ? " ↑" : " ↓") : " ↕"}
+                        {isActive ? (activeSort?.direction === "asc" ? " ↑" : " ↓") : " ↕"}
                       </span>
                     </button>
                   ) : (
@@ -133,6 +140,21 @@ function cellWrapClass(column: SortableColumn, tableNowrap: boolean): string {
     return `sortable-data-table__td--nowrap ${alignClass(column.align)}`.trim();
   }
   return `text-break ${alignClass(column.align)}`.trim();
+}
+
+function compareRows(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>,
+  primaryKey: string,
+  direction: "asc" | "desc",
+  tieBreakers: string[],
+): number {
+  const keys = [primaryKey, ...tieBreakers.filter((key) => key !== primaryKey)];
+  for (const key of keys) {
+    const result = compareValues(a[key], b[key], direction);
+    if (result !== 0) return result;
+  }
+  return 0;
 }
 
 function compareValues(a: unknown, b: unknown, direction: "asc" | "desc"): number {
