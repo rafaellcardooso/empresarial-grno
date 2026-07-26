@@ -1,5 +1,8 @@
-import Link from "next/link";
+"use client";
+
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { ExportCsvButton } from "@/components/ui/ExportCsvButton";
 
 type CardHeaderLinkProps = {
   href: string;
@@ -20,14 +23,9 @@ type ExportCsvLinkProps = {
   label?: string;
 };
 
-/** Link de download CSV com ícone no cabeçalho de cards. */
+/** Botão de download CSV no cabeçalho de cards. */
 export function ExportCsvLink({ href, label = "Exportar CSV" }: ExportCsvLinkProps) {
-  return (
-    <a href={href} className="card-header-action" download>
-      <i className="bi bi-download" aria-hidden="true" />
-      {label}
-    </a>
-  );
+  return <ExportCsvButton href={href} label={label} variant="header" />;
 }
 
 type CardHeaderActionsProps = {

@@ -1,6 +1,6 @@
 import type { RowDataPacket } from "mysql2";
 import { recTipoLikePrefix, recTipoPrefixFromParam } from "@/lib/config/rec-types";
-import { SIR_LIST_MAX_PAGE_SIZE } from "@/lib/config/sir-pagination";
+import { SIR_EXPORT_BATCH_SIZE, SIR_LIST_MAX_PAGE_SIZE } from "@/lib/config/sir-pagination";
 import { sirRecordStatusFromFilter, type SirStatusFilter } from "@/lib/config/sir-status";
 import { sirQuery } from "@/lib/db/sir";
 import { SIR_TABLES, type RalRecord, type RecRecord } from "@/lib/models";
@@ -27,6 +27,7 @@ export type SirRalQueryOptions = {
   cf?: string;
   limit?: number;
   offset?: number;
+  forExport?: boolean;
 };
 
 export type SirRecQueryOptions = {
@@ -35,6 +36,7 @@ export type SirRecQueryOptions = {
   tipo?: string;
   limit?: number;
   offset?: number;
+  forExport?: boolean;
 };
 
 /** Monta cláusula SQL de status para listagens SIR. */
@@ -91,9 +93,13 @@ const SIR_ORDER_BY_ABERTURA_DESC = `
 `;
 
 /** Anexa LIMIT/OFFSET validados quando informados nas opções de listagem. */
-function appendListLimitClause(sql: string, options?: { limit?: number; offset?: number }): string {
+function appendListLimitClause(
+  sql: string,
+  options?: { limit?: number; offset?: number; forExport?: boolean },
+): string {
   if (options?.limit == null) return sql;
-  const limit = Math.min(Math.max(Math.floor(options.limit), 1), SIR_LIST_MAX_PAGE_SIZE);
+  const maxLimit = options.forExport ? SIR_EXPORT_BATCH_SIZE : SIR_LIST_MAX_PAGE_SIZE;
+  const limit = Math.min(Math.max(Math.floor(options.limit), 1), maxLimit);
   let next = `${sql} LIMIT ${limit}`;
   const offset = options.offset ?? 0;
   if (offset > 0) {
@@ -230,6 +236,54 @@ export async function listActiveRecs(options?: {
   offset?: number;
 }): Promise<RecRecord[]> {
   return listRecs({ ...options, status: "ativo" });
+}
+
+type SirExportListOptions = Omit<SirRalQueryOptions, "limit" | "offset" | "forExport">;
+
+/** Lista todas as RAL filtradas em lotes para exportação CSV. */
+export async function listAllRalsForExport(
+  options: SirExportListOptions = {},
+): Promise<RalRecord[]> {
+  const batchSize = SIR_EXPORT_BATCH_SIZE;
+  const allRows: RalRecord[] = [];
+  let offset = 0;
+
+  while (true) {
+    const batch = await listRals({
+      ...options,
+      limit: batchSize,
+      offset,
+      forExport: true,
+    });
+    allRows.push(...batch);
+    if (batch.length < batchSize) break;
+    offset += batchSize;
+  }
+
+  return allRows;
+}
+
+/** Lista todas as REC filtradas em lotes para exportação CSV. */
+export async function listAllRecsForExport(
+  options: Omit<SirRecQueryOptions, "limit" | "offset" | "forExport"> = {},
+): Promise<RecRecord[]> {
+  const batchSize = SIR_EXPORT_BATCH_SIZE;
+  const allRows: RecRecord[] = [];
+  let offset = 0;
+
+  while (true) {
+    const batch = await listRecs({
+      ...options,
+      limit: batchSize,
+      offset,
+      forExport: true,
+    });
+    allRows.push(...batch);
+    if (batch.length < batchSize) break;
+    offset += batchSize;
+  }
+
+  return allRows;
 }
 
 /** Busca texto de detalhes de RAL. */

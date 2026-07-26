@@ -10,6 +10,7 @@ export type SortableColumn = {
   sortable?: boolean;
   align?: "start" | "center" | "end";
   minWidth?: string;
+  width?: string;
   nowrap?: boolean;
 };
 
@@ -68,6 +69,13 @@ export function SortableDataTable({
       <table
         className={`table table-hover table-striped align-middle mb-0 sortable-data-table${className ? ` ${className}` : ""}`}
       >
+        {columns.some((column) => column.width) ? (
+          <colgroup>
+            {columns.map((column) => (
+              <col key={column.key} style={column.width ? { width: column.width } : undefined} />
+            ))}
+          </colgroup>
+        ) : null}
         <thead className="table-light">
           <tr>
             {columns.map((column) => {

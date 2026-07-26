@@ -4,11 +4,12 @@ import type { PmeBsodRow } from "@/lib/queries/bsod";
 
 export const BSOD_EXPORT_COLUMNS: CsvColumn<Record<string, unknown>>[] = [
   { key: "monitor_label", label: "STATUS" },
-  { key: "ope", label: "OPE" },
+  { key: "ope", label: "OPERAÇÃO" },
   { key: "cmts", label: "CMTS" },
   { key: "node", label: "NODE" },
   { key: "mac", label: "MAC" },
   { key: "contrato", label: "CONTRATO" },
+  { key: "address", label: "ENDEREÇO" },
   { key: "profile", label: "PROFILE" },
   { key: "bsod_vlan", label: "VLAN BSOD" },
   {

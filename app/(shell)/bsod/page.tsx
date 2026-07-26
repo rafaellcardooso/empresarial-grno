@@ -4,9 +4,22 @@ import {
   bsodFilterSummary,
   bsodUrlStateFromParams,
   buildBsodExportHref,
+  buildBsodHref,
   parseBsodSearchParams,
 } from "@/lib/config/bsod-filters";
-import { countBsodHealth, listBsodCmts, listBsodNodes, listPmeBsod } from "@/lib/queries/bsod";
+import {
+  BSOD_LIST_PAGE_SIZE,
+  bsodListOffset,
+  bsodPageFromParam,
+} from "@/lib/config/bsod-pagination";
+import {
+  countPmeBsod,
+  getCachedBsodCmts,
+  getCachedBsodHealthCounts,
+  getCachedBsodNodes,
+  listPmeBsod,
+} from "@/lib/queries/bsod";
+import { loadTratativasForBsodRows } from "@/lib/tratativa/load-for-rows";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "BSOD" };
@@ -17,6 +30,7 @@ type PageProps = {
     saude?: string;
     cmts?: string;
     node?: string;
+    page?: string;
   }>;
 };
 
@@ -25,6 +39,8 @@ export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
   const urlState = bsodUrlStateFromParams(params);
   const queryFilters = parseBsodSearchParams(params);
+  const currentPage = bsodPageFromParam(params.page);
+  const pageSize = BSOD_LIST_PAGE_SIZE;
   const scopeFilters = {
     health: queryFilters.health,
     vlan: queryFilters.vlan,
@@ -32,14 +48,21 @@ export default async function Page({ searchParams }: PageProps) {
     node: queryFilters.node,
     ope: queryFilters.ope,
   };
+  const listFilters = {
+    ...queryFilters,
+    limit: pageSize,
+    offset: bsodListOffset(currentPage, pageSize),
+  };
 
   try {
-    const [rows, healthCounts, cmtsOptions, nodeOptions] = await Promise.all([
-      listPmeBsod(queryFilters),
-      countBsodHealth(scopeFilters),
-      listBsodCmts(scopeFilters),
-      listBsodNodes(scopeFilters),
+    const [rows, total, healthCounts, cmtsOptions, nodeOptions] = await Promise.all([
+      listPmeBsod(listFilters),
+      countPmeBsod(queryFilters),
+      getCachedBsodHealthCounts(scopeFilters),
+      getCachedBsodCmts(scopeFilters),
+      getCachedBsodNodes(scopeFilters),
     ]);
+    const tratativasByKey = await loadTratativasForBsodRows(rows);
 
     return (
       <>
@@ -51,6 +74,11 @@ export default async function Page({ searchParams }: PageProps) {
         />
         <BsodInventoryTable
           rows={rows}
+          tratativasByKey={tratativasByKey}
+          total={total}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          activeUrlState={urlState}
           filterSummary={bsodFilterSummary(urlState)}
           exportHref={buildBsodExportHref(urlState)}
         />

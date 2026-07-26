@@ -1,66 +1,60 @@
 "use client";
 
+import { BsodRecordsTable } from "@/components/bsod/BsodRecordsTable";
 import { ContentCard } from "@/components/ui/ContentCard";
 import { CardHeaderActions, ExportCsvLink } from "@/components/ui/CardHeaderActions";
-import { formatNumberPtBr } from "@/lib/format/number";
-import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
-import { SortableDataTable, type SortableColumn } from "@/components/ui/SortableDataTable";
-import type { BsodFilterKey } from "@/lib/config/bsod-filters";
+import { TablePagination } from "@/components/ui/TablePagination";
+import { buildBsodHref, type BsodFilterKey, type BsodUrlState } from "@/lib/config/bsod-filters";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
+import type { TratativaPublic } from "@/lib/models/tratativa";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
 
 type BsodInventoryTableProps = {
   rows: PmeBsodRow[];
+  tratativasByKey?: Record<string, TratativaPublic>;
+  total: number;
+  currentPage: number;
+  pageSize: number;
+  activeUrlState: BsodUrlState;
   activeFilter?: BsodFilterKey;
   filterSummary?: string;
   exportHref: string;
 };
 
-const TABLE_COLUMNS: SortableColumn[] = [
-  { key: "monitor_label", label: "STATUS", sortable: true, align: "center" },
-  { key: "ope", label: "OPE", sortable: true, align: "center" },
-  { key: "cmts", label: "CMTS", sortable: true, align: "center" },
-  { key: "node", label: "NODE", sortable: true, align: "center" },
-  { key: "mac", label: "MAC", sortable: true, align: "center" },
-  { key: "contrato", label: "CONTRATO", sortable: true, align: "center" },
-  { key: "profile", label: "PROFILE", sortable: true, align: "center" },
-  { key: "bsod_vlan", label: "VLAN BSOD", sortable: true, align: "center" },
-  { key: "tx", label: "TX", sortable: true, align: "center" },
-  { key: "rx", label: "RX", sortable: true, align: "center" },
-  { key: "mer", label: "MER", sortable: true, align: "center" },
-  { key: "monitor_time", label: "ÚLTIMA LEITURA", sortable: true, align: "center" },
-];
-
-/** Tabela de inventário PME filtrada por KPI. */
+/** Card da listagem BSOD com tabela compacta, paginação e exportação CSV. */
 export function BsodInventoryTable({
   rows,
+  tratativasByKey,
+  total,
+  currentPage,
+  pageSize,
+  activeUrlState,
   activeFilter,
   filterSummary,
   exportHref,
 }: BsodInventoryTableProps) {
   const suffix = filterSummary ?? (activeFilter ? filterLabel(activeFilter) : undefined);
+  const titleSuffix = suffix ? ` — ${suffix}` : "";
+
+  function buildPageHref(page: number): string {
+    return buildBsodHref({ ...activeUrlState, page: page <= 1 ? undefined : page });
+  }
 
   return (
     <ContentCard
-      title={
-        suffix
-          ? `${METRIC_LABELS.bsod.inventario} — ${suffix} (${rows.length})`
-          : `${METRIC_LABELS.bsod.inventario} (${rows.length})`
-      }
+      title={`${METRIC_LABELS.bsod.inventario}${titleSuffix} (${total})`}
       headerAside={
         <CardHeaderActions>
           <ExportCsvLink href={exportHref} />
         </CardHeaderActions>
       }
     >
-      <SortableDataTable
-        className="sortable-data-table--bsod"
-        columns={TABLE_COLUMNS}
-        rows={rows as Record<string, unknown>[]}
-        empty="Nenhum PME para o filtro selecionado."
-        defaultSort={{ key: "monitor_status", direction: "asc" }}
-        sortTieBreakers={["monitor_status", "cmts", "node", "mac"]}
-        renderCell={renderBsodCell}
+      <BsodRecordsTable rows={rows} tratativasByKey={tratativasByKey} />
+      <TablePagination
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={total}
+        buildPageHref={buildPageHref}
       />
     </ContentCard>
   );
@@ -75,74 +69,4 @@ function filterLabel(key: BsodFilterKey): string {
     sem_vlan: METRIC_LABELS.bsod.semVlan,
   };
   return labels[key];
-}
-
-function renderBsodCell(key: string, value: unknown, row: Record<string, unknown>) {
-  if (key === "monitor_label") {
-    return <HealthBadge label={String(value)} status={row.monitor_status as number | null} />;
-  }
-  if (key === "monitor_time") {
-    return <DateTimeStacked value={value as string | null} />;
-  }
-  if (key === "profile") {
-    if (value == null || value === "") return "—";
-    return <span className="bsod-profile-text">{String(value)}</span>;
-  }
-  if (key === "bsod_vlan") {
-    if (value == null || value === "") return "—";
-    return <span className="bsod-vlan-badge">{String(value)}</span>;
-  }
-  if (key === "tx" || key === "rx" || key === "mer") {
-    return (
-      <SignalMetric kind={key} value={value} monitorStatus={row.monitor_status as number | null} />
-    );
-  }
-  if (value == null || value === "") return "—";
-  return String(value);
-}
-
-function isSignalNegative(kind: "tx" | "rx" | "mer", value: number): boolean {
-  if (Number.isNaN(value)) return false;
-  if (kind === "mer") return value <= 36;
-  if (kind === "rx") return value < -12;
-  return value > 50;
-}
-
-function SignalMetric({
-  kind,
-  value,
-  monitorStatus,
-}: {
-  kind: "tx" | "rx" | "mer";
-  value: unknown;
-  monitorStatus?: number | null;
-}) {
-  const isOffline = monitorStatus === 0;
-
-  if (value == null || value === "") {
-    return (
-      <span
-        className={`bsod-signal-metric ${isOffline ? "bsod-signal-metric--negative" : "bsod-signal-metric--empty"}`}
-      >
-        —
-      </span>
-    );
-  }
-  const numeric = Number(value);
-  const formatted = formatNumberPtBr(numeric, { maximumFractionDigits: 2 });
-  const negative = isOffline || isSignalNegative(kind, numeric);
-  return (
-    <span
-      className={`bsod-signal-metric ${negative ? "bsod-signal-metric--negative" : "bsod-signal-metric--positive"}`}
-    >
-      {formatted}
-    </span>
-  );
-}
-
-function HealthBadge({ label, status }: { label: string; status: number | null }) {
-  let className = "badge rounded-pill bsod-health-badge bsod-health-badge--unknown";
-  if (status === 1) className = "badge rounded-pill bsod-health-badge bsod-health-badge--online";
-  if (status === 0) className = "badge rounded-pill bsod-health-badge bsod-health-badge--offline";
-  return <span className={className}>{label}</span>;
 }

@@ -58,6 +58,7 @@ export function BsodFilterToolbar({
     return buildBsodHref({
       ...activeState,
       saude: key === "all" ? undefined : key,
+      page: undefined,
     });
   }
 
@@ -65,12 +66,13 @@ export function BsodFilterToolbar({
     const next = mergeState({
       cmts: value || undefined,
       node: undefined,
+      page: undefined,
     });
     navigate(next);
   }
 
   function handleNodeChange(value: string) {
-    navigate(mergeState({ node: value || undefined }));
+    navigate(mergeState({ node: value || undefined, page: undefined }));
   }
 
   return (

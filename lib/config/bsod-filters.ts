@@ -10,6 +10,7 @@ export type BsodUrlState = {
   cmts?: string;
   node?: string;
   filtro?: BsodFilterKey;
+  page?: number;
 };
 
 const VALID_FILTERS = new Set<BsodFilterKey>([
@@ -49,6 +50,7 @@ export function parseBsodSearchParams(params: {
   saude?: string;
   cmts?: string;
   node?: string;
+  page?: string;
 }): BsodFilters {
   const filtro = isBsodFilterKey(params.filtro) ? params.filtro : undefined;
   const saude = isBsodHealthFilter(params.saude)
@@ -58,14 +60,13 @@ export function parseBsodSearchParams(params: {
       : undefined;
 
   const filters: BsodFilters = {
-    limit: 500,
     cmts: bsodParamFromUrl(params.cmts),
     node: bsodParamFromUrl(params.node),
   };
 
   if (saude) filters.health = saude;
   if (filtro && VLAN_FILTERS.has(filtro as BsodVlanFilterKey)) {
-    filters.vlan = filtro;
+    filters.vlan = filtro as BsodVlanFilterKey;
   }
 
   return filters;
@@ -77,6 +78,7 @@ export function bsodUrlStateFromParams(params: {
   saude?: string;
   cmts?: string;
   node?: string;
+  page?: string;
 }): BsodUrlState {
   const filtro = isBsodFilterKey(params.filtro) ? params.filtro : undefined;
   const saude = isBsodHealthFilter(params.saude)
@@ -90,6 +92,7 @@ export function bsodUrlStateFromParams(params: {
     cmts: bsodParamFromUrl(params.cmts),
     node: bsodParamFromUrl(params.node),
     filtro,
+    page: params.page ? Number(params.page) : undefined,
   };
 }
 
@@ -103,6 +106,7 @@ export function buildBsodHref(state: BsodUrlState = {}): string {
   if (state.filtro && VLAN_FILTERS.has(state.filtro as BsodVlanFilterKey)) {
     params.set("filtro", state.filtro);
   }
+  if (state.page && state.page > 1) params.set("page", String(state.page));
 
   const query = params.toString();
   return query ? `/bsod?${query}` : "/bsod";
