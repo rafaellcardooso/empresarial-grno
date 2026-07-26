@@ -1,191 +1,264 @@
-import os
+from __future__ import annotations
+
 import re
 
-import aiohttp
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
+from telegram.ext import ContextTypes
 
-# Next.js BFF (aliases /api/rals|recs). Fallback: Flask legado :5007
-API_BASE_URL = os.environ.get(
-    "EMPRESARIAL_API_URL",
-    "http://127.0.0.1:3003/api",
-).rstrip("/")
+from functions.common import HTML, reply_or_edit
+from keyboards import indexed_items_keyboard, sir_type_keyboard
+from lib.empresarial_api import fetch_ral_detail, fetch_rals, fetch_rec_detail, fetch_recs
+from lib.ops_messages import (
+    format_cf_selection,
+    format_empty_active,
+    format_error,
+    format_ral_detail,
+    format_rec_detail,
+    format_records_selection,
+    format_session_expired,
+    format_sir_menu,
+)
 
-# ---------- Funções de API ----------
 
-async def get_rals():
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"{API_BASE_URL}/rals") as resp:
-            resp.raise_for_status()
-            data = await resp.json()
-            return data.get("data", [])
+async def send_sir_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await reply_or_edit(
+        update,
+        format_sir_menu(),
+        reply_markup=sir_type_keyboard(),
+        parse_mode=HTML,
+    )
 
-async def get_recs():
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"{API_BASE_URL}/recs") as resp:
-            resp.raise_for_status()
-            data = await resp.json()
-            return data.get("data", [])
 
-async def resumo_ral(num_recup):
-    match = re.search(r'(\d+)', num_recup)
-    if not match:
-        return f"Número de RAL inválido: {num_recup}"
-    num_id = match.group(1)
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{API_BASE_URL}/rals/{num_id}") as resp:
-                resp.raise_for_status()
-                data = await resp.json()
-                if data["status"] != "sucesso":
-                    return f"RAL {num_id} não encontrada."
-
-                ral = data["data"]
-                # --- INÍCIO DA MUDANÇA (RAL) ---
-                detalhes = ral.get("detalhes", "Não disponível.")
-                # Assumindo que a API retorna o campo 'detalhes' da tabela 'rals'
-                # --- FIM DA MUDANÇA (RAL) ---
-                resumo = (
-                    f"📌 RAL: {ral['num_recup']}\n"
-                    f"📅 Abertura: {ral['abertura']}\n"
-                    f"👷 Executante: {ral['cf_executante']}\n"
-                    f"⚠ Código Anormalidade: {ral['codigo_anormalidade']}\n"
-                    f"📝 Descrição: {ral['descricao']}\n"
-                    f"⏱ Duração: {ral['duracao']}\n"
-                    f"🔄 Status: {ral['status']}\n"
-                    f"💡 Tipo RAL: {ral['tipo_ral']}\n"
-                    f"⏳ Última Atualização: {ral['ultima_atualizacao']}\n"
-                )
-                return resumo
-    except Exception as e:
-        return f"Erro ao consultar RAL {num_recup}: {str(e)}"
-
-async def resumo_rec(num_recup):
-    match = re.search(r'(\d+)', num_recup)
-    if not match:
-        return f"Número da REC inválido: {num_recup}"
-    num_id = match.group(1)
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{API_BASE_URL}/recs/{num_id}") as resp:
-                resp.raise_for_status()
-                data = await resp.json()
-                if data["status"] != "sucesso":
-                    return f"REC {num_id} não encontrada."
-
-                rec = data["data"]
-                # --- INÍCIO DA MUDANÇA (REC) ---
-                detalhes_title = rec.get("detalhes_title", "Não disponível.")
-                # Assumindo que a API retorna o campo 'detalhes_title' da tabela 'recs'
-                # --- FIM DA MUDANÇA (REC) ---
-                resumo = (
-                    f"📌 REC: {rec['num_recup']}\n"
-                    f"📅 Abertura: {rec['abertura']}\n"
-                    f"👷 Executante: {rec['cf_executante']}\n"
-                    f"⚠ Cliente: {rec['cliente']}\n"
-                    f"🔄 Status: {rec['status']}\n"
-                    f"⏳ Última Atualização: {rec['ultima_atualizacao']}\n"
-                        f"\n"
-                        f"--- Detalhes do Sistema (Tooltip) ---\n"
-                        f"{detalhes_title}"
-                )
-                return resumo
-    except Exception as e:
-        return f"Erro ao consultar a REC {num_recup}: {str(e)}"
-
-# ---------- Handlers (mantidos, mas completos abaixo para contexto) ----------
-
-async def send_sir_menu(update, context):
-    keyboard = [
-        [InlineKeyboardButton("RAL", callback_data="sir_ral")],
-        [InlineKeyboardButton("REC", callback_data="sir_rec")],
-        [InlineKeyboardButton("❌ Cancelar", callback_data="sir_cancel")]
-    ]
-    markup = InlineKeyboardMarkup(keyboard)
-    if update.message:
-        await update.message.reply_text("Escolha uma opção:", reply_markup=markup)
-    elif update.callback_query:
-        await update.callback_query.edit_message_text("Escolha uma opção:", reply_markup=markup)
-
-async def handle_sir_selection(update, context):
+async def handle_voltar_sir(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    await query.answer()
-    data = query.data
+    if query:
+        await query.answer()
+    await send_sir_menu(update, context)
 
-    # Cancelamento
-    if data == "sir_cancel":
-        await query.edit_message_text("Operação cancelada.")
+
+def _active_records(fetch_result: list[dict]) -> list[dict]:
+    return [record for record in fetch_result if record.get("status") == "ATIVO"]
+
+
+def _group_by_cf(records: list[dict]) -> dict[str, list[str]]:
+    grouped: dict[str, list[str]] = {}
+    for record in records:
+        cf = str(record.get("cf_executante", ""))
+        num_recup = str(record.get("num_recup", "")).strip()
+        if not cf or not num_recup:
+            continue
+        grouped.setdefault(cf, []).append(num_recup)
+    return grouped
+
+
+async def handle_sir_type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None:
+        return
+    await query.answer()
+    record_type = query.data.split(":", 1)[1] if query.data else ""
+
+    if record_type == "ral":
+        records = _active_records(await fetch_rals())
+        storage_key = "sir_cf_ral"
+        page_prefix = "pg:cf:ral"
+        item_prefix = "cf:ral"
+        back_callback = "v:sr"
+    elif record_type == "rec":
+        records = _active_records(await fetch_recs())
+        storage_key = "sir_cf_rec"
+        page_prefix = "pg:cf:rec"
+        item_prefix = "cf:rec"
+        back_callback = "v:sr"
+    else:
+        await query.edit_message_text(format_error("Opção inválida."), parse_mode=HTML)
         return
 
-    # ---------- Menu RAL ----------
-    elif data == "sir_ral":
-        rals = await get_rals()
-        rals_ativas = [r for r in rals if r.get("status") == "ATIVO"]
-        if not rals_ativas:
-            await query.edit_message_text("Nenhuma RAL ativa encontrada.")
-            return
+    if not records:
+        await query.edit_message_text(
+            format_empty_active(record_type),
+            parse_mode=HTML,
+        )
+        return
 
-        cf_dict = {}
-        for r in rals_ativas:
-            cf = r["cf_executante"]
-            cf_dict.setdefault(cf, []).append(r["num_recup"])
+    cf_map = _group_by_cf(records)
+    cf_list = sorted(cf_map.keys())
+    context.user_data[storage_key] = cf_list
+    context.user_data[f"{storage_key}_map"] = cf_map
 
-        keyboard = [[InlineKeyboardButton(cf, callback_data=f"cf_ral_{cf}")] for cf in sorted(cf_dict.keys())]
-        keyboard.append([InlineKeyboardButton("⬅️ Voltar", callback_data="sir_voltar")])
-        context.user_data["cf_ral"] = cf_dict
-        await query.edit_message_text("Selecione o CF da RAL:", reply_markup=InlineKeyboardMarkup(keyboard))
+    await query.edit_message_text(
+        format_cf_selection(record_type),
+        reply_markup=indexed_items_keyboard(
+            cf_list,
+            item_prefix=item_prefix,
+            page=0,
+            back_callback=back_callback,
+            page_prefix=page_prefix,
+        ),
+        parse_mode=HTML,
+    )
 
-    elif data.startswith("cf_ral_"):
-        cf = data.split("_")[2]
-        cf_dict = context.user_data.get("cf_ral", {})
-        rals_cf = cf_dict.get(cf, [])
-        keyboard = [[InlineKeyboardButton(ral, callback_data=f"ral_{ral}")] for ral in sorted(rals_cf)]
-        keyboard.append([InlineKeyboardButton("⬅️ Voltar", callback_data="sir_ral")])
-        await query.edit_message_text(f"RALs do CF {cf}:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    elif data.startswith("ral_"):
-        num_ral = data.split("_")[1]
-        resumo = await resumo_ral(num_ral)
-        # Adicionada a opção de voltar ao menu de RALs do CF
-        cf_ral = context.user_data.get("cf_ral", {}) 
-        cf_atual = next((cf for cf, rals in cf_ral.items() if num_ral in rals), None)
-        
-        await query.edit_message_text(resumo)
+async def handle_sir_cf_page_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None:
+        return
+    await query.answer()
+    parts = (query.data or "").split(":")
+    if len(parts) != 4:
+        await query.edit_message_text(format_error("Opção inválida."), parse_mode=HTML)
+        return
+    record_type = parts[2]
+    page = int(parts[3])
+    storage_key = f"sir_cf_{record_type}"
+    cf_list = context.user_data.get(storage_key, [])
+    if not cf_list:
+        await query.edit_message_text(format_session_expired(), parse_mode=HTML)
+        return
 
-    # ---------- Menu REC ----------
-    elif data == "sir_rec":
-        recs = await get_recs()
-        recs_ativas = [r for r in recs if r.get("status") == "ATIVO"]
-        if not recs_ativas:
-            await query.edit_message_text("Nenhuma REC ativa encontrada.")
-            return
+    await query.edit_message_text(
+        format_cf_selection(record_type),
+        reply_markup=indexed_items_keyboard(
+            cf_list,
+            item_prefix=f"cf:{record_type}",
+            page=page,
+            back_callback="v:sr",
+            page_prefix=f"pg:cf:{record_type}",
+        ),
+        parse_mode=HTML,
+    )
 
-        cf_dict = {}
-        for r in recs_ativas:
-            cf = r["cf_executante"]
-            cf_dict.setdefault(cf, []).append(r["num_recup"])
 
-        keyboard = [[InlineKeyboardButton(cf, callback_data=f"cf_rec_{cf}")] for cf in sorted(cf_dict.keys())]
-        keyboard.append([InlineKeyboardButton("⬅️ Voltar", callback_data="sir_voltar")])
-        context.user_data["cf_rec"] = cf_dict
-        await query.edit_message_text("Selecione o CF da REC:", reply_markup=InlineKeyboardMarkup(keyboard))
+async def handle_sir_cf_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None:
+        return
+    await query.answer()
+    _, record_type, index_raw = query.data.split(":", 2)
+    index = int(index_raw)
+    storage_key = f"sir_cf_{record_type}"
+    cf_list = context.user_data.get(storage_key, [])
+    cf_map = context.user_data.get(f"{storage_key}_map", {})
+    if index < 0 or index >= len(cf_list):
+        await query.edit_message_text(format_session_expired(), parse_mode=HTML)
+        return
 
-    elif data.startswith("cf_rec_"):
-        cf = data.split("_")[2]
-        cf_dict = context.user_data.get("cf_rec", {})
-        recs_cf = cf_dict.get(cf, [])
-        keyboard = [[InlineKeyboardButton(rec, callback_data=f"rec_{rec}")] for rec in sorted(recs_cf)]
-        keyboard.append([InlineKeyboardButton("⬅️ Voltar", callback_data="sir_rec")])
-        await query.edit_message_text(f"RECs do CF {cf}:", reply_markup=InlineKeyboardMarkup(keyboard))
+    cf = cf_list[index]
+    records = sorted(cf_map.get(cf, []))
+    context.user_data[f"sir_records_{record_type}"] = records
+    context.user_data[f"sir_records_{record_type}_cf"] = cf
 
-    elif data.startswith("rec_"):
-        num_rec = data.split("_")[1]
-        resumo = await resumo_rec(num_rec)
-        # Adicionada a opção de voltar ao menu de RECs do CF
-        cf_rec = context.user_data.get("cf_rec", {})
-        cf_atual = next((cf for cf, recs in cf_rec.items() if num_rec in recs), None)
-        
-        await query.edit_message_text(resumo)
+    await query.edit_message_text(
+        format_records_selection(record_type, cf),
+        reply_markup=indexed_items_keyboard(
+            records,
+            item_prefix=f"rd:{record_type}",
+            page=0,
+            back_callback=f"v:cf:{record_type}",
+            page_prefix=f"pg:rd:{record_type}",
+        ),
+        parse_mode=HTML,
+    )
 
-    # Voltar ao menu inicial
-    elif data == "sir_voltar":
+
+async def handle_sir_record_page_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None:
+        return
+    await query.answer()
+    parts = (query.data or "").split(":")
+    if len(parts) != 4:
+        await query.edit_message_text(format_error("Opção inválida."), parse_mode=HTML)
+        return
+    record_type = parts[2]
+    page = int(parts[3])
+    records = context.user_data.get(f"sir_records_{record_type}", [])
+    cf = context.user_data.get(f"sir_records_{record_type}_cf", "")
+    if not records:
+        await query.edit_message_text(format_session_expired(), parse_mode=HTML)
+        return
+
+    await query.edit_message_text(
+        format_records_selection(record_type, cf),
+        reply_markup=indexed_items_keyboard(
+            records,
+            item_prefix=f"rd:{record_type}",
+            page=page,
+            back_callback=f"v:cf:{record_type}",
+            page_prefix=f"pg:rd:{record_type}",
+        ),
+        parse_mode=HTML,
+    )
+
+
+async def handle_voltar_cf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None:
+        return
+    await query.answer()
+    record_type = query.data.split(":", 2)[2] if query.data else ""
+    storage_key = f"sir_cf_{record_type}"
+    cf_list = context.user_data.get(storage_key, [])
+    if not cf_list:
         await send_sir_menu(update, context)
+        return
+
+    await query.edit_message_text(
+        format_cf_selection(record_type),
+        reply_markup=indexed_items_keyboard(
+            cf_list,
+            item_prefix=f"cf:{record_type}",
+            page=0,
+            back_callback="v:sr",
+            page_prefix=f"pg:cf:{record_type}",
+        ),
+        parse_mode=HTML,
+    )
+
+
+async def resumo_ral(num_recup: str) -> str:
+    match = re.search(r"(\d+)", num_recup)
+    if not match:
+        return format_error(f"Número de RAL inválido: {num_recup}")
+    num_id = match.group(1)
+    try:
+        data = await fetch_ral_detail(num_id)
+        if not data:
+            return format_error(f"RAL {num_id} não encontrada.")
+        return format_ral_detail(data)
+    except Exception as error:
+        return format_error(f"Erro ao consultar RAL {num_recup}: {error}")
+
+
+async def resumo_rec(num_recup: str) -> str:
+    match = re.search(r"(\d+)", num_recup)
+    if not match:
+        return format_error(f"Número da REC inválido: {num_recup}")
+    num_id = match.group(1)
+    try:
+        data = await fetch_rec_detail(num_id)
+        if not data:
+            return format_error(f"REC {num_id} não encontrada.")
+        return format_rec_detail(data)
+    except Exception as error:
+        return format_error(f"Erro ao consultar REC {num_recup}: {error}")
+
+
+async def handle_sir_record_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None:
+        return
+    await query.answer()
+    _, record_type, index_raw = query.data.split(":", 2)
+    index = int(index_raw)
+    records = context.user_data.get(f"sir_records_{record_type}", [])
+    if index < 0 or index >= len(records):
+        await query.edit_message_text(format_session_expired(), parse_mode=HTML)
+        return
+
+    num_recup = records[index]
+    if record_type == "ral":
+        text = await resumo_ral(num_recup)
+    else:
+        text = await resumo_rec(num_recup)
+    await query.edit_message_text(text, parse_mode=HTML)
