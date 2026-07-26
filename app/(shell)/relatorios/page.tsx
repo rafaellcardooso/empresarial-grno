@@ -1,19 +1,27 @@
-import { ContentCard } from "@/components/ui/ContentCard";
+import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { RelatorioExportSection } from "@/components/relatorios/RelatorioExportSection";
+import { RelatoriosHub } from "@/components/relatorios/RelatoriosHub";
+import { RELATORIOS_COPY } from "@/lib/config/relatorios-copy";
 
 export const metadata = { title: "Relatórios" };
 
-/** Página de relatórios operacionais. */
+/** Hub de relatórios operacionais. */
 export default function Page() {
   return (
     <>
       <PageHeader
-        title="Relatórios"
-        description="Exportação e consultas históricas de RAL, REC e inventário BSOD."
+        title={RELATORIOS_COPY.hubTitle}
+        description={RELATORIOS_COPY.hubDescription}
+        aside={
+          <Link href="#exportacao-csv" className="btn btn-outline-secondary btn-sm">
+            <i className="bi bi-download me-1" aria-hidden="true" />
+            {RELATORIOS_COPY.exportHubLink}
+          </Link>
+        }
       />
-      <ContentCard title="Relatórios disponíveis">
-        <p className="text-body-secondary mb-0 p-3">Nenhum relatório publicado no momento.</p>
-      </ContentCard>
+      <RelatoriosHub />
+      <RelatorioExportSection />
     </>
   );
 }
