@@ -96,8 +96,15 @@ export async function sendNotificationToAllUsers(notificationId: number): Promis
   return ids.length;
 }
 
-/** Lista notificações do usuário. */
-export async function listUserNotifications(userId: number): Promise<UserNotificationRecord[]> {
+/** Máximo de notificações exibidas no painel do sino. */
+export const USER_NOTIFICATIONS_LIST_LIMIT = 10;
+
+/** Lista as notificações mais recentes do usuário. */
+export async function listUserNotifications(
+  userId: number,
+  limit = USER_NOTIFICATIONS_LIST_LIMIT,
+): Promise<UserNotificationRecord[]> {
+  const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 50);
   return sirQuery<UserNotificationRow[]>(
     `SELECT
        n.id AS notification_id,
@@ -110,7 +117,8 @@ export async function listUserNotifications(userId: number): Promise<UserNotific
      FROM app_user_notifications un
      INNER JOIN app_notifications n ON n.id = un.notification_id
      WHERE un.user_id = ?
-     ORDER BY un.delivered_at DESC`,
+     ORDER BY un.delivered_at DESC
+     LIMIT ${safeLimit}`,
     [userId],
   );
 }
