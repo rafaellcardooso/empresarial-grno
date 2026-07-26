@@ -1,0 +1,20 @@
+[Unit]
+Description=SIR Telegram — bot operacional (rotinas e /sir)
+After=network.target empresarial-next.service
+Wants=empresarial-next.service
+
+[Service]
+Type=simple
+User=datacenter
+Group=datacenter
+WorkingDirectory=/usr/local/empresarial/workers/sir-ingest/telegram
+EnvironmentFile=/usr/local/empresarial/workers/sir-ingest/.env
+ExecStart=/usr/local/empresarial/workers/sir-ingest/telegram/venv/bin/python3 main-ops-bot.py
+Restart=always
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sir-telegram-ops
+
+[Install]
+WantedBy=multi-user.target

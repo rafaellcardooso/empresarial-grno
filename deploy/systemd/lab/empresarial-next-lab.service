@@ -1,0 +1,17 @@
+[Unit]
+Description=Empresarial GRNO — Next.js (lab — User=rcard)
+After=network.target
+
+[Service]
+Type=simple
+User=rcard
+WorkingDirectory=/usr/local/empresarial
+Environment=NODE_ENV=development
+Environment=PORT=3003
+EnvironmentFile=-/usr/local/empresarial/.env.local
+ExecStart=/usr/bin/npm run dev
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

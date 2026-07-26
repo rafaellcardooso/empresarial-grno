@@ -1,0 +1,22 @@
+[Unit]
+Description=SIR ingest — Alertas REC (lab — User=rcard)
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=rcard
+WorkingDirectory=/usr/local/empresarial/workers/sir-ingest
+Environment=PATH=/usr/bin:/usr/local/bin
+Environment=TMPDIR=/usr/local/empresarial/workers/sir-ingest/states/tmp
+Environment=PLAYWRIGHT_BROWSERS_PATH=/usr/local/empresarial/workers/sir-ingest/.playwright-browsers
+Environment=CYCLE_OFFSET_MS=90000
+EnvironmentFile=-/usr/local/empresarial/workers/sir-ingest/.env
+ExecStart=/usr/bin/node sources/AlertasRecRede.js
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sir-ingest-rec-lab
+
+[Install]
+WantedBy=multi-user.target

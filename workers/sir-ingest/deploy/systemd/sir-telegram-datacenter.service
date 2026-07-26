@@ -1,0 +1,20 @@
+[Unit]
+Description=SIR Telegram — alertas datacenter (RAL/REC)
+After=network.target empresarial-next.service sir-ingest-ral.service sir-ingest-rec.service
+Wants=empresarial-next.service
+
+[Service]
+Type=simple
+User=datacenter
+Group=datacenter
+WorkingDirectory=/usr/local/empresarial/workers/sir-ingest/telegram
+EnvironmentFile=/usr/local/empresarial/workers/sir-ingest/.env
+ExecStart=/usr/local/empresarial/workers/sir-ingest/telegram/venv/bin/python3 notify-datacenter.py
+Restart=always
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sir-telegram-datacenter
+
+[Install]
+WantedBy=multi-user.target

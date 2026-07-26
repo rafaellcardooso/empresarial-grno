@@ -1,0 +1,20 @@
+[Unit]
+Description=SIR Telegram — alertas datacenter (lab — User=rcard)
+After=network.target empresarial-next-lab.service sir-ingest-ral-lab.service sir-ingest-rec-lab.service
+Wants=empresarial-next-lab.service
+
+[Service]
+Type=simple
+User=rcard
+WorkingDirectory=/usr/local/empresarial/workers/sir-ingest/telegram
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/usr/local/empresarial/workers/sir-ingest/.env
+ExecStart=/usr/local/empresarial/workers/sir-ingest/telegram/venv/bin/python3 notify-datacenter.py
+Restart=always
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sir-telegram-datacenter-lab
+
+[Install]
+WantedBy=multi-user.target
