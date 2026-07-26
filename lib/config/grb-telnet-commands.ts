@@ -167,7 +167,7 @@ export function buildNokiaVprnPingCommand(
   const word = input.word?.trim() ?? "";
 
   if (!instance) throw new Error("Router-instance VPRN é obrigatório.");
-  if (preset.requiresIp && !ip) throw new Error("IP é obrigatório.");
+  if (preset.requiresIp && !ip) throw new Error("Informe o IPv4 ou IPv6 de destino.");
 
   const raw =
     preset.id === "ping-vrf-vrf-ip-word" && word

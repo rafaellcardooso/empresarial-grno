@@ -138,6 +138,29 @@ export function fieldPrompt(field: TelnetCommandField, eqpto: string): string {
   return prompts[field];
 }
 
+/** Rótulo do campo conforme preset (ping aceita IPv4 ou IPv6 no campo ip). */
+export function fieldLabelForPreset(
+  field: TelnetCommandField,
+  preset: TelnetCommandPreset,
+): string {
+  if (field === "ip" && telnetPresetCategory(preset) === "ping") {
+    return "IP de destino";
+  }
+  return FIELD_LABELS[field];
+}
+
+/** Prompt do campo conforme preset e equipamento. */
+export function fieldPromptForPreset(
+  field: TelnetCommandField,
+  eqpto: string,
+  preset: TelnetCommandPreset,
+): string {
+  if (field === "ip" && telnetPresetCategory(preset) === "ping") {
+    return "Informe o IPv4 ou IPv6 de destino.";
+  }
+  return fieldPrompt(field, eqpto);
+}
+
 /** Texto do campo VPRN conforme preset (ping usa nome; BGP usa service-id). */
 export function vrfFieldPrompt(preset: TelnetCommandPreset, eqpto: string): string {
   if (isNokiaEqpto(eqpto) && isNokiaVprnBgpPreset(preset.id)) {

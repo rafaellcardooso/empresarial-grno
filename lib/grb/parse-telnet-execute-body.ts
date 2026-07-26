@@ -3,10 +3,11 @@ import {
   getTelnetCommandPreset,
   isNokiaVprnBgpPreset,
   TELNET_DEFAULT_PING_PRESET_ID,
+  telnetPresetCategory,
 } from "@/lib/config/grb-telnet-commands";
 import type { TelnetCommandPreset } from "@/lib/config/grb-telnet-types";
 import { presetNeedsVprnList } from "@/lib/config/grb-telnet-ui";
-import { isGrbIpv6Valid } from "@/lib/grb/execute-telnet";
+import { isGrbIpv6Valid, isGrbTelnetDestinationValid } from "@/lib/grb/telnet-address";
 
 export type GrbTelnetExecuteBody = {
   eqpto?: string;
@@ -54,8 +55,14 @@ export function parseTelnetExecuteBody(
   const vprnServiceId = body.vprnServiceId?.trim() ?? "";
   const word = body.word?.trim() ?? "";
 
-  if (preset.requiresIp && !isGrbCircuitIpValid(ipNetwork)) {
-    return { error: "Informe um IPv4 válido." };
+  if (preset.requiresIp) {
+    const isPing = telnetPresetCategory(preset) === "ping";
+    if (isPing && !isGrbTelnetDestinationValid(ipNetwork)) {
+      return { error: "Informe um IPv4 ou IPv6 válido." };
+    }
+    if (!isPing && !isGrbCircuitIpValid(ipNetwork)) {
+      return { error: "Informe um IPv4 válido." };
+    }
   }
   if (preset.requiresIpv6 && !isGrbIpv6Valid(ipv6Network)) {
     return { error: "Informe um IPv6 válido." };

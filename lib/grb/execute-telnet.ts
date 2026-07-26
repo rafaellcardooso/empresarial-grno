@@ -13,6 +13,11 @@ import {
 } from "@/lib/config/grb-telnet-commands";
 import { isNokiaEqpto } from "@/lib/config/grb-telnet-catalog";
 import { resolveRouterInstance, resolveVprnServiceId } from "@/lib/grb/telnet-vprn";
+import {
+  applyCiscoPingIpv6Syntax,
+  isGrbIpv6Valid,
+  isGrbTelnetDestinationValid,
+} from "@/lib/grb/telnet-address";
 import { fetchGrbConsoleHtml } from "@/lib/grb/fetch-console-html";
 import {
   buildGrbProxyUrl,
@@ -54,12 +59,7 @@ export type GrbExecuteTelnetPresetInput = {
 /** @deprecated Use GrbExecuteTelnetPresetInput. */
 export type GrbExecutePingPresetInput = GrbExecuteTelnetPresetInput;
 
-/** Indica se a string parece um IPv6 válido (presença de colons). */
-export function isGrbIpv6Valid(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed || !trimmed.includes(":")) return false;
-  return /^[0-9a-fA-F:.]+$/.test(trimmed);
-}
+export { isGrbIpv6Valid } from "@/lib/grb/telnet-address";
 
 /** Carrega console GRB, executa comando via proxy e retorna saída telnet. */
 export async function executeTelnetCommand(
@@ -111,8 +111,14 @@ export async function executeTelnetPreset(
   const word = input.word?.trim() ?? "";
   const eqpto = input.eqpto.trim();
 
-  if (preset.requiresIp && !isGrbCircuitIpValid(ipNetwork)) {
-    throw new Error("Informe um IPv4 válido.");
+  if (preset.requiresIp) {
+    const isPing = telnetPresetCategory(preset) === "ping";
+    if (isPing && !isGrbTelnetDestinationValid(ipNetwork)) {
+      throw new Error("Informe um IPv4 ou IPv6 válido.");
+    }
+    if (!isPing && !isGrbCircuitIpValid(ipNetwork)) {
+      throw new Error("Informe um IPv4 válido.");
+    }
   }
   if (preset.requiresIpv6 && !isGrbIpv6Valid(ipv6Network)) {
     throw new Error("Informe um IPv6 válido.");
@@ -173,6 +179,15 @@ export async function executeTelnetPreset(
       vrfName: vrfResolved,
       word,
     }));
+  }
+
+  if (telnetPresetCategory(preset) === "ping" && !isNokiaEqpto(eqpto) && ipNetwork.includes(":")) {
+    const prefix = resolvedValue.slice(0, GRB_COMMAND_VALUE_PREFIX_LENGTH);
+    const body = applyCiscoPingIpv6Syntax(
+      resolvedValue.slice(GRB_COMMAND_VALUE_PREFIX_LENGTH),
+      ipNetwork,
+    );
+    resolvedValue = prefix + body;
   }
 
   return executeTelnetCommand({

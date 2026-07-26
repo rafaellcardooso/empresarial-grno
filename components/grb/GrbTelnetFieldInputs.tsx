@@ -10,27 +10,37 @@ type GrbTelnetFieldBaseProps = {
 export type GrbTelnetIpFieldProps = GrbTelnetFieldBaseProps & {
   value: string;
   onChange: (value: string) => void;
+  label?: string;
+  placeholder?: string;
+  hint?: string;
 };
 
 /** Campo IP do formulário TELNET. */
-export function GrbTelnetIpField({ eqpto, isExecuting, value, onChange }: GrbTelnetIpFieldProps) {
+export function GrbTelnetIpField({
+  eqpto,
+  isExecuting,
+  value,
+  onChange,
+  label,
+  placeholder,
+  hint,
+}: GrbTelnetIpFieldProps) {
   return (
     <div className="col-md-6">
       <label className="form-label grb-panel__label" htmlFor="grb-ip-network">
-        {FIELD_LABELS.ip}
+        {label ?? FIELD_LABELS.ip}
       </label>
       <input
         id="grb-ip-network"
         type="text"
-        inputMode="decimal"
         className="form-control form-control-sm"
-        placeholder="Ex.: 10.20.30.40"
+        placeholder={placeholder ?? "Ex.: 10.20.30.40 ou 2001:db8::1"}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         autoComplete="off"
         disabled={isExecuting}
       />
-      <div className="form-text text-body-secondary">{fieldPrompt("ip", eqpto)}</div>
+      <div className="form-text text-body-secondary">{hint ?? fieldPrompt("ip", eqpto)}</div>
     </div>
   );
 }

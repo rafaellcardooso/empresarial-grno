@@ -8,7 +8,13 @@ import {
 import { GrbTelnetVprnField } from "@/components/grb/GrbTelnetVprnField";
 import type { GrbTelnetVprnFieldState } from "@/components/grb/grb-telnet-form-types";
 import type { TelnetPlatform } from "@/lib/config/grb-telnet-catalog";
-import { fieldPrompt, vrfFieldPrompt, type TelnetCommandField } from "@/lib/config/grb-telnet-ui";
+import {
+  fieldLabelForPreset,
+  fieldPrompt,
+  fieldPromptForPreset,
+  vrfFieldPrompt,
+  type TelnetCommandField,
+} from "@/lib/config/grb-telnet-ui";
 import type { TelnetCommandPreset } from "@/lib/config/grb-telnet-types";
 
 export type { GrbTelnetVprnFieldState } from "@/components/grb/grb-telnet-form-types";
@@ -119,6 +125,8 @@ export function GrbTelnetCommandFields({
               isExecuting={isExecuting}
               value={ipNetwork}
               onChange={onIpNetworkChange}
+              label={commandPreset ? fieldLabelForPreset("ip", commandPreset) : undefined}
+              hint={commandPreset ? fieldPromptForPreset("ip", eqpto, commandPreset) : undefined}
             />
           );
         }
