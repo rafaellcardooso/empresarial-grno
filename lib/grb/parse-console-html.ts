@@ -39,17 +39,20 @@ export function buildGrbProxyUrl(
   return parts.join("");
 }
 
-/** Lista opções do combo interface_s renderizado pelo console GRB do equipamento. */
+/** Extrai valores do select interface_s do HTML do console GRB (sem duplicatas). */
 export function extractGrbInterfaceOptions(html: string): string[] {
   const selectMatch = html.match(/<select[^>]*id=['"]interface_s['"][^>]*>([\s\S]*?)<\/select>/i);
   if (!selectMatch?.[1]) return [];
 
+  const seen = new Set<string>();
   const options: string[] = [];
   const optionPattern = /<option\s+value=['"]([^'"]*)['"]\s*>/gi;
 
   for (const match of selectMatch[1].matchAll(optionPattern)) {
     const value = match[1]?.trim();
-    if (value) options.push(value);
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    options.push(value);
   }
 
   return options;
