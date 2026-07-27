@@ -39,7 +39,7 @@ export function TablePagination({
             {currentPage <= 1 ? (
               <span className="page-link">Anterior</span>
             ) : (
-              <Link className="page-link" href={buildPageHref(prevPage)}>
+              <Link className="page-link" href={buildPageHref(prevPage)} scroll={false}>
                 Anterior
               </Link>
             )}
@@ -53,7 +53,7 @@ export function TablePagination({
             {currentPage >= totalPages ? (
               <span className="page-link">Próxima</span>
             ) : (
-              <Link className="page-link" href={buildPageHref(nextPage)}>
+              <Link className="page-link" href={buildPageHref(nextPage)} scroll={false}>
                 Próxima
               </Link>
             )}

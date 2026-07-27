@@ -31,7 +31,7 @@ type CfRankingListProps = CfRankingListBaseProps &
 
 /** Ranking de CF executante com filtro ao clicar no nome. */
 export function CfRankingList({ items, basePath, activeCf, filterParams }: CfRankingListProps) {
-  const visible = items.filter((item) => item.total > 0).slice(0, 8);
+  const visible = items.filter((item) => item.total > 0);
 
   if (!visible.length) {
     return <li className="list-group-item text-body-secondary">{UI_COPY.noData}</li>;

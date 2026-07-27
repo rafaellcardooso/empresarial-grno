@@ -1,11 +1,15 @@
 "use client";
 
+import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { BsodRecordsTable } from "@/components/bsod/BsodRecordsTable";
 import { ContentCard } from "@/components/ui/ContentCard";
 import { CardHeaderActions, ExportCsvLink } from "@/components/ui/CardHeaderActions";
 import { TablePagination } from "@/components/ui/TablePagination";
+import { TableSearchField } from "@/components/ui/TableSearchField";
 import { buildBsodHref, type BsodFilterKey, type BsodUrlState } from "@/lib/config/bsod-filters";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
+import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
 
@@ -33,12 +37,20 @@ export function BsodInventoryTable({
   filterSummary,
   exportHref,
 }: BsodInventoryTableProps) {
+  const router = useRouter();
   const suffix = filterSummary ?? (activeFilter ? filterLabel(activeFilter) : undefined);
   const titleSuffix = suffix ? ` — ${suffix}` : "";
 
   function buildPageHref(page: number): string {
     return buildBsodHref({ ...activeUrlState, page: page <= 1 ? undefined : page });
   }
+
+  const handleSearchCommit = useCallback(
+    (q: string | undefined) => {
+      router.push(buildBsodHref({ ...activeUrlState, q, page: undefined }), { scroll: false });
+    },
+    [router, activeUrlState],
+  );
 
   return (
     <ContentCard
@@ -49,6 +61,11 @@ export function BsodInventoryTable({
         </CardHeaderActions>
       }
     >
+      <TableSearchField
+        value={activeUrlState.q}
+        placeholder={UI_COPY.tableSearchBsod}
+        onCommit={handleSearchCommit}
+      />
       <BsodRecordsTable rows={rows} tratativasByKey={tratativasByKey} />
       <TablePagination
         currentPage={currentPage}

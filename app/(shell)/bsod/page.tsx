@@ -4,7 +4,6 @@ import {
   bsodFilterSummary,
   bsodUrlStateFromParams,
   buildBsodExportHref,
-  buildBsodHref,
   parseBsodSearchParams,
 } from "@/lib/config/bsod-filters";
 import {
@@ -17,6 +16,7 @@ import {
   getCachedBsodCmts,
   getCachedBsodHealthCounts,
   getCachedBsodNodes,
+  getCachedBsodVlanCounts,
   listPmeBsod,
 } from "@/lib/queries/bsod";
 import { loadTratativasForBsodRows } from "@/lib/tratativa/load-for-rows";
@@ -30,18 +30,31 @@ type PageProps = {
     saude?: string;
     cmts?: string;
     node?: string;
+    q?: string;
     page?: string;
   }>;
 };
 
-/** Inventário PME filtrado por saúde, CMTS e node. */
+/** Inventário PME filtrado por saúde, VLAN, CMTS e node. */
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
   const urlState = bsodUrlStateFromParams(params);
   const queryFilters = parseBsodSearchParams(params);
   const currentPage = bsodPageFromParam(params.page);
   const pageSize = BSOD_LIST_PAGE_SIZE;
-  const scopeFilters = {
+  const healthScope = {
+    vlan: queryFilters.vlan,
+    cmts: queryFilters.cmts,
+    node: queryFilters.node,
+    ope: queryFilters.ope,
+  };
+  const vlanScope = {
+    health: queryFilters.health,
+    cmts: queryFilters.cmts,
+    node: queryFilters.node,
+    ope: queryFilters.ope,
+  };
+  const facetScope = {
     health: queryFilters.health,
     vlan: queryFilters.vlan,
     cmts: queryFilters.cmts,
@@ -55,12 +68,13 @@ export default async function Page({ searchParams }: PageProps) {
   };
 
   try {
-    const [rows, total, healthCounts, cmtsOptions, nodeOptions] = await Promise.all([
+    const [rows, total, healthCounts, vlanCounts, cmtsOptions, nodeOptions] = await Promise.all([
       listPmeBsod(listFilters),
       countPmeBsod(queryFilters),
-      getCachedBsodHealthCounts(scopeFilters),
-      getCachedBsodCmts(scopeFilters),
-      getCachedBsodNodes(scopeFilters),
+      getCachedBsodHealthCounts(healthScope),
+      getCachedBsodVlanCounts(vlanScope),
+      getCachedBsodCmts(facetScope),
+      getCachedBsodNodes(facetScope),
     ]);
     const tratativasByKey = await loadTratativasForBsodRows(rows);
 
@@ -68,6 +82,7 @@ export default async function Page({ searchParams }: PageProps) {
       <>
         <BsodFilterToolbar
           healthCounts={healthCounts}
+          vlanCounts={vlanCounts}
           cmtsOptions={cmtsOptions}
           nodeOptions={nodeOptions}
           activeState={urlState}

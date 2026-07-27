@@ -1,4 +1,5 @@
 import { BSOD_STATUS_LABELS, METRIC_LABELS } from "@/lib/config/metric-labels";
+import { normalizeTableSearch } from "@/lib/config/table-search";
 import type { BsodFilters, BsodHealthFilter } from "@/lib/queries/bsod";
 
 export type BsodFilterKey = "online" | "offline" | "sem_leitura" | "com_vlan" | "sem_vlan";
@@ -10,6 +11,7 @@ export type BsodUrlState = {
   cmts?: string;
   node?: string;
   filtro?: BsodFilterKey;
+  q?: string;
   page?: number;
 };
 
@@ -50,6 +52,7 @@ export function parseBsodSearchParams(params: {
   saude?: string;
   cmts?: string;
   node?: string;
+  q?: string;
   page?: string;
 }): BsodFilters {
   const filtro = isBsodFilterKey(params.filtro) ? params.filtro : undefined;
@@ -62,6 +65,7 @@ export function parseBsodSearchParams(params: {
   const filters: BsodFilters = {
     cmts: bsodParamFromUrl(params.cmts),
     node: bsodParamFromUrl(params.node),
+    q: normalizeTableSearch(params.q),
   };
 
   if (saude) filters.health = saude;
@@ -78,6 +82,7 @@ export function bsodUrlStateFromParams(params: {
   saude?: string;
   cmts?: string;
   node?: string;
+  q?: string;
   page?: string;
 }): BsodUrlState {
   const filtro = isBsodFilterKey(params.filtro) ? params.filtro : undefined;
@@ -92,6 +97,7 @@ export function bsodUrlStateFromParams(params: {
     cmts: bsodParamFromUrl(params.cmts),
     node: bsodParamFromUrl(params.node),
     filtro,
+    q: normalizeTableSearch(params.q),
     page: params.page ? Number(params.page) : undefined,
   };
 }
@@ -106,6 +112,7 @@ export function buildBsodHref(state: BsodUrlState = {}): string {
   if (state.filtro && VLAN_FILTERS.has(state.filtro as BsodVlanFilterKey)) {
     params.set("filtro", state.filtro);
   }
+  if (state.q) params.set("q", state.q);
   if (state.page && state.page > 1) params.set("page", String(state.page));
 
   const query = params.toString();
@@ -127,6 +134,7 @@ export function bsodFilterSummary(state: BsodUrlState): string | undefined {
   if (state.node) parts.push(state.node);
   if (state.filtro === "com_vlan") parts.push(METRIC_LABELS.bsod.comVlan);
   if (state.filtro === "sem_vlan") parts.push(METRIC_LABELS.bsod.semVlan);
+  if (state.q) parts.push(`“${state.q}”`);
   return parts.length ? parts.join(" · ") : undefined;
 }
 
@@ -139,6 +147,7 @@ export function buildBsodExportHref(state: BsodUrlState = {}): string {
   if (state.filtro && VLAN_FILTERS.has(state.filtro as BsodVlanFilterKey)) {
     params.set("filtro", state.filtro);
   }
+  if (state.q) params.set("q", state.q);
   const query = params.toString();
   return query ? `/api/export/bsod?${query}` : "/api/export/bsod";
 }

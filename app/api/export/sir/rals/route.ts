@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cfFilterFromParam } from "@/lib/config/sir-filters";
+import { cfFilterFromParam, searchQueryFromParam } from "@/lib/config/sir-filters";
 import { ralTipoValueFromParam } from "@/lib/config/ral-types";
 import { sirStatusFromParam } from "@/lib/config/sir-status";
 import { buildCsvFilename, rowsToCsv } from "@/lib/export/csv";
@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
       status: sirStatusFromParam(sp.get("status") ?? undefined),
       tipo: ralTipoValueFromParam(sp.get("tipo") ?? undefined),
       cf: cfFilterFromParam(sp.get("cf") ?? undefined),
+      q: searchQueryFromParam(sp.get("q")),
     });
 
     const csv = rowsToCsv(rows as Record<string, unknown>[], RAL_EXPORT_COLUMNS);

@@ -2,6 +2,7 @@ import type { RowDataPacket } from "mysql2";
 import { recTipoLikePrefix, recTipoPrefixFromParam } from "@/lib/config/rec-types";
 import { SIR_EXPORT_BATCH_SIZE, SIR_LIST_MAX_PAGE_SIZE } from "@/lib/config/sir-pagination";
 import { sirRecordStatusFromFilter, type SirStatusFilter } from "@/lib/config/sir-status";
+import { likeContainsPattern, normalizeTableSearch } from "@/lib/config/table-search";
 import { sirQuery } from "@/lib/db/sir";
 import { SIR_TABLES, type RalRecord, type RecRecord } from "@/lib/models";
 import { serializeRow, serializeRows } from "@/lib/serialize";
@@ -25,6 +26,7 @@ export type SirRalQueryOptions = {
   status?: SirStatusFilter;
   tipo?: string;
   cf?: string;
+  q?: string;
   limit?: number;
   offset?: number;
   forExport?: boolean;
@@ -34,6 +36,7 @@ export type SirRecQueryOptions = {
   status?: SirStatusFilter;
   cf?: string;
   tipo?: string;
+  q?: string;
   limit?: number;
   offset?: number;
   forExport?: boolean;
@@ -44,6 +47,40 @@ function buildStatusClause(status: SirStatusFilter = "ativo"): { sql: string; pa
   const recordStatus = sirRecordStatusFromFilter(status);
   if (!recordStatus) return { sql: "", params: [] };
   return { sql: " AND status = ?", params: [recordStatus] };
+}
+
+/** Monta cláusula OR de busca textual em colunas RAL. */
+function buildRalSearchClause(q?: string): { sql: string; params: unknown[] } {
+  const term = normalizeTableSearch(q);
+  if (!term) return { sql: "", params: [] };
+  const pattern = likeContainsPattern(term);
+  return {
+    sql: ` AND (
+      num_recup LIKE ? ESCAPE '!'
+      OR descricao LIKE ? ESCAPE '!'
+      OR cf_executante LIKE ? ESCAPE '!'
+      OR tipo_ral LIKE ? ESCAPE '!'
+      OR codigo_anormalidade LIKE ? ESCAPE '!'
+    )`,
+    params: [pattern, pattern, pattern, pattern, pattern],
+  };
+}
+
+/** Monta cláusula OR de busca textual em colunas REC. */
+function buildRecSearchClause(q?: string): { sql: string; params: unknown[] } {
+  const term = normalizeTableSearch(q);
+  if (!term) return { sql: "", params: [] };
+  const pattern = likeContainsPattern(term);
+  return {
+    sql: ` AND (
+      num_recup LIKE ? ESCAPE '!'
+      OR cliente LIKE ? ESCAPE '!'
+      OR designacao LIKE ? ESCAPE '!'
+      OR cf_executante LIKE ? ESCAPE '!'
+      OR prioridade LIKE ? ESCAPE '!'
+    )`,
+    params: [pattern, pattern, pattern, pattern, pattern],
+  };
 }
 
 /** Conta registros por CF conforme filtro de status. */
@@ -132,12 +169,20 @@ export async function countRals(options?: SirRalQueryOptions): Promise<number> {
     params.push(options.cf);
   }
 
+  const searchClause = buildRalSearchClause(options?.q);
+  sql += searchClause.sql;
+  params.push(...searchClause.params);
+
   const rows = await sirQuery<RowDataPacket[]>(sql, params);
   return Number(rows[0]?.total ?? 0);
 }
 
 /** Conta RALs ativas com filtros opcionais. */
-export async function countActiveRals(options?: { tipo?: string; cf?: string }): Promise<number> {
+export async function countActiveRals(options?: {
+  tipo?: string;
+  cf?: string;
+  q?: string;
+}): Promise<number> {
   return countRals({ ...options, status: "ativo" });
 }
 
@@ -161,12 +206,20 @@ export async function countRecs(options?: SirRecQueryOptions): Promise<number> {
     params.push(options.cf);
   }
 
+  const searchClause = buildRecSearchClause(options?.q);
+  sql += searchClause.sql;
+  params.push(...searchClause.params);
+
   const rows = await sirQuery<RowDataPacket[]>(sql, params);
   return Number(rows[0]?.total ?? 0);
 }
 
 /** Conta RECs ativas com filtros opcionais por CF e tipo (REC/DSR/TCQ). */
-export async function countActiveRecs(options?: { cf?: string; tipo?: string }): Promise<number> {
+export async function countActiveRecs(options?: {
+  cf?: string;
+  tipo?: string;
+  q?: string;
+}): Promise<number> {
   return countRecs({ ...options, status: "ativo" });
 }
 
@@ -189,6 +242,10 @@ export async function listRals(options?: SirRalQueryOptions): Promise<RalRecord[
     params.push(options.cf);
   }
 
+  const searchClause = buildRalSearchClause(options?.q);
+  sql += searchClause.sql;
+  params.push(...searchClause.params);
+
   sql += SIR_ORDER_BY_ABERTURA_DESC;
   sql = appendListLimitClause(sql, options);
 
@@ -200,6 +257,7 @@ export async function listRals(options?: SirRalQueryOptions): Promise<RalRecord[
 export async function listActiveRals(options?: {
   tipo?: string;
   cf?: string;
+  q?: string;
   limit?: number;
   offset?: number;
 }): Promise<RalRecord[]> {
@@ -226,6 +284,10 @@ export async function listRecs(options?: SirRecQueryOptions): Promise<RecRecord[
     params.push(options.cf);
   }
 
+  const searchClause = buildRecSearchClause(options?.q);
+  sql += searchClause.sql;
+  params.push(...searchClause.params);
+
   sql += SIR_ORDER_BY_ABERTURA_DESC;
   sql = appendListLimitClause(sql, options);
 
@@ -237,6 +299,7 @@ export async function listRecs(options?: SirRecQueryOptions): Promise<RecRecord[
 export async function listActiveRecs(options?: {
   cf?: string;
   tipo?: string;
+  q?: string;
   limit?: number;
   offset?: number;
 }): Promise<RecRecord[]> {

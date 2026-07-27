@@ -1670,6 +1670,11 @@ body {
   color: #f87171;
 }
 
+.cf-ranking-list {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
 .cf-ranking-link {
   color: var(--text-clr);
   text-decoration: none;
@@ -1922,6 +1927,25 @@ body {
   color: var(--secondary-text-clr);
 }
 
+.bsod-filter-field__control {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.bsod-filter-field__control .form-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bsod-filter-field__clear {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.55rem;
+}
+
 .sortable-th-btn {
   border: 0;
   background: transparent;
@@ -1963,6 +1987,28 @@ body {
   font-weight: 600;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
+}
+
+.table-search-field {
+  position: relative;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line-clr);
+  background: var(--surface-clr);
+}
+
+.table-search-field__icon {
+  position: absolute;
+  left: 1.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--secondary-text-clr);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+.table-search-field__input {
+  padding-left: 2rem;
+  max-width: 28rem;
 }
 
 .content-card__actions {
