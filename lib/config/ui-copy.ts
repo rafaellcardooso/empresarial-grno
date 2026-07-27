@@ -28,6 +28,8 @@ export const UI_COPY = {
     "Endereço ausente — rode o enrich PME no hfc-sls ou aguarde import Xpertrak.",
   acionamentoCopy: "Copiar e registrar",
   acionamentoCopied: "Copiado — cole no WhatsApp.",
+  acionamentoRegisteredCopyFailed:
+    "Acionamento registrado. Não foi possível copiar — selecione a mensagem e copie manualmente.",
   acionamentoClose: "Fechar",
   acionamentoLoading: "Carregando dados do registro…",
   acionamentoLoadError: "Não foi possível carregar o acionamento.",

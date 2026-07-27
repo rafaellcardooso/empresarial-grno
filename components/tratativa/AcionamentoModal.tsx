@@ -11,6 +11,7 @@ import {
   ACIONAMENTO_WHATSAPP_MENTION_FIELD,
 } from "@/lib/config/acionamento-form";
 import { UI_COPY } from "@/lib/config/ui-copy";
+import { copyTextToClipboard } from "@/lib/browser/clipboard";
 import type { AcionamentoContext, AcionamentoTechnicianInput } from "@/lib/models/acionamento";
 import type { TratativaRecordKind } from "@/lib/models/tratativa";
 import { buildAcionamentoMessage } from "@/lib/tratativa/build-acionamento-message";
@@ -51,6 +52,7 @@ export function AcionamentoModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copyOk, setCopyOk] = useState(false);
+  const [copyWarning, setCopyWarning] = useState<string | null>(null);
   const [context, setContext] = useState<AcionamentoContext | null>(null);
   const [technician, setTechnician] = useState<AcionamentoTechnicianInput>(EMPTY_TECHNICIAN);
 
@@ -73,6 +75,7 @@ export function AcionamentoModal({
     setLoading(true);
     setError(null);
     setCopyOk(false);
+    setCopyWarning(null);
     setContext(null);
     setTechnician(EMPTY_TECHNICIAN);
 
@@ -115,6 +118,7 @@ export function AcionamentoModal({
   const updateField = useCallback((field: keyof AcionamentoTechnicianInput, value: string) => {
     setTechnician((current) => ({ ...current, [field]: value }));
     setCopyOk(false);
+    setCopyWarning(null);
   }, []);
 
   /** Registra acionamento e copia mensagem para área de transferência. */
@@ -128,6 +132,7 @@ export function AcionamentoModal({
     setSubmitting(true);
     setError(null);
     setCopyOk(false);
+    setCopyWarning(null);
 
     try {
       const response = await fetch("/api/tratativas/acionamento", {
@@ -143,9 +148,14 @@ export function AcionamentoModal({
       }
 
       const message = payload.message ?? previewMessage;
-      await navigator.clipboard.writeText(message);
-      setCopyOk(true);
       onRegistered?.();
+
+      const copied = await copyTextToClipboard(message);
+      if (copied) {
+        setCopyOk(true);
+      } else {
+        setCopyWarning(UI_COPY.acionamentoRegisteredCopyFailed);
+      }
     } catch {
       setError(UI_COPY.acionamentoSubmitError);
     } finally {
@@ -195,6 +205,9 @@ export function AcionamentoModal({
             <div className="modal-body">
               {loading ? <p className="text-muted mb-0">{UI_COPY.acionamentoLoading}</p> : null}
               {error ? <div className="alert alert-danger py-2 mb-3">{error}</div> : null}
+              {copyWarning ? (
+                <div className="alert alert-warning py-2 mb-3">{copyWarning}</div>
+              ) : null}
 
               {!loading && context ? (
                 <div className="row g-4">
