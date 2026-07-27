@@ -34,6 +34,7 @@ export type BsodFilters = {
   health?: BsodHealthFilter;
   vlan?: BsodVlanFilter;
   q?: string;
+  macs?: string[];
   limit?: number;
   offset?: number;
 };
@@ -99,6 +100,12 @@ export function buildBsodInventoryWhere(
   if (!omit.has("ope") && filters.ope) {
     where.push("i.ope = ?");
     params.push(filters.ope);
+  }
+
+  if (filters.macs && filters.macs.length > 0) {
+    const placeholders = filters.macs.map(() => "?").join(", ");
+    where.push(`UPPER(i.mac) IN (${placeholders})`);
+    params.push(...filters.macs.map((mac) => mac.toUpperCase()));
   }
 
   if (!omit.has("q")) {

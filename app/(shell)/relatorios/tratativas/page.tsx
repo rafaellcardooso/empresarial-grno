@@ -14,16 +14,17 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "BSOD" };
 
 type PageProps = {
-  searchParams: Promise<{ de?: string; ate?: string }>;
+  searchParams: Promise<{ de?: string; ate?: string; status?: string }>;
 };
 
-/** Análise operacional de tratativas BSOD. */
+/** Análise operacional e listagem de tratativas BSOD por status. */
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters = parseTratativaReportParams(params);
   const reportCacheKey = [
     formatRelatorioDateParam(filters.from),
     formatRelatorioDateParam(filters.to),
+    filters.status ?? "all",
   ].join(":");
 
   return (

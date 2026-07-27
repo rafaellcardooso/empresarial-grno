@@ -19,6 +19,10 @@ import {
   getCachedBsodVlanCounts,
   listPmeBsod,
 } from "@/lib/queries/bsod";
+import {
+  countActiveBsodByChamadoStatus,
+  listActiveBsodKeysByChamadoStatus,
+} from "@/lib/queries/tratativa-chamados";
 import { loadTratativasForBsodRows } from "@/lib/tratativa/load-for-rows";
 
 export const dynamic = "force-dynamic";
@@ -32,10 +36,11 @@ type PageProps = {
     node?: string;
     q?: string;
     page?: string;
+    tratativa?: string;
   }>;
 };
 
-/** Inventário PME filtrado por saúde, VLAN, CMTS e node. */
+/** Inventário PME filtrado por saúde, VLAN, tratativa, CMTS e node. */
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
   const urlState = bsodUrlStateFromParams(params);
@@ -61,21 +66,45 @@ export default async function Page({ searchParams }: PageProps) {
     node: queryFilters.node,
     ope: queryFilters.ope,
   };
-  const listFilters = {
-    ...queryFilters,
-    limit: pageSize,
-    offset: bsodListOffset(currentPage, pageSize),
-  };
 
   try {
-    const [rows, total, healthCounts, vlanCounts, cmtsOptions, nodeOptions] = await Promise.all([
-      listPmeBsod(listFilters),
-      countPmeBsod(queryFilters),
-      getCachedBsodHealthCounts(healthScope),
-      getCachedBsodVlanCounts(vlanScope),
-      getCachedBsodCmts(facetScope),
-      getCachedBsodNodes(facetScope),
+    const [tratativaCounts, tratativaMacs] = await Promise.all([
+      countActiveBsodByChamadoStatus(),
+      urlState.tratativa
+        ? listActiveBsodKeysByChamadoStatus(urlState.tratativa)
+        : Promise.resolve<string[] | null>(null),
     ]);
+
+    if (tratativaMacs) {
+      queryFilters.macs = tratativaMacs;
+    }
+
+    const emptyByTratativa = Boolean(tratativaMacs && tratativaMacs.length === 0);
+
+    const listFilters = {
+      ...queryFilters,
+      limit: pageSize,
+      offset: bsodListOffset(currentPage, pageSize),
+    };
+
+    const [rows, total, healthCounts, vlanCounts, cmtsOptions, nodeOptions] = emptyByTratativa
+      ? await Promise.all([
+          Promise.resolve([]),
+          Promise.resolve(0),
+          getCachedBsodHealthCounts(healthScope),
+          getCachedBsodVlanCounts(vlanScope),
+          getCachedBsodCmts(facetScope),
+          getCachedBsodNodes(facetScope),
+        ])
+      : await Promise.all([
+          listPmeBsod(listFilters),
+          countPmeBsod(queryFilters),
+          getCachedBsodHealthCounts(healthScope),
+          getCachedBsodVlanCounts(vlanScope),
+          getCachedBsodCmts(facetScope),
+          getCachedBsodNodes(facetScope),
+        ]);
+
     const tratativasByKey = await loadTratativasForBsodRows(rows);
 
     return (
@@ -85,6 +114,7 @@ export default async function Page({ searchParams }: PageProps) {
           vlanCounts={vlanCounts}
           cmtsOptions={cmtsOptions}
           nodeOptions={nodeOptions}
+          tratativaCounts={tratativaCounts}
           activeState={urlState}
         />
         <BsodInventoryTable

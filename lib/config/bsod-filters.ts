@@ -1,10 +1,18 @@
 import { BSOD_STATUS_LABELS, METRIC_LABELS } from "@/lib/config/metric-labels";
 import { normalizeTableSearch } from "@/lib/config/table-search";
+import {
+  parseTratativaChamadoStatusFilter,
+  TRATATIVA_CHAMADO_STATUS_LABELS,
+  type TratativaChamadoStatus,
+} from "@/lib/config/tratativa-chamados";
 import type { BsodFilters, BsodHealthFilter } from "@/lib/queries/bsod";
 
 export type BsodFilterKey = "online" | "offline" | "sem_leitura" | "com_vlan" | "sem_vlan";
 
 export type BsodVlanFilterKey = "com_vlan" | "sem_vlan";
+
+/** Status ativos do pipeline (concluídos ficam no relatório). */
+export type BsodTratativaFilter = Exclude<TratativaChamadoStatus, "concluido">;
 
 export type BsodUrlState = {
   saude?: BsodHealthFilter;
@@ -12,6 +20,7 @@ export type BsodUrlState = {
   node?: string;
   filtro?: BsodFilterKey;
   q?: string;
+  tratativa?: BsodTratativaFilter;
   page?: number;
 };
 
@@ -25,6 +34,14 @@ const VALID_FILTERS = new Set<BsodFilterKey>([
 
 const VLAN_FILTERS = new Set<BsodVlanFilterKey>(["com_vlan", "sem_vlan"]);
 
+const ACTIVE_TRATATIVA_FILTERS = new Set<BsodTratativaFilter>([
+  "em_tratativa",
+  "acionado",
+  "validacao_pendente",
+  "validacao_reprovada",
+  "validado",
+]);
+
 /** Valida chave de filtro legado da URL (`filtro`). */
 export function isBsodFilterKey(value?: string): value is BsodFilterKey {
   return value != null && VALID_FILTERS.has(value as BsodFilterKey);
@@ -33,6 +50,13 @@ export function isBsodFilterKey(value?: string): value is BsodFilterKey {
 /** Valida filtro de saúde na URL (`saude`). */
 export function isBsodHealthFilter(value?: string): value is BsodHealthFilter {
   return value === "online" || value === "offline" || value === "sem_leitura";
+}
+
+/** Valida filtro de tratativa ativa na URL. */
+export function isBsodTratativaFilter(value?: string): value is BsodTratativaFilter {
+  if (!value) return false;
+  const parsed = parseTratativaChamadoStatusFilter(value);
+  return parsed !== "all" && parsed !== "concluido" && ACTIVE_TRATATIVA_FILTERS.has(parsed);
 }
 
 /** Decodifica parâmetro de texto da query string. */
@@ -54,6 +78,7 @@ export function parseBsodSearchParams(params: {
   node?: string;
   q?: string;
   page?: string;
+  tratativa?: string;
 }): BsodFilters {
   const filtro = isBsodFilterKey(params.filtro) ? params.filtro : undefined;
   const saude = isBsodHealthFilter(params.saude)
@@ -84,6 +109,7 @@ export function bsodUrlStateFromParams(params: {
   node?: string;
   q?: string;
   page?: string;
+  tratativa?: string;
 }): BsodUrlState {
   const filtro = isBsodFilterKey(params.filtro) ? params.filtro : undefined;
   const saude = isBsodHealthFilter(params.saude)
@@ -98,6 +124,7 @@ export function bsodUrlStateFromParams(params: {
     node: bsodParamFromUrl(params.node),
     filtro,
     q: normalizeTableSearch(params.q),
+    tratativa: isBsodTratativaFilter(params.tratativa) ? params.tratativa : undefined,
     page: params.page ? Number(params.page) : undefined,
   };
 }
@@ -113,6 +140,7 @@ export function buildBsodHref(state: BsodUrlState = {}): string {
     params.set("filtro", state.filtro);
   }
   if (state.q) params.set("q", state.q);
+  if (state.tratativa) params.set("tratativa", state.tratativa);
   if (state.page && state.page > 1) params.set("page", String(state.page));
 
   const query = params.toString();
@@ -134,6 +162,7 @@ export function bsodFilterSummary(state: BsodUrlState): string | undefined {
   if (state.node) parts.push(state.node);
   if (state.filtro === "com_vlan") parts.push(METRIC_LABELS.bsod.comVlan);
   if (state.filtro === "sem_vlan") parts.push(METRIC_LABELS.bsod.semVlan);
+  if (state.tratativa) parts.push(TRATATIVA_CHAMADO_STATUS_LABELS[state.tratativa]);
   if (state.q) parts.push(`“${state.q}”`);
   return parts.length ? parts.join(" · ") : undefined;
 }
@@ -148,6 +177,20 @@ export function buildBsodExportHref(state: BsodUrlState = {}): string {
     params.set("filtro", state.filtro);
   }
   if (state.q) params.set("q", state.q);
+  if (state.tratativa) params.set("tratativa", state.tratativa);
   const query = params.toString();
   return query ? `/api/export/bsod?${query}` : "/api/export/bsod";
 }
+
+/** Chips de tratativa ativa na toolbar BSOD. */
+export const BSOD_TRATATIVA_FILTER_OPTIONS: Array<{
+  key: "all" | BsodTratativaFilter;
+  label: string;
+}> = [
+  { key: "all", label: "Todos" },
+  { key: "em_tratativa", label: TRATATIVA_CHAMADO_STATUS_LABELS.em_tratativa },
+  { key: "acionado", label: TRATATIVA_CHAMADO_STATUS_LABELS.acionado },
+  { key: "validacao_pendente", label: TRATATIVA_CHAMADO_STATUS_LABELS.validacao_pendente },
+  { key: "validado", label: TRATATIVA_CHAMADO_STATUS_LABELS.validado },
+  { key: "validacao_reprovada", label: TRATATIVA_CHAMADO_STATUS_LABELS.validacao_reprovada },
+];

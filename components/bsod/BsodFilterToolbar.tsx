@@ -3,8 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { SirFilterChip } from "@/components/sir/SirFilterToolbar";
 import {
+  BSOD_TRATATIVA_FILTER_OPTIONS,
   buildBsodHref,
   bsodUrlStateFromParams,
+  type BsodTratativaFilter,
   type BsodUrlState,
   type BsodVlanFilterKey,
 } from "@/lib/config/bsod-filters";
@@ -20,6 +22,7 @@ type BsodFilterToolbarProps = {
   vlanCounts: BsodVlanCounts;
   cmtsOptions: BsodFacetCount[];
   nodeOptions: BsodFacetCount[];
+  tratativaCounts: Record<"all" | BsodTratativaFilter, number>;
   activeState: BsodUrlState;
 };
 
@@ -36,12 +39,13 @@ const VLAN_FILTERS: Array<{ key: "all" | BsodVlanFilterKey; label: string }> = [
   { key: "sem_vlan", label: "Sem VLAN" },
 ];
 
-/** Barra de filtros BSOD no padrão SIR: saúde, VLAN, CMTS e node. */
+/** Barra de filtros BSOD: saúde, VLAN, tratativa, CMTS e node. */
 export function BsodFilterToolbar({
   healthCounts,
   vlanCounts,
   cmtsOptions,
   nodeOptions,
+  tratativaCounts,
   activeState,
 }: BsodFilterToolbarProps) {
   const router = useRouter();
@@ -58,6 +62,7 @@ export function BsodFilterToolbar({
       cmts: searchParams.get("cmts") ?? undefined,
       node: searchParams.get("node") ?? undefined,
       q: searchParams.get("q") ?? undefined,
+      tratativa: searchParams.get("tratativa") ?? undefined,
     });
     return { ...current, ...partial };
   }
@@ -87,6 +92,14 @@ export function BsodFilterToolbar({
     return buildBsodHref({
       ...activeState,
       filtro: key === "all" ? undefined : key,
+      page: undefined,
+    });
+  }
+
+  function tratativaHref(key: "all" | BsodTratativaFilter): string {
+    return buildBsodHref({
+      ...activeState,
+      tratativa: key === "all" ? undefined : key,
       page: undefined,
     });
   }
@@ -151,6 +164,24 @@ export function BsodFilterToolbar({
                   label={label}
                   count={vlanCount(key)}
                   href={vlanHref(key)}
+                  active={active}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="sir-filter-toolbar__group">
+          <span className="sir-filter-toolbar__heading">Tratativa</span>
+          <div className="sir-filter-toolbar__chips">
+            {BSOD_TRATATIVA_FILTER_OPTIONS.map(({ key, label }) => {
+              const active = key === "all" ? !activeState.tratativa : activeState.tratativa === key;
+              return (
+                <SirFilterChip
+                  key={key}
+                  label={label}
+                  count={tratativaCounts[key]}
+                  href={tratativaHref(key)}
                   active={active}
                 />
               );

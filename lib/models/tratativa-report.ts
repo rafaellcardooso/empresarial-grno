@@ -1,4 +1,10 @@
+import type {
+  TratativaChamadoStatus,
+  TratativaChamadoStatusFilter,
+} from "@/lib/config/tratativa-chamados";
 import type { TratativaRecordKind } from "@/lib/models/tratativa";
+import type { ValidacaoFcaInput } from "@/lib/models/validacao";
+import type { ValidacaoOutcome } from "@/lib/config/tratativa-workflow";
 
 /** Escopo de relatório de tratativas (tipo de registro ou todos). */
 export type TratativaReportScope = TratativaRecordKind | "ALL";
@@ -8,6 +14,7 @@ export type TratativaReportFilters = {
   from: Date;
   to: Date;
   recordKind: TratativaReportScope;
+  status?: TratativaChamadoStatusFilter;
 };
 
 /** Contagens agregadas de eventos de tratativa no período. */
@@ -60,4 +67,20 @@ export type TratativaReportData = {
   operators: TratativaReportOperatorRow[];
   bySymptom: TratativaReportRankRow[];
   topClients: TratativaReportRankRow[];
+};
+
+/** Linha de chamado BSOD para listagem por status. */
+export type TratativaChamadoRow = {
+  id: number;
+  recordKey: string;
+  userName: string;
+  userCorporateId: string;
+  status: TratativaChamadoStatus;
+  startedAt: string;
+  acionadoAt: string | null;
+  validatedAt: string | null;
+  concludedAt: string | null;
+  releasedAt: string | null;
+  outcome: ValidacaoOutcome | null;
+  fca: ValidacaoFcaInput | null;
 };

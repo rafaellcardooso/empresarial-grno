@@ -1536,6 +1536,78 @@ body {
   margin-bottom: 1.25rem;
 }
 
+.tratativa-chamados-panel {
+  margin-top: 0.5rem;
+}
+
+.tratativa-chamados-table__mac {
+  font-size: 0.8rem;
+}
+
+.tratativa-chamados-table__operator {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  line-height: 1.25;
+}
+
+.tratativa-chamados-table__expand-col {
+  width: 2rem;
+}
+
+.tratativa-chamados-table__expand {
+  line-height: 1;
+  text-decoration: none;
+  color: var(--secondary-text-clr);
+}
+
+.tratativa-chamados-table__fca-row > td {
+  background: color-mix(in srgb, var(--surface-clr) 92%, var(--accent-clr));
+  border-top: none;
+  padding-top: 0.35rem;
+  padding-bottom: 0.85rem;
+}
+
+.tratativa-chamados-fca {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.35rem 0.25rem;
+}
+
+.tratativa-chamados-fca__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.85rem;
+}
+
+.tratativa-chamados-fca__title {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.tratativa-chamados-fca__grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.tratativa-chamados-fca__grid dt {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--secondary-text-clr);
+  margin-bottom: 0.15rem;
+}
+
+.tratativa-chamados-fca__grid dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+}
+
 .relatorio-tratativa-filters__presets {
   display: flex;
   flex-wrap: wrap;
