@@ -27,6 +27,6 @@ Restore desktop toggle and sectioned nav from legacy template.
 wip / ajustes / update files / fixed stuff
 ```
 
-- Não staged: `.env.local`, `workers/sir-ingest/.env`, dumps em `states/`.
+- Não staged: `.env.local`, `workers/sir-ingest/.env`, runtime em `workers/sir-ingest/states/*.json` (e dumps em `states/error/`).
 - Antes de commit que altere env: `npm run env:check` e atualizar `.env.example`.
 - Pre-commit roda **lint-staged** (Prettier + ESLint nos arquivos staged).
