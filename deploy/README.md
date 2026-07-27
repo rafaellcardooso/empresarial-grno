@@ -1,12 +1,18 @@
-# Deploy — produção
+# Deploy — units e troubleshooting
 
-> Índice: [docs/README.md](../docs/README.md) · Checklist: [docs/2026-07-26-deploy-producao.md](../docs/2026-07-26-deploy-producao.md) · **Pendências:** [docs/operacao-prod/README.md](../docs/operacao-prod/README.md)
+> Índice: [docs/README.md](../docs/README.md)
 
-Guia para servidor Linux (ex.: **SRV-APP-DEV**), repo em `/usr/local/empresarial`, usuário de serviço **`datacenter`**, app na porta **3003**.
+Este arquivo **não** é o checklist de instalação. Use:
 
-**Antes de systemd ou bots Telegram:** consulte [docs/operacao-prod/README.md](../docs/operacao-prod/README.md) — entradas com **Prod: pendente** (release 2026-07-26).
+| Ambiente         | Documento                                                                   |
+| ---------------- | --------------------------------------------------------------------------- |
+| **Lab**          | [docs/2026-07-27-lab.md](../docs/2026-07-27-lab.md)                         |
+| **Produção**     | [docs/2026-07-26-deploy-producao.md](../docs/2026-07-26-deploy-producao.md) |
+| **Delta manual** | [docs/operacao-prod/README.md](../docs/operacao-prod/README.md)             |
 
-Todos os comandos abaixo assumem:
+Aqui ficam: referência das **units systemd**, **troubleshooting** comum e lembretes de path.
+
+Todos os comandos assumem:
 
 ```bash
 cd /usr/local/empresarial
@@ -16,191 +22,7 @@ Rodar `npm` na home (`~`) ou como `root` em `/root` **falha** — não há `pack
 
 ---
 
-## Pré-requisitos
-
-| Item                     | Notas                                                                                                                 |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| **Node.js 20+**          | `node -v` / `npm -v`                                                                                                  |
-| **MariaDB/MySQL**        | Banco `claroEmpresarial`, usuário `monitor` (ou o de `.env.local`)                                                    |
-| **Git**                  | Clone ou pull em `/usr/local/empresarial`                                                                             |
-| **Usuário `datacenter`** | Dono do repo, units systemd e processos Playwright                                                                    |
-| **Playwright (SO)**      | Após `install:browsers`, se o Chromium não subir: `sudo npx playwright install-deps chromium` em `workers/sir-ingest` |
-
-Units systemd (copiar uma vez):
-
-- `deploy/systemd/empresarial-next.service`
-- `workers/sir-ingest/deploy/systemd/sir-ingest-ral.service`
-- `workers/sir-ingest/deploy/systemd/sir-ingest-rec.service`
-- `workers/sir-ingest/deploy/systemd/sir-telegram-ops.service`
-- `workers/sir-ingest/deploy/systemd/sir-telegram-datacenter.service`
-
-**Lab (WSL / dev — `User=rcard`):** units em `deploy/systemd/lab/` e `workers/sir-ingest/deploy/systemd/lab/` (sufixo `-lab`). Ver seção [Systemd — lab](#systemd--lab) abaixo.
-
----
-
-## Primeiro deploy (servidor novo)
-
-### 1. Código e dependências Next
-
-```bash
-cd /usr/local/empresarial
-git pull origin main          # ou git clone …
-npm install
-```
-
-> `npm install` é **obrigatório antes** de `db:bootstrap:sql` — o script usa `dotenv` e outros pacotes da raiz.
-
-### 2. Variáveis de ambiente
-
-```bash
-cp .env.example .env.local
-# Editar: SIR_DB_*, HFC_DB_*, AUTH_SECRET, APP_PUBLIC_URL (URL real do app)
-# GRB_BASE_URL, CRITEL_BASE_URL (rede interna GRB)
-
-cd workers/sir-ingest
-cp .env.example .env
-# Editar: SIR_DB_* (iguais à raiz), SISTEMA_USUARIO, SISTEMA_SENHA, SISTEMA_URL
-cd ../..
-
-npm run env:check
-```
-
-### 3. Banco SIR (schema vazio — dados vêm do ingest)
-
-**Não** use `db:import` nem `db:seed` em produção.
-
-Em Debian/Ubuntu o `root` do MariaDB costuma ser **socket-only** (`ERROR 1698`). Use **`sudo mariadb`**, não `mariadb -u root -p`.
-
-**Não** pipeie `npm run …` direto no MariaDB — o npm imprime linhas de lifecycle no stdout e quebra o SQL. Use o script Node:
-
-```bash
-cd /usr/local/empresarial
-node scripts/db/bootstrap-sir.mjs | sudo mariadb
-npm run db:migrate
-```
-
-Se o MySQL não for localhost, ajuste `SIR_DB_GRANT_HOSTS` em `.env.local` antes do bootstrap (ex.: `localhost,127.0.0.1,IP_DO_APP`).
-
-### 4. Login (staff)
-
-```bash
-npm run db:seed-staff
-```
-
-Cria o único usuário staff (matrícula + senha **só no banco**, não no `.env`).
-
-### 5. Worker SIR (Playwright)
-
-Como **`datacenter`** (mesmo usuário das units):
-
-```bash
-cd /usr/local/empresarial/workers/sir-ingest
-npm install
-export PLAYWRIGHT_BROWSERS_PATH=/usr/local/empresarial/workers/sir-ingest/.playwright-browsers
-npm run install:browsers
-```
-
-Se o journal mostrar `Executable doesn't exist at …/.playwright-browsers/…`:
-
-```bash
-cd /usr/local/empresarial/workers/sir-ingest
-sudo npx playwright install-deps chromium
-npm run install:browsers
-```
-
-### 6. Systemd (uma vez)
-
-```bash
-cd /usr/local/empresarial
-sudo cp workers/sir-ingest/deploy/systemd/*.service /etc/systemd/system/
-sudo cp deploy/systemd/empresarial-next.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable sir-ingest-ral sir-ingest-rec empresarial-next sir-telegram-ops sir-telegram-datacenter
-```
-
-### 7. Build Next e subir serviços
-
-```bash
-cd /usr/local/empresarial
-npm run build
-sudo systemctl start sir-ingest-ral sir-ingest-rec empresarial-next sir-telegram-ops sir-telegram-datacenter
-```
-
-Ou: `sudo systemctl enable --now …` na primeira vez.
-
-### 8. Conferir
-
-Aguarde 1–2 ciclos do ingest (~5 min cada; REC inicia ~90s após RAL):
-
-```bash
-sudo systemctl status empresarial-next sir-ingest-ral sir-ingest-rec
-curl -s http://127.0.0.1:3003/api/saude | jq
-curl -s http://127.0.0.1:3003/api/rals | jq length
-curl -s http://127.0.0.1:3003/api/recs | jq length
-
-sudo journalctl -u sir-ingest-ral -n 30 --no-pager
-sudo journalctl -u sir-ingest-rec -n 30 --no-pager
-```
-
-Logs OK: `"status":"ok"` e `"rowErrors":0` no evento `scrape_cycle`.
-
----
-
-## Atualização de release (deploy rotineiro)
-
-**Primeira aplicação da release 2026-07-25/26:** ordem em [docs/operacao-prod/README.md](../docs/operacao-prod/README.md) (migrations → GRB → Telegram).
-
-Após `git pull`, **sempre** na raiz do repo:
-
-```bash
-cd /usr/local/empresarial
-git pull origin main
-npm install
-npm run build
-sudo systemctl restart empresarial-next
-```
-
-| O que mudou no commit            | Ação extra                                                                                                         |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Só `app/`, `components/`, `lib/` | Build + restart **Next** (acima)                                                                                   |
-| `workers/sir-ingest/` (scrape)   | `cd workers/sir-ingest && npm install && cd ../..` + `sudo systemctl restart sir-ingest-ral sir-ingest-rec`        |
-| `workers/sir-ingest/telegram/`   | `telegram/venv/bin/pip install -r requirements.txt` + restart **sir-telegram-ops** **sir-telegram-datacenter**     |
-| `migrations/sir/`                | `npm run db:migrate` (Next e workers podem continuar rodando)                                                      |
-| `.env.example` (novas chaves)    | Atualizar `.env.local` e `workers/sir-ingest/.env`; `npm run env:check`                                            |
-| `migrations/sir/` (006–008)      | Ver [operacao-prod/2026-07-26-tratativas-migrations.md](../docs/operacao-prod/2026-07-26-tratativas-migrations.md) |
-
-**Atalho** (pull + build + restart dos 3 serviços):
-
-```bash
-cd /usr/local/empresarial
-git pull origin main
-npm install
-npm run build
-(cd workers/sir-ingest && npm install)
-sudo systemctl restart empresarial-next sir-ingest-ral sir-ingest-rec
-```
-
-Mudança **só no worker** → não precisa `npm run build`.  
-Mudança **só na UI** → não precisa restart dos workers.
-
----
-
-## Troubleshooting (erros comuns)
-
-| Sintoma                                           | Causa                        | Correção                                                                            |
-| ------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------- |
-| `ENOENT … /root/package.json`                     | `npm` fora do repo           | `cd /usr/local/empresarial`                                                         |
-| `Cannot find package 'dotenv'`                    | Deps não instaladas          | `npm install` na raiz                                                               |
-| `ERROR 1698 … root@localhost`                     | Auth socket do MariaDB       | `node scripts/db/bootstrap-sir.mjs \| sudo mariadb`                                 |
-| `ERROR 1064 … empresarial@0.1.0 db:bootstrap`     | Pipe de `npm run` no mariadb | Usar `node scripts/db/bootstrap-sir.mjs \| sudo mariadb`                            |
-| `Executable doesn't exist … playwright-browsers`  | Chromium não baixado         | `workers/sir-ingest`: `npm run install:browsers` como `datacenter`                  |
-| Next sobe mas UI antiga                           | Falta build após pull        | `npm run build && sudo systemctl restart empresarial-next`                          |
-| `api/saude` ERRO SIR                              | MySQL ou credenciais         | Conferir `.env.local`, `npm run env:check`, migrate                                 |
-| Worker `rowErrors` alto / encerramentos indevidos | Scrape incompleto            | Ver journal; após fix de código, restart workers; UPSERT reativa itens ainda no SIR |
-
----
-
-## Serviços systemd
+## Serviços systemd — produção
 
 | Unit                      | Processo                  | Porta / efeito                             |
 | ------------------------- | ------------------------- | ------------------------------------------ |
@@ -209,6 +31,16 @@ Mudança **só na UI** → não precisa restart dos workers.
 | `sir-ingest-rec`          | `AlertasRecRede.js`       | Grava `recs` (filtro SIR: **REC/DSR/TCQ**) |
 | `sir-telegram-ops`        | `main-ops-bot.py`         | Bot operacional (`/sir`, `/rotinas`)       |
 | `sir-telegram-datacenter` | `notify-datacenter.py`    | Push RAL/REC CF datacenter                 |
+
+Arquivos:
+
+- `deploy/systemd/empresarial-next.service`
+- `workers/sir-ingest/deploy/systemd/sir-ingest-ral.service`
+- `workers/sir-ingest/deploy/systemd/sir-ingest-rec.service`
+- `workers/sir-ingest/deploy/systemd/sir-telegram-ops.service`
+- `workers/sir-ingest/deploy/systemd/sir-telegram-datacenter.service`
+
+Instalação e enable: checklist de [produção §6](../docs/2026-07-26-deploy-producao.md#6-systemd-uma-vez).
 
 Logs:
 
@@ -220,54 +52,58 @@ sudo journalctl -u sir-telegram-ops -u sir-telegram-datacenter -f
 
 ---
 
-## Systemd — lab
+## Serviços systemd — lab
 
-Units com sufixo `-lab`, **`User=rcard`**, para WSL ou máquina de dev (mesmos paths em `/usr/local/empresarial`).
+Units com sufixo `-lab`, **`User=rcard`**, paths em `/usr/local/empresarial`.
 
-| Unit                          | Processo               | Diferença vs prod                       |
-| ----------------------------- | ---------------------- | --------------------------------------- |
-| `empresarial-next-lab`        | `npm run dev`          | Hot reload; `.env.local` opcional (`-`) |
-| `sir-ingest-ral-lab`          | `AlertasRalRede.js`    | Igual ingest; usuário `rcard`           |
-| `sir-ingest-rec-lab`          | `AlertasRecRede.js`    | Igual ingest; usuário `rcard`           |
-| `sir-telegram-ops-lab`        | `main-ops-bot.py`      | Depende de `empresarial-next-lab`       |
-| `sir-telegram-datacenter-lab` | `notify-datacenter.py` | Depende de Next + ingest lab            |
+| Unit                          | Processo               | Diferença vs prod                 |
+| ----------------------------- | ---------------------- | --------------------------------- |
+| `empresarial-next-lab`        | `npm run dev`          | Hot reload                        |
+| `sir-ingest-ral-lab`          | `AlertasRalRede.js`    | Usuário `rcard`                   |
+| `sir-ingest-rec-lab`          | `AlertasRecRede.js`    | Usuário `rcard`                   |
+| `sir-telegram-ops-lab`        | `main-ops-bot.py`      | Depende de `empresarial-next-lab` |
+| `sir-telegram-datacenter-lab` | `notify-datacenter.py` | Depende de Next + ingest lab      |
 
-Instalação (uma vez):
+Arquivos em `deploy/systemd/lab/` e `workers/sir-ingest/deploy/systemd/lab/`.
+
+Setup completo (env, banco, enable): **[docs/2026-07-27-lab.md](../docs/2026-07-27-lab.md)**.
+
+Instalação rápida das units:
 
 ```bash
 cd /usr/local/empresarial
 sudo cp deploy/systemd/lab/empresarial-next-lab.service /etc/systemd/system/
 sudo cp workers/sir-ingest/deploy/systemd/lab/*.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab
-# Telegram (após pip install -r workers/sir-ingest/telegram/requirements.txt):
-sudo systemctl enable sir-telegram-ops-lab sir-telegram-datacenter-lab
-sudo systemctl start empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab
-sudo systemctl start sir-telegram-ops-lab sir-telegram-datacenter-lab
+sudo systemctl enable --now empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab
+# Telegram: ver docs/operacao-prod/2026-07-26-telegram-sir-bots.md (Passos — Lab)
 ```
 
-Conferir:
-
-```bash
-systemctl status empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab
-journalctl -u sir-telegram-ops-lab -u sir-telegram-datacenter-lab -n 30 --no-pager
-curl -s http://127.0.0.1:3003/api/saude | jq
-```
-
-**Não** misturar units lab e prod no mesmo host (mesma porta 3003 e mesmos states do ingest).
+**Não** misturar units lab e prod no mesmo host (porta 3003 e `states/` do ingest).
 
 ---
 
-## UI SIR (referência)
+## Troubleshooting (erros comuns)
 
-- `/sir` — resumo; KPIs RAL e REC/DSR/TCQ (abertas / encerradas)
-- `/sir/rals`, `/sir/recs` — filtros por tipo, CF e status (`?status=encerrado|todos`)
-- Listagens ordenadas por **abertura** (mais antigas primeiro); clique no cabeçalho **ABERTURA** para inverter
+| Sintoma                                           | Causa                        | Correção                                                                  |
+| ------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------- |
+| `ENOENT … /root/package.json`                     | `npm` fora do repo           | `cd /usr/local/empresarial`                                               |
+| `Cannot find package 'dotenv'`                    | Deps não instaladas          | `npm install` na raiz                                                     |
+| `ERROR 1698 … root@localhost`                     | Auth socket do MariaDB       | `node scripts/db/bootstrap-sir.mjs \| sudo mariadb`                       |
+| `ERROR 1064 … empresarial@0.1.0 db:bootstrap`     | Pipe de `npm run` no mariadb | Usar `node scripts/db/bootstrap-sir.mjs \| sudo mariadb`                  |
+| `Executable doesn't exist … playwright-browsers`  | Chromium não baixado         | `workers/sir-ingest`: `npm run install:browsers` (usuário da unit)        |
+| Next sobe mas UI antiga                           | Falta build após pull        | Prod: `npm run build && sudo systemctl restart empresarial-next`          |
+| `api/saude` ERRO SIR                              | MySQL ou credenciais         | Conferir `.env.local`, `npm run env:check`, migrate                       |
+| Worker `rowErrors` alto / encerramentos indevidos | Scrape incompleto            | Ver journal; após fix, restart workers; UPSERT reativa itens ainda no SIR |
 
-APIs legado (bot Telegram): `/api/rals`, `/api/recs` (somente **ATIVO**). BFF interno: `/api/sir/*`.
+Mais sintomas de UI/GRB: [docs/2026-07-26-operacao.md §14](../docs/2026-07-26-operacao.md#14-troubleshooting).
 
 ---
 
-## Dev local
+## UI SIR (atalho)
 
-Ver [README.md](../README.md), [docs/2026-07-26-operacao.md](../docs/2026-07-26-operacao.md) e skill `.cursor/skills/emp-db-setup/SKILL.md`. Em dev pode usar `db:import` com snapshot; **não** em prod.
+- `/sir` — resumo RAL e REC/DSR/TCQ
+- `/sir/rals`, `/sir/recs` — filtros por tipo, CF, status e busca (`q`)
+- APIs legado (bot): `/api/rals`, `/api/recs` (somente **ATIVO**) · BFF: `/api/sir/*`
+
+Referência completa: [docs/2026-07-26-operacao.md](../docs/2026-07-26-operacao.md).

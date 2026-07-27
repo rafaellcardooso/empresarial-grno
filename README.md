@@ -21,18 +21,31 @@ Centralizar em uma única interface:
 - Playwright — worker SIR (`workers/sir-ingest`)
 - Bootstrap 5 · tema GRNO
 
-## Setup rápido
+## Documentação
+
+Tudo em **[docs/](docs/README.md)**. Comece pelo ambiente:
+
+| Ambiente     | Guia                                                                     |
+| ------------ | ------------------------------------------------------------------------ |
+| **Lab**      | [docs/2026-07-27-lab.md](docs/2026-07-27-lab.md)                         |
+| **Produção** | [docs/2026-07-26-deploy-producao.md](docs/2026-07-26-deploy-producao.md) |
+| Delta manual | [docs/operacao-prod/](docs/operacao-prod/README.md)                      |
+| Referência   | [docs/2026-07-26-operacao.md](docs/2026-07-26-operacao.md)               |
+
+## Setup rápido (lab)
 
 ```bash
 cd /usr/local/empresarial
 cp .env.example .env.local
+npm install
 npm run db:bootstrap
-npm run db:migrate && npm run db:import   # dev; prod: ver deploy
+npm run db:migrate && npm run db:import   # lab; NÃO use db:import em prod
 npm run db:seed-staff
 npm run env:check
-npm install
 npm run dev    # http://localhost:3003
 ```
+
+Passo a passo completo (units `-lab`, worker, Telegram): **[docs/2026-07-27-lab.md](docs/2026-07-27-lab.md)**.
 
 ## Lint / format (dev)
 
@@ -54,11 +67,11 @@ Prettier + ESLint via **lint-staged** (pre-commit) e **commitlint** (Conventiona
 | `/grb/critel`                    | Gráficos Critel por designação                                                  |
 | `/relatorios`                    | Hub de relatórios e export CSV                                                  |
 
-Lista completa, APIs, env e troubleshooting: **[docs/](docs/README.md)** · **[operação](docs/2026-07-26-operacao.md)**
+Lista completa e APIs: **[docs/2026-07-26-operacao.md](docs/2026-07-26-operacao.md)**.
 
 ## Deploy (produção)
 
-Checklist: **[docs/2026-07-26-deploy-producao.md](docs/2026-07-26-deploy-producao.md)** · runbook: **[deploy/README.md](deploy/README.md)** · **pendências lab/prod:** **[docs/operacao-prod/](docs/operacao-prod/README.md)**
+Checklist: **[docs/2026-07-26-deploy-producao.md](docs/2026-07-26-deploy-producao.md)** · units/troubleshooting: **[deploy/README.md](deploy/README.md)** · pendências: **[docs/operacao-prod/](docs/operacao-prod/README.md)**.
 
 ```bash
 cd /usr/local/empresarial
@@ -67,7 +80,7 @@ npm install && npm run build
 sudo systemctl restart empresarial-next
 ```
 
-Porta **3003** · usuário típico **`datacenter`**.
+Porta **3003** · usuário típico **`datacenter`**. Não use units `*-lab*` em produção.
 
 ## Worker SIR
 
@@ -80,15 +93,6 @@ npm run start:ral   # e/ou start:rec
 
 Detalhes: [workers/sir-ingest/README.md](workers/sir-ingest/README.md)
 
-## Systemd
-
-```bash
-sudo cp workers/sir-ingest/deploy/systemd/*.service /etc/systemd/system/
-sudo cp deploy/systemd/empresarial-next.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now sir-ingest-ral sir-ingest-rec empresarial-next
-```
-
 ## Estrutura
 
 ```
@@ -100,7 +104,7 @@ empresarial/
   migrations/sir/
   workers/sir-ingest/
   docs/              # documentação
-  deploy/            # systemd + runbook
+  deploy/            # systemd (units + troubleshooting)
 ```
 
 ## Regras
@@ -108,5 +112,6 @@ empresarial/
 - Scrapers **não** rodam dentro do Next.
 - Este repo **não escreve** no MySQL `hfc-sls`.
 - Env: `.env.example` ↔ `.env.local` + `npm run env:check`.
+- Lab e prod: secrets e units separados.
 
 Documentação completa: **[docs/README.md](docs/README.md)**

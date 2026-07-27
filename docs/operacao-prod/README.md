@@ -4,9 +4,11 @@ Mudanças no código que **exigem passos no host** (systemd, `.env`, venv Python
 
 Guides estáveis (instalação, APIs, checklist genérico de deploy):
 
-- [2026-07-26-operacao.md](../2026-07-26-operacao.md)
-- [2026-07-26-deploy-producao.md](../2026-07-26-deploy-producao.md)
-- [2026-07-26-bots-telegram.md](../2026-07-26-bots-telegram.md)
+- [Lab](../2026-07-27-lab.md)
+- [Produção](../2026-07-26-deploy-producao.md)
+- [Referência (APIs/env)](../2026-07-26-operacao.md)
+- [Bots Telegram](../2026-07-26-bots-telegram.md)
+- Units + troubleshooting: [deploy/README.md](../../deploy/README.md)
 
 **Fluxo:** lab primeiro → marcar **Lab** como `aplicado` → repetir em produção → marcar **Prod** como `aplicado`.
 

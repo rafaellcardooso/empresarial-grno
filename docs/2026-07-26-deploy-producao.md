@@ -1,12 +1,14 @@
 # Deploy em produção — Empresarial GRNO
 
-> Última revisão: **2026-07-26** · Índice: [README.md](README.md)
+> Última revisão: **2026-07-27** · Índice: [README.md](README.md)
 
 Checklist para servidor Linux (ex.: **SRV-APP-DEV**), repo em `/usr/local/empresarial`, usuário **`datacenter`**, app na porta **3003**.
 
-Runbook completo, tabela de troubleshooting e referência de serviços: **[deploy/README.md](../deploy/README.md)**.
+**Lab** (WSL / `User=rcard`, units `*-lab*`): **[2026-07-27-lab.md](2026-07-27-lab.md)** — não use este checklist no lab.
 
-**Antes do passo 6 (systemd) ou de subir bots Telegram:** consulte **[operacao-prod/README.md](operacao-prod/README.md)** — entradas com **Prod: pendente** têm comandos extras (migrations 006–008, env GRB, venv Python, units `sir-telegram-*`) além do loop genérico abaixo.
+Units, troubleshooting e tabela de serviços: **[deploy/README.md](../deploy/README.md)**.
+
+**Antes do passo 6 (systemd) ou de subir bots Telegram:** consulte **[operacao-prod/README.md](operacao-prod/README.md)** — entradas com **Prod: pendente** têm comandos extras (migrations, env GRB, venv Python, units `sir-telegram-*`) além do loop genérico abaixo.
 
 ---
 
@@ -58,6 +60,8 @@ CRITEL_BASE_URL=http://200.255.253.12/grb/critel
 ```
 
 Lista completa e regras de paridade: [2026-07-26-operacao.md §4](2026-07-26-operacao.md#4-variáveis-de-ambiente) · `.env.example`.
+
+**Não** copie `.env` do lab para produção.
 
 ---
 
@@ -145,9 +149,14 @@ UI (autenticado): `/sir`, `/bsod`, `/grb` (TELNET), `/grb/critel`, `/relatorios`
 
 ## 9. Atualização rotineira (release)
 
-**Release 2026-07-25/26 (primeira vez em prod):** seguir a ordem em [operacao-prod/README.md](operacao-prod/README.md#ordem-sugerida--release-2026-07-2526-prod-pendente) (migrations → GRB env + build → Telegram).
+Há dois tipos de atualização:
 
-Loop genérico após delta manual aplicado:
+1. **Delta manual** — mudanças que exigem passos no host (migrations novas, chaves de env, venv, units). Veja [operacao-prod/README.md](operacao-prod/README.md) e aplique entradas com **Prod: pendente** **antes** do loop abaixo.
+2. **Loop genérico** — código já alinhado com o host; só pull + build + restart.
+
+**Release 2026-07-25/26 (primeira vez em prod):** ordem em [operacao-prod/README.md](operacao-prod/README.md#ordem-sugerida--release-2026-07-2526-prod-pendente) (migrations → GRB env + build → Telegram).
+
+Loop genérico após delta manual aplicado (ou quando não há pendência):
 
 ```bash
 cd /usr/local/empresarial
@@ -199,8 +208,10 @@ Migrations já aplicadas **não** revertem automaticamente — avaliar manualmen
 
 ## 11. Referências
 
+- **Lab:** [2026-07-27-lab.md](2026-07-27-lab.md)
 - **Pendências lab/prod:** [operacao-prod/README.md](operacao-prod/README.md)
 - Bots Telegram SIR: [2026-07-26-bots-telegram.md](2026-07-26-bots-telegram.md)
-- Troubleshooting detalhado: [deploy/README.md](../deploy/README.md#troubleshooting-erros-comuns)
-- Operação diária e APIs: [2026-07-26-operacao.md](2026-07-26-operacao.md)
-- Skill de banco dev: `.cursor/skills/emp-db-setup/SKILL.md`
+- Units + troubleshooting: [deploy/README.md](../deploy/README.md)
+- Referência (APIs, env, UI): [2026-07-26-operacao.md](2026-07-26-operacao.md)
+- Skill de banco (lab): `.cursor/skills/emp-db-setup/SKILL.md`
+- Skill de deploy: `.cursor/skills/emp-deploy-producao/SKILL.md`

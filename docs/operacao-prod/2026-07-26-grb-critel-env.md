@@ -1,6 +1,6 @@
 # GRB / Critel — env + build Next
 
-> **Data:** 2026-07-26 · **Escopo:** lab + prod · **Lab:** aplicado · **Prod:** pendente
+> **Data:** 2026-07-26 · **Escopo:** lab + prod · **Lab:** aplicado · **Prod:** aplicado
 
 ## Resumo
 

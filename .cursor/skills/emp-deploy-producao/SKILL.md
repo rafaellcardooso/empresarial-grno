@@ -13,7 +13,9 @@ description: >-
 
 Seguir **`docs/2026-07-26-deploy-producao.md`** na ordem das seções. Não inventar roteiro paralelo.
 
-Antes de systemd ou bots Telegram: revisar **`docs/operacao-prod/README.md`** — aplicar entradas com **Prod: pendente** (comandos além do loop genérico).
+**Lab** (WSL / units `*-lab*` / `User=rcard`): usar **`docs/2026-07-27-lab.md`** — não aplicar o checklist de produção no lab.
+
+Antes de systemd ou bots Telegram em **produção**: revisar **`docs/operacao-prod/README.md`** — aplicar entradas com **Prod: pendente** (comandos além do loop genérico).
 
 ## Sequência — release 2026-07-25/26 (prod pendente)
 
@@ -68,7 +70,8 @@ Bots Telegram **dependem** do Next na 3003; não subir `sir-telegram-*` antes de
 
 ## Referências
 
-- Checklist: `docs/2026-07-26-deploy-producao.md`
-- Runbook: `deploy/README.md`
+- Lab: `docs/2026-07-27-lab.md`
+- Checklist produção: `docs/2026-07-26-deploy-producao.md`
+- Units + troubleshooting: `deploy/README.md`
 - Bots: `docs/2026-07-26-bots-telegram.md`
 - Índice pendências: `docs/operacao-prod/README.md`
