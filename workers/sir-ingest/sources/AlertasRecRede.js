@@ -5,12 +5,11 @@ import {
   loadBaseConfig,
   loadSeenItems,
   logCycleSummary,
-  prepareScrapeTable,
   processRecordClosures,
   runWithRetry,
   saveErrorPageHtml,
   saveSeenItems,
-  scrapeListaTableSnapshot,
+  scrapeListaTableSnapshotConfirmed,
   SirBrowserSession,
   startPollingLoop,
   submitRecordTypeFilter,
@@ -106,11 +105,14 @@ function parseRecSnapshotRow(row) {
 }
 
 /** Processa linhas da tabela REC, persiste no banco e detecta encerramentos. */
-async function processRecTable(page, seenItems) {
-  const tableFrame = await prepareScrapeTable(page, config.elementTimeoutMs);
+async function processRecTable(page, seenItems, { sessionFresh = false } = {}) {
   let snapshot;
   try {
-    snapshot = await scrapeListaTableSnapshot(tableFrame, REC_ROW_SELECTOR);
+    ({ snapshot } = await scrapeListaTableSnapshotConfirmed(
+      page,
+      REC_ROW_SELECTOR,
+      config.elementTimeoutMs,
+    ));
   } catch (err) {
     if (isFrameDetachedError(err)) {
       throw new Error("Frame was detached while reading REC table snapshot");
@@ -121,6 +123,7 @@ async function processRecTable(page, seenItems) {
   const currentIds = [];
   let hasNewItems = false;
   let rowErrors = 0;
+  let untrustedEmpty = false;
 
   for (const row of snapshot) {
     try {
@@ -146,34 +149,37 @@ async function processRecTable(page, seenItems) {
   if (hasNewItems) saveSeenItems(config.seenItemsFile, seenItems);
 
   if (rowErrors === 0) {
-    await processRecordClosures({
+    const closure = await processRecordClosures({
       currentIds,
       activeIdsFile: config.activeIdsFile,
       tableStateFile: config.tableStateFile,
       table: config.table,
       logPrefix: LOG_PREFIX,
       emptyCyclesBeforeClose: config.emptyCyclesBeforeClose,
+      sessionFresh,
     });
+    untrustedEmpty = Boolean(closure?.untrustedEmpty);
   } else {
     console.warn(
       `${LOG_PREFIX} Skipping closures — ${rowErrors} row parse error(s); list may be incomplete.`,
     );
   }
 
-  return { active: currentIds.length, rowErrors };
+  return { active: currentIds.length, rowErrors, untrustedEmpty };
 }
 
 /** Executa ciclo de scrape REC (reutiliza sessão; reloga só se necessário). */
 async function runRecCycle({ startedAt }) {
   const seenItems = loadSeenItems(config.seenItemsFile);
-  let tableStats = { active: 0, rowErrors: 0 };
+  let tableStats = { active: 0, rowErrors: 0, untrustedEmpty: false };
 
   try {
     await runWithRetry(
       async () => {
         const page = await session.ensurePage();
+        const sessionFresh = session.consumeFreshLoginFlag();
         await submitRecordTypeFilter(page, config.recordType, config.elementTimeoutMs);
-        tableStats = await processRecTable(page, seenItems);
+        tableStats = await processRecTable(page, seenItems, { sessionFresh });
       },
       {
         maxRetries: config.maxRetries,
@@ -190,7 +196,7 @@ async function runRecCycle({ startedAt }) {
 
     logCycleSummary(LOG_PREFIX, {
       recordType: config.recordType,
-      status: "ok",
+      status: tableStats.untrustedEmpty ? "empty_untrusted" : "ok",
       active: tableStats.active,
       rowErrors: tableStats.rowErrors,
       durationMs: Date.now() - startedAt,

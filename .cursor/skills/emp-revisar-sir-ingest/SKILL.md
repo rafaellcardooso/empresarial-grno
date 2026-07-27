@@ -43,7 +43,7 @@ description: >-
 - [ ] Paridade RAL/REC (select, retry, error dump, encerramento)
 - [ ] UPSERT atualiza todos os campos mutáveis
 - [ ] Detalhes/tooltip: política clara (só 1ª vez vs sempre)
-- [ ] Falha de scrape não encerra tudo indevidamente
+- [ ] Falha de scrape / tabela vazia suspeita não encerra tudo indevidamente (login fresco, cliff ≥10→0)
 - [ ] Conexão MySQL reconecta após queda
 - [ ] Sem overlap de ciclos se scrape > intervalo
 - [ ] Imports/deps mortos removidos

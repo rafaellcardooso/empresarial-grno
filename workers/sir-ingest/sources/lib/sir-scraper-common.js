@@ -38,7 +38,7 @@ export function loadBaseConfig(overrides = {}) {
     elementTimeoutMs: 15000,
     emptyCyclesBeforeClose: process.env.CICLOS_VAZIOS_PARA_ENCERRAR
       ? parseInt(process.env.CICLOS_VAZIOS_PARA_ENCERRAR, 10)
-      : 2,
+      : 4,
     cycleOffsetMs: process.env.CYCLE_OFFSET_MS ? parseInt(process.env.CYCLE_OFFSET_MS, 10) : 0,
     sessionMaxCycles: process.env.SESSION_MAX_CYCLES
       ? parseInt(process.env.SESSION_MAX_CYCLES, 10)
@@ -207,7 +207,26 @@ export async function markRecordClosed(table, recordId, logPrefix) {
   }
 }
 
-/** Encerra registros ausentes no scrape; tabela vazia exige ciclos consecutivos confirmados. */
+/** Ciclos vazios mínimos quando o scrape anterior tinha vários ativos (anti cliff 0). */
+const EMPTY_CLIFF_MIN_CYCLES = 5;
+/** Quantidade mínima de ativos anteriores para exigir o cliff threshold. */
+const EMPTY_CLIFF_PREVIOUS_MIN = 10;
+
+/**
+ * Calcula quantos ciclos vazios consecutivos são necessários antes do encerramento em massa.
+ * Lista antes populada exige limiar maior para evitar falso vazio pós-login/filtro.
+ */
+function resolveEmptyCyclesRequired(previousCount, emptyCyclesBeforeClose) {
+  if (previousCount >= EMPTY_CLIFF_PREVIOUS_MIN) {
+    return Math.max(emptyCyclesBeforeClose, EMPTY_CLIFF_MIN_CYCLES);
+  }
+  return emptyCyclesBeforeClose;
+}
+
+/**
+ * Encerra registros ausentes no scrape; tabela vazia exige ciclos consecutivos confirmados.
+ * Vazio logo após login fresco ou cliff populado→0 não encerra sem confirmação reforçada.
+ */
 export async function processRecordClosures({
   currentIds,
   activeIdsFile,
@@ -215,16 +234,31 @@ export async function processRecordClosures({
   table,
   logPrefix,
   emptyCyclesBeforeClose,
+  sessionFresh = false,
 }) {
   const state = loadTableState(tableStateFile);
   const previousIds = loadActiveIds(activeIdsFile);
 
   if (currentIds.length === 0) {
-    state.consecutiveEmptyCycles += 1;
     state.isEmpty = true;
 
+    if (sessionFresh && previousIds.length > 0) {
+      state.consecutiveEmptyCycles = 0;
+      saveTableState(tableStateFile, state);
+      console.warn(
+        `${logPrefix} Empty table right after fresh login — skipping closures (untrusted); empty counter reset.`,
+      );
+      return { closed: false, untrustedEmpty: true, consecutiveEmptyCycles: 0 };
+    }
+
+    const requiredEmptyCycles = resolveEmptyCyclesRequired(
+      previousIds.length,
+      emptyCyclesBeforeClose,
+    );
+    state.consecutiveEmptyCycles += 1;
+
     const shouldCloseAll =
-      state.consecutiveEmptyCycles >= emptyCyclesBeforeClose && previousIds.length > 0;
+      state.consecutiveEmptyCycles >= requiredEmptyCycles && previousIds.length > 0;
 
     if (shouldCloseAll) {
       console.log(
@@ -235,14 +269,22 @@ export async function processRecordClosures({
       }
       saveActiveIds(activeIdsFile, []);
       state.consecutiveEmptyCycles = 0;
-    } else if (previousIds.length > 0) {
+      saveTableState(tableStateFile, state);
+      return { closed: true, untrustedEmpty: false, consecutiveEmptyCycles: 0 };
+    }
+
+    if (previousIds.length > 0) {
       console.log(
-        `${logPrefix} Empty table (${state.consecutiveEmptyCycles}/${emptyCyclesBeforeClose}) — waiting for confirmation.`,
+        `${logPrefix} Empty table (${state.consecutiveEmptyCycles}/${requiredEmptyCycles}) — waiting for confirmation.`,
       );
     }
 
     saveTableState(tableStateFile, state);
-    return;
+    return {
+      closed: false,
+      untrustedEmpty: previousIds.length > 0,
+      consecutiveEmptyCycles: state.consecutiveEmptyCycles,
+    };
   }
 
   state.isEmpty = false;
@@ -258,6 +300,7 @@ export async function processRecordClosures({
   }
 
   saveActiveIds(activeIdsFile, currentIds);
+  return { closed: closedIds.length > 0, untrustedEmpty: false, consecutiveEmptyCycles: 0 };
 }
 
 /** Aguarda frame nomeado ficar disponível na página. */
@@ -302,6 +345,11 @@ async function readScrapeTableState(tableFrame) {
   });
 }
 
+/** Quantos passes estáveis exige a assinatura da tabela (vazio precisa mais tempo). */
+function requiredStablePasses(signature) {
+  return signature.startsWith("empty:") ? 6 : 2;
+}
+
 /** Aguarda tabela SIR carregar (vazia ou com linhas de dados). */
 export async function waitForScrapeTable(tableFrame, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
@@ -314,7 +362,7 @@ export async function waitForScrapeTable(tableFrame, timeoutMs) {
     if (state.ready) {
       if (state.signature === lastSignature) {
         stablePasses += 1;
-        if (stablePasses >= 2) return;
+        if (stablePasses >= requiredStablePasses(state.signature)) return;
       } else {
         stablePasses = 1;
         lastSignature = state.signature;
@@ -345,7 +393,7 @@ export async function prepareScrapeTable(page, timeoutMs) {
       if (state.ready) {
         if (state.signature === lastSignature) {
           stablePasses += 1;
-          if (stablePasses >= 2) return tableFrame;
+          if (stablePasses >= requiredStablePasses(state.signature)) return tableFrame;
         } else {
           stablePasses = 1;
           lastSignature = state.signature;
@@ -373,7 +421,21 @@ export async function submitRecordTypeFilter(page, recordType, timeoutMs) {
   const filterFrame = await waitForFrame(page, "frameFiltro", timeoutMs);
   await filterFrame.locator('select[name="indic_tipo_recup"]').selectOption({ label: recordType });
   await filterFrame.locator('[name="confirma"]').click();
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(800);
+}
+
+/**
+ * Lê snapshot da lista; se vier vazio, aguarda e relê uma vez para reduzir falso vazio pós-filtro.
+ */
+export async function scrapeListaTableSnapshotConfirmed(page, rowSelector, timeoutMs) {
+  let tableFrame = await prepareScrapeTable(page, timeoutMs);
+  let snapshot = await scrapeListaTableSnapshot(tableFrame, rowSelector);
+  if (snapshot.length > 0) return { tableFrame, snapshot };
+
+  await page.waitForTimeout(2500);
+  tableFrame = await prepareScrapeTable(page, timeoutMs);
+  snapshot = await scrapeListaTableSnapshot(tableFrame, rowSelector);
+  return { tableFrame, snapshot };
 }
 
 /** Navega frames aninhados até o frame da tabela de itens. */
@@ -393,6 +455,7 @@ export class SirBrowserSession {
     this.page = null;
     this.cyclesSinceLogin = 0;
     this.maxCyclesBeforeRelogin = config.sessionMaxCycles ?? 12;
+    this.justLoggedIn = false;
   }
 
   /** Retorna página autenticada no SIR, reutilizando sessão quando possível. */
@@ -411,10 +474,18 @@ export class SirBrowserSession {
         this.config.elementTimeoutMs,
       );
       this.cyclesSinceLogin = 0;
+      this.justLoggedIn = true;
       console.log("[SIR] Browser session started (fresh login).");
     }
 
     return this.page;
+  }
+
+  /** Consome e limpa o flag de login fresco deste ciclo. */
+  consumeFreshLoginFlag() {
+    const wasFresh = this.justLoggedIn;
+    this.justLoggedIn = false;
+    return wasFresh;
   }
 
   /** Incrementa contador de ciclos na sessão atual. */
@@ -433,6 +504,7 @@ export class SirBrowserSession {
     this.browser = null;
     this.page = null;
     this.cyclesSinceLogin = 0;
+    this.justLoggedIn = false;
   }
 }
 
