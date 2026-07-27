@@ -6,11 +6,18 @@ import {
   buildBsodHref,
   bsodUrlStateFromParams,
   type BsodUrlState,
+  type BsodVlanFilterKey,
 } from "@/lib/config/bsod-filters";
-import type { BsodFacetCount, BsodHealthCounts, BsodHealthFilter } from "@/lib/queries/bsod";
+import type {
+  BsodFacetCount,
+  BsodHealthCounts,
+  BsodHealthFilter,
+  BsodVlanCounts,
+} from "@/lib/queries/bsod";
 
 type BsodFilterToolbarProps = {
   healthCounts: BsodHealthCounts;
+  vlanCounts: BsodVlanCounts;
   cmtsOptions: BsodFacetCount[];
   nodeOptions: BsodFacetCount[];
   activeState: BsodUrlState;
@@ -23,9 +30,16 @@ const HEALTH_FILTERS: Array<{ key: "all" | BsodHealthFilter; label: string }> = 
   { key: "sem_leitura", label: "Sem leitura" },
 ];
 
-/** Barra de filtros BSOD por saúde, CMTS e node. */
+const VLAN_FILTERS: Array<{ key: "all" | BsodVlanFilterKey; label: string }> = [
+  { key: "all", label: "Todos" },
+  { key: "com_vlan", label: "Com VLAN" },
+  { key: "sem_vlan", label: "Sem VLAN" },
+];
+
+/** Barra de filtros BSOD no padrão SIR: saúde, VLAN, CMTS e node. */
 export function BsodFilterToolbar({
   healthCounts,
+  vlanCounts,
   cmtsOptions,
   nodeOptions,
   activeState,
@@ -34,7 +48,7 @@ export function BsodFilterToolbar({
   const searchParams = useSearchParams();
 
   function navigate(next: BsodUrlState) {
-    router.push(buildBsodHref(next));
+    router.push(buildBsodHref(next), { scroll: false });
   }
 
   function mergeState(partial: Partial<BsodUrlState>): BsodUrlState {
@@ -43,6 +57,7 @@ export function BsodFilterToolbar({
       saude: searchParams.get("saude") ?? undefined,
       cmts: searchParams.get("cmts") ?? undefined,
       node: searchParams.get("node") ?? undefined,
+      q: searchParams.get("q") ?? undefined,
     });
     return { ...current, ...partial };
   }
@@ -54,6 +69,12 @@ export function BsodFilterToolbar({
     return healthCounts.sem_leitura;
   }
 
+  function vlanCount(key: "all" | BsodVlanFilterKey): number {
+    if (key === "all") return vlanCounts.total;
+    if (key === "com_vlan") return vlanCounts.com_vlan;
+    return vlanCounts.sem_vlan;
+  }
+
   function healthHref(key: "all" | BsodHealthFilter): string {
     return buildBsodHref({
       ...activeState,
@@ -62,18 +83,32 @@ export function BsodFilterToolbar({
     });
   }
 
-  function handleCmtsChange(value: string) {
-    const next = mergeState({
-      cmts: value || undefined,
-      node: undefined,
+  function vlanHref(key: "all" | BsodVlanFilterKey): string {
+    return buildBsodHref({
+      ...activeState,
+      filtro: key === "all" ? undefined : key,
       page: undefined,
     });
-    navigate(next);
+  }
+
+  function handleCmtsChange(value: string) {
+    navigate(
+      mergeState({
+        cmts: value || undefined,
+        node: undefined,
+        page: undefined,
+      }),
+    );
   }
 
   function handleNodeChange(value: string) {
     navigate(mergeState({ node: value || undefined, page: undefined }));
   }
+
+  const activeVlan =
+    activeState.filtro === "com_vlan" || activeState.filtro === "sem_vlan"
+      ? activeState.filtro
+      : undefined;
 
   return (
     <div className="card shadow-sm mb-3 bsod-filter-toolbar">
@@ -105,44 +140,88 @@ export function BsodFilterToolbar({
           </div>
         </div>
 
+        <div className="sir-filter-toolbar__group">
+          <span className="sir-filter-toolbar__heading">VLAN</span>
+          <div className="sir-filter-toolbar__chips">
+            {VLAN_FILTERS.map(({ key, label }) => {
+              const active = key === "all" ? !activeVlan : activeVlan === key;
+              return (
+                <SirFilterChip
+                  key={key}
+                  label={label}
+                  count={vlanCount(key)}
+                  href={vlanHref(key)}
+                  active={active}
+                />
+              );
+            })}
+          </div>
+        </div>
+
         <div className="bsod-filter-toolbar__selects">
           <div className="bsod-filter-field">
             <label className="form-label bsod-filter-field__label" htmlFor="bsod-filter-cmts">
               CMTS
             </label>
-            <select
-              id="bsod-filter-cmts"
-              className="form-select form-select-sm"
-              value={activeState.cmts ?? ""}
-              onChange={(event) => handleCmtsChange(event.target.value)}
-            >
-              <option value="">Todos os CMTS</option>
-              {cmtsOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.value} ({option.total})
-                </option>
-              ))}
-            </select>
+            <div className="bsod-filter-field__control">
+              <select
+                id="bsod-filter-cmts"
+                className="form-select form-select-sm"
+                value={activeState.cmts ?? ""}
+                onChange={(event) => handleCmtsChange(event.target.value)}
+              >
+                <option value="">Todos os CMTS</option>
+                {cmtsOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value} ({option.total})
+                  </option>
+                ))}
+              </select>
+              {activeState.cmts ? (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm bsod-filter-field__clear"
+                  onClick={() => handleCmtsChange("")}
+                  aria-label="Limpar CMTS"
+                  title="Limpar CMTS"
+                >
+                  <i className="bi bi-x-lg" aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div className="bsod-filter-field">
             <label className="form-label bsod-filter-field__label" htmlFor="bsod-filter-node">
               Node
             </label>
-            <select
-              id="bsod-filter-node"
-              className="form-select form-select-sm"
-              value={activeState.node ?? ""}
-              onChange={(event) => handleNodeChange(event.target.value)}
-              disabled={nodeOptions.length === 0 && !activeState.node}
-            >
-              <option value="">Todos os nodes</option>
-              {nodeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.value} ({option.total})
-                </option>
-              ))}
-            </select>
+            <div className="bsod-filter-field__control">
+              <select
+                id="bsod-filter-node"
+                className="form-select form-select-sm"
+                value={activeState.node ?? ""}
+                onChange={(event) => handleNodeChange(event.target.value)}
+                disabled={nodeOptions.length === 0 && !activeState.node}
+              >
+                <option value="">Todos os nodes</option>
+                {nodeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value} ({option.total})
+                  </option>
+                ))}
+              </select>
+              {activeState.node ? (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm bsod-filter-field__clear"
+                  onClick={() => handleNodeChange("")}
+                  aria-label="Limpar node"
+                  title="Limpar node"
+                >
+                  <i className="bi bi-x-lg" aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
