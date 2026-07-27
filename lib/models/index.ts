@@ -14,6 +14,7 @@ export {
 } from "@/lib/models/app-user";
 export { type AppNotificationRecord, type UserNotificationRecord } from "@/lib/models/notification";
 export { type AcionamentoContext, type AcionamentoTechnicianInput } from "@/lib/models/acionamento";
+export { type ValidacaoFcaInput } from "@/lib/models/validacao";
 export {
   type ActiveTratativaRecord,
   type TratativaPublic,

@@ -4,7 +4,9 @@ import {
   type ValidacaoOutcome,
   workflowStatusFromValidacaoOutcome,
 } from "@/lib/config/tratativa-workflow";
+import type { ValidacaoFcaInput } from "@/lib/models/validacao";
 import { parseTratativaRecordKind } from "@/lib/tratativa/keys";
+import { getValidacaoFcaValidationError } from "@/lib/tratativa/validate-validacao-fca";
 import { TratativaForbiddenError, TratativaRequiredError } from "@/lib/queries/tratativas";
 import { TratativaWorkflowError, recordValidacao } from "@/lib/queries/tratativa-workflow";
 
@@ -12,10 +14,10 @@ type ValidacaoBody = {
   recordKind?: string;
   recordKey?: string;
   outcome?: string;
-  note?: string | null;
+  fca?: Partial<ValidacaoFcaInput>;
 };
 
-/** Registra resultado da validação pós-VT. */
+/** Registra resultado da validação pós-VT com FCA. */
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session || session.status !== "ACTIVE") {
@@ -26,9 +28,15 @@ export async function POST(request: Request) {
   const recordKind = parseTratativaRecordKind(body?.recordKind);
   const recordKey = body?.recordKey?.trim();
   const outcome = parseValidacaoOutcome(body?.outcome);
+  const fca = normalizeFcaInput(body?.fca);
 
   if (!recordKind || !recordKey || !outcome) {
     return NextResponse.json({ error: "Parâmetros inválidos" }, { status: 400 });
+  }
+
+  const fcaError = getValidacaoFcaValidationError(fca);
+  if (fcaError) {
+    return NextResponse.json({ error: fcaError }, { status: 400 });
   }
 
   try {
@@ -38,7 +46,7 @@ export async function POST(request: Request) {
       userId: session.userId,
       userRole: session.role,
       outcome,
-      note: body?.note ?? null,
+      fca,
     });
     return NextResponse.json({
       ok: true,
@@ -47,6 +55,15 @@ export async function POST(request: Request) {
   } catch (error) {
     return workflowErrorResponse(error);
   }
+}
+
+/** Normaliza campos FCA do body da API. */
+function normalizeFcaInput(raw: Partial<ValidacaoFcaInput> | undefined): ValidacaoFcaInput {
+  return {
+    fato: String(raw?.fato ?? "").trim(),
+    causa: String(raw?.causa ?? "").trim(),
+    acao: String(raw?.acao ?? "").trim(),
+  };
 }
 
 function parseValidacaoOutcome(value?: string): ValidacaoOutcome | null {

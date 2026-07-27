@@ -1,6 +1,7 @@
 import type { RowDataPacket } from "mysql2";
 import { sirExecute, sirQuery } from "@/lib/db/sir";
 import type { AppUserRole } from "@/lib/models/app-user";
+import type { ValidacaoFcaInput } from "@/lib/models/validacao";
 import { parseValidacaoOutcomeFromNote } from "@/lib/config/tratativa-workflow";
 import type {
   TratativaPublic,
@@ -8,6 +9,10 @@ import type {
   TratativaWorkflowStatus,
 } from "@/lib/models/tratativa";
 import { normalizeTratativaKey } from "@/lib/tratativa/keys";
+import {
+  formatValidacaoFcaMessage,
+  getValidacaoFcaValidationError,
+} from "@/lib/tratativa/validate-validacao-fca";
 import { TratativaForbiddenError, TratativaRequiredError } from "@/lib/queries/tratativas";
 
 type WorkflowEventRow = RowDataPacket & {
@@ -154,14 +159,14 @@ export async function requestValidacao(input: {
   );
 }
 
-/** Registra resultado da validação pós-VT. */
+/** Registra resultado da validação pós-VT com FCA. */
 export async function recordValidacao(input: {
   recordKind: TratativaRecordKind;
   recordKey: string;
   userId: number;
   userRole: AppUserRole;
   outcome: "aprovada" | "reprovada";
-  note?: string | null;
+  fca: ValidacaoFcaInput;
 }): Promise<void> {
   const key = normalizeTratativaKey(input.recordKind, input.recordKey);
   const active = await getActiveTratativaForWorkflow(input);
@@ -170,16 +175,18 @@ export async function recordValidacao(input: {
     throw new TratativaWorkflowError("Registre validação somente com solicitação pendente.");
   }
 
-  const noteParts: string[] = [input.outcome];
-  const trimmedNote = input.note?.trim();
-  if (trimmedNote) noteParts.push(trimmedNote);
-  const note = noteParts.join(" — ").slice(0, 500);
+  const fcaError = getValidacaoFcaValidationError(input.fca);
+  if (fcaError) {
+    throw new TratativaWorkflowError(fcaError);
+  }
+
+  const messageText = formatValidacaoFcaMessage(input.fca);
 
   await sirExecute(
     `INSERT INTO app_tratativa_events
-       (tratativa_id, record_kind, record_key, event_type, user_id, note)
-     VALUES (?, ?, ?, 'VALIDACAO', ?, ?)`,
-    [active.id, input.recordKind, key, input.userId, note],
+       (tratativa_id, record_kind, record_key, event_type, user_id, note, message_text)
+     VALUES (?, ?, ?, 'VALIDACAO', ?, ?, ?)`,
+    [active.id, input.recordKind, key, input.userId, input.outcome, messageText],
   );
 }
 

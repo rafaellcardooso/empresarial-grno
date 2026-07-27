@@ -4,6 +4,8 @@ import { useCallback, useState } from "react";
 import { ValidacaoModal } from "@/components/tratativa/ValidacaoModal";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic, TratativaWorkflowStatus } from "@/lib/models/tratativa";
+import type { ValidacaoFcaInput } from "@/lib/models/validacao";
+import type { ValidacaoOutcome } from "@/lib/config/tratativa-workflow";
 
 type TratativaBsodWorkflowProps = {
   recordKey: string;
@@ -141,30 +143,31 @@ export function TratativaBsodWorkflow({
         open={validacaoOpen}
         recordKey={recordKey}
         onClose={() => setValidacaoOpen(false)}
-        onSubmit={async (outcome, note) => {
+        onSubmit={async (outcome: ValidacaoOutcome, fca: ValidacaoFcaInput) => {
           onBusyChange(true);
           onError(null);
           try {
             const response = await fetch("/api/tratativas/validacao", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ recordKind: "BSOD", recordKey, outcome, note }),
+              body: JSON.stringify({ recordKind: "BSOD", recordKey, outcome, fca }),
             });
             const payload = (await response.json()) as {
               error?: string;
               workflowStatus?: TratativaWorkflowStatus;
             };
             if (!response.ok) {
-              onError(payload.error ?? UI_COPY.tratativaValidacaoError);
-              return false;
+              const message = payload.error ?? UI_COPY.tratativaValidacaoError;
+              onError(message);
+              return message;
             }
             if (payload.workflowStatus) {
               onWorkflowChange({ ...tratativa, workflowStatus: payload.workflowStatus });
             }
-            return true;
+            return null;
           } catch {
             onError(UI_COPY.tratativaValidacaoError);
-            return false;
+            return UI_COPY.tratativaValidacaoError;
           } finally {
             onBusyChange(false);
           }
