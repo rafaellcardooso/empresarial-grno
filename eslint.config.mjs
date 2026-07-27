@@ -22,7 +22,9 @@ const eslintConfig = [
       "_legacy-ui/**",
       "public/assets/**",
       "workers/sir-ingest/node_modules/**",
+      "workers/sir-ingest/.playwright-browsers/**",
       "workers/sir-ingest/states/**",
+      "workers/sir-ingest/telegram/venv/**",
     ],
   },
   {
