@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
         saude: sp.get("saude") ?? undefined,
         cmts: sp.get("cmts") ?? undefined,
         node: sp.get("node") ?? undefined,
+        q: sp.get("q") ?? undefined,
       }),
     );
 

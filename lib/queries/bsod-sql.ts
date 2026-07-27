@@ -1,5 +1,7 @@
 import { BSOD_STATUS_LABELS } from "@/lib/config/metric-labels";
+import { likeContainsPattern, normalizeTableSearch } from "@/lib/config/table-search";
 import { normalizeDateTimeIso } from "@/lib/format/datetime";
+import type { LatestMonitorReading } from "@/lib/queries/bsod-monitor";
 import type { RowDataPacket } from "mysql2";
 
 export type PmeBsodRow = RowDataPacket & {
@@ -31,12 +33,13 @@ export type BsodFilters = {
   ope?: string;
   health?: BsodHealthFilter;
   vlan?: BsodVlanFilter;
+  q?: string;
   limit?: number;
   offset?: number;
 };
 
 export type BsodWhereOptions = {
-  omit?: Array<"health" | "cmts" | "node" | "vlan" | "ope">;
+  omit?: Array<"health" | "cmts" | "node" | "vlan" | "ope" | "q">;
 };
 
 export type BsodFacetCount = {
@@ -51,41 +54,24 @@ export type BsodHealthCounts = {
   sem_leitura: number;
 };
 
-/** Subquery com última leitura por MAC (evita JOIN com tbl_inventory_cables). */
-export const LATEST_MONITOR_SUBQUERY = `
-  SELECT mac, status, tx, rx, mer, time
-  FROM (
-    SELECT mac, status, tx, rx, mer, time,
-      ROW_NUMBER() OVER (PARTITION BY mac ORDER BY time DESC) AS rn
-    FROM tbl_monitor_pme
-  ) ranked
-  WHERE rn = 1
-`;
+export type BsodVlanCounts = {
+  total: number;
+  com_vlan: number;
+  sem_vlan: number;
+};
 
 export const BSOD_PME_FROM = `FROM tbl_inventory_pme i`;
 
-export const BSOD_FROM_WITH_MONITOR = `
-  ${BSOD_PME_FROM}
-  LEFT JOIN (${LATEST_MONITOR_SUBQUERY}) m ON i.mac = m.mac
-`;
-
-export const BSOD_LIST_SELECT = `
+/** Colunas de inventário PME (monitor anexado em memória). */
+export const BSOD_INVENTORY_SELECT = `
   SELECT
     i.id, i.ope, i.cmts, i.mac, i.id_cable, i.node, i.contrato, i.profile,
     NULLIF(TRIM(i.address), '') AS address,
-    i.bsod_vlan, i.vlan,
-    m.status AS monitor_status, m.tx, m.rx, m.mer, m.time AS monitor_time
+    i.bsod_vlan, i.vlan
 `;
 
-/** Indica se filtros exigem JOIN com monitoramento. */
-export function bsodNeedsMonitorJoin(filters: BsodFilters, options?: BsodWhereOptions): boolean {
-  const omit = new Set(options?.omit ?? []);
-  if (!omit.has("health") && filters.health) return true;
-  return false;
-}
-
-/** Monta cláusulas WHERE compartilhadas das consultas BSOD. */
-export function buildBsodWhere(
+/** Monta WHERE só com filtros de inventário (saúde aplicada em memória). */
+export function buildBsodInventoryWhere(
   filters: BsodFilters = {},
   options?: BsodWhereOptions,
 ): {
@@ -96,15 +82,6 @@ export function buildBsodWhere(
   const where: string[] = [];
   const params: unknown[] = [];
 
-  if (!omit.has("health") && filters.health === "online") {
-    where.push("m.status = 1");
-  }
-  if (!omit.has("health") && filters.health === "offline") {
-    where.push("m.status = 0");
-  }
-  if (!omit.has("health") && filters.health === "sem_leitura") {
-    where.push("m.status IS NULL");
-  }
   if (!omit.has("vlan") && filters.vlan === "com_vlan") {
     where.push("i.bsod_vlan > 0");
   }
@@ -124,15 +101,29 @@ export function buildBsodWhere(
     params.push(filters.ope);
   }
 
+  if (!omit.has("q")) {
+    const term = normalizeTableSearch(filters.q);
+    if (term) {
+      const pattern = likeContainsPattern(term);
+      where.push(`(
+        i.mac LIKE ? ESCAPE '!'
+        OR i.contrato LIKE ? ESCAPE '!'
+        OR i.node LIKE ? ESCAPE '!'
+        OR i.cmts LIKE ? ESCAPE '!'
+        OR i.ope LIKE ? ESCAPE '!'
+        OR i.address LIKE ? ESCAPE '!'
+        OR i.id_cable LIKE ? ESCAPE '!'
+        OR i.profile LIKE ? ESCAPE '!'
+        OR i.vlan LIKE ? ESCAPE '!'
+      )`);
+      params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+    }
+  }
+
   return {
     sql: where.length ? `WHERE ${where.join(" AND ")}` : "",
     params,
   };
-}
-
-/** Escolhe FROM com ou sem monitor conforme filtros da consulta. */
-export function bsodFromClause(filters: BsodFilters, options?: BsodWhereOptions): string {
-  return bsodNeedsMonitorJoin(filters, options) ? BSOD_FROM_WITH_MONITOR : BSOD_PME_FROM;
 }
 
 /** Anexa condição extra a uma cláusula WHERE existente ou cria nova. */
@@ -141,11 +132,61 @@ export function appendWhereCondition(whereSql: string, condition: string): strin
   return `${whereSql} AND ${condition}`;
 }
 
+/** Indica se o filtro de saúde está ativo para a consulta. */
+export function bsodHasHealthFilter(filters: BsodFilters, options?: BsodWhereOptions): boolean {
+  const omit = new Set(options?.omit ?? []);
+  return !omit.has("health") && Boolean(filters.health);
+}
+
+/** Verifica se a linha atende ao filtro de saúde SNMP. */
+export function matchesBsodHealth(
+  monitorStatus: number | null,
+  health: BsodHealthFilter | undefined,
+): boolean {
+  if (!health) return true;
+  if (health === "online") return monitorStatus === 1;
+  if (health === "offline") return monitorStatus === 0;
+  return monitorStatus == null;
+}
+
+/** Rank de ordenação: offline → sem leitura → online. */
+export function bsodHealthSortRank(monitorStatus: number | null): number {
+  if (monitorStatus === 0) return 0;
+  if (monitorStatus == null) return 1;
+  return 2;
+}
+
+/** Compara linhas BSOD na ordem padrão da listagem. */
+export function compareBsodRows(a: PmeBsodRow, b: PmeBsodRow): number {
+  const healthDiff = bsodHealthSortRank(a.monitor_status) - bsodHealthSortRank(b.monitor_status);
+  if (healthDiff !== 0) return healthDiff;
+  const cmtsDiff = a.cmts.localeCompare(b.cmts);
+  if (cmtsDiff !== 0) return cmtsDiff;
+  const nodeDiff = a.node.localeCompare(b.node);
+  if (nodeDiff !== 0) return nodeDiff;
+  return a.mac.localeCompare(b.mac);
+}
+
 /** Converte código de status SNMP em rótulo de saúde. */
 function monitorStatusLabel(status: number | null | undefined): string {
   if (status === 1) return BSOD_STATUS_LABELS.online;
   if (status === 0) return BSOD_STATUS_LABELS.offline;
   return BSOD_STATUS_LABELS.semLeitura;
+}
+
+/** Une linha de inventário com a última leitura SNMP (se houver). */
+export function mergeInventoryWithMonitor(
+  inventoryRow: RowDataPacket,
+  reading: LatestMonitorReading | undefined,
+): RowDataPacket {
+  return {
+    ...inventoryRow,
+    monitor_status: reading?.status ?? null,
+    tx: reading?.tx ?? null,
+    rx: reading?.rx ?? null,
+    mer: reading?.mer ?? null,
+    monitor_time: reading?.time ?? null,
+  };
 }
 
 /** Normaliza linha unindo inventário PME com última leitura de monitoramento. */

@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
         saude: sp.get("saude") ?? undefined,
         cmts: sp.get("cmts") ?? undefined,
         node: sp.get("node") ?? undefined,
+        q: sp.get("q") ?? undefined,
       }),
       ope: sp.get("ope") || undefined,
       limit: sp.get("limit") ? Number(sp.get("limit")) : 500,
