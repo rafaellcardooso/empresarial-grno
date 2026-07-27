@@ -3667,3 +3667,12 @@ footer a:hover {
 .driver-popover {
   font-family: var(--font-sans);
 }
+
+/* Confirmação empilhada sobre outro modal (ex.: exclusão de usuário). */
+.confirm-action-modal {
+  z-index: 1065;
+}
+
+.confirm-action-backdrop {
+  z-index: 1060;
+}

@@ -29,4 +29,9 @@ export const AUTH_COPY = {
     "Promover {name} ({corporateId}) a administrador? Terá acesso a aprovações e notificações.",
   demoteStaffConfirm:
     "Remover privilégios de administrador de {name} ({corporateId})? Continuará como usuário comum.",
+  deleteUserTitle: "Excluir usuário",
+  deleteUserConfirm:
+    "Excluir permanentemente {name} ({corporateId})? Esta ação não pode ser desfeita.",
+  deleteUserConfirmAction: "Excluir permanentemente",
+  deleteUserCancel: "Cancelar",
 } as const;

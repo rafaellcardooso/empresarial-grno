@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { AppUserPublic } from "@/lib/models/app-user";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { CORPORATE_ID_HINT, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
+import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 
 const STATUS_LABELS: Record<AppUserPublic["status"], string> = {
   PENDING: "Pendente",
@@ -32,6 +33,7 @@ function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalP
   const [resettingPassword, setResettingPassword] = useState(false);
   const [changingRole, setChangingRole] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     setCorporateId(user.corporateId);
@@ -41,6 +43,7 @@ function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalP
     setConfirmPassword("");
     setError(null);
     setSuccess(null);
+    setConfirmDeleteOpen(false);
   }, [user]);
 
   useEffect(() => {
@@ -161,13 +164,15 @@ function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalP
     }
   }
 
-  /** Exclui usuário após confirmação. */
-  async function handleDelete() {
-    const confirmed = window.confirm(
-      `Excluir permanentemente ${editingUser.name} (${editingUser.corporateId})? Esta ação não pode ser desfeita.`,
-    );
-    if (!confirmed) return;
+  /** Abre o modal de confirmação de exclusão. */
+  function handleDeleteClick() {
+    setError(null);
+    setSuccess(null);
+    setConfirmDeleteOpen(true);
+  }
 
+  /** Exclui usuário após confirmação no modal estilizado. */
+  async function handleDeleteConfirm() {
     setError(null);
     setSuccess(null);
     setDeleting(true);
@@ -177,18 +182,25 @@ function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalP
       const data = (await response.json()) as { error?: string };
 
       if (!response.ok) {
+        setConfirmDeleteOpen(false);
         setError(data.error ?? "Não foi possível excluir.");
         return;
       }
 
+      setConfirmDeleteOpen(false);
       onSaved();
       onClose();
     } catch {
+      setConfirmDeleteOpen(false);
       setError("Erro de conexão. Tente novamente.");
     } finally {
       setDeleting(false);
     }
   }
+
+  const deleteConfirmMessage = AUTH_COPY.deleteUserConfirm
+    .replace("{name}", editingUser.name)
+    .replace("{corporateId}", editingUser.corporateId);
 
   return (
     <>
@@ -352,10 +364,10 @@ function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalP
               <button
                 type="button"
                 className="btn btn-outline-danger"
-                onClick={handleDelete}
-                disabled={deleting}
+                onClick={handleDeleteClick}
+                disabled={deleting || confirmDeleteOpen}
               >
-                {deleting ? "Excluindo…" : "Excluir usuário"}
+                Excluir usuário
               </button>
               <button type="button" className="btn btn-secondary" onClick={onClose}>
                 Fechar
@@ -365,6 +377,18 @@ function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalP
         </div>
       </div>
       <div className="modal-backdrop fade show" aria-hidden="true" onClick={onClose} />
+
+      <ConfirmActionModal
+        open={confirmDeleteOpen}
+        title={AUTH_COPY.deleteUserTitle}
+        message={deleteConfirmMessage}
+        confirmLabel={AUTH_COPY.deleteUserConfirmAction}
+        cancelLabel={AUTH_COPY.deleteUserCancel}
+        confirming={deleting}
+        confirmVariant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
     </>
   );
 }
