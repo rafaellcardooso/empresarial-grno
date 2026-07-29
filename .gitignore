@@ -53,6 +53,10 @@ workers/sir-ingest/**/__pycache__/
 workers/sir-ingest/RalDetail_*.txt
 workers/sir-ingest/states/telegram-tmp/
 
+# TMIP
+workers/tmip/venv/
+workers/tmip/venv/.env
+
 # vercel
 .vercel
 
