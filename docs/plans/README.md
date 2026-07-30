@@ -1,11 +1,7 @@
-# Planos de implementação
+# Planos
 
-Planos estáveis (aprovados / em andamento) versionados no repo.
+Planos aprovados/em implementação podem viver aqui como `AAAA-MM-DD-tema.md`.
 
-| Data | Plano                   | Status |
-| ---- | ----------------------- | ------ |
-| —    | _(nenhum plano aberto)_ | —      |
+Rascunhos do Cursor ficam fora do repo (`~/.cursor/plans/`).
 
-Rascunhos intermediários do Cursor podem ficar só em `~/.cursor/plans/`. Aqui entra a versão fechada (sem secrets).
-
-Mudanças que exigem passos no host após merge vão para [operacao-prod/](../operacao-prod/README.md), não nesta pasta.
+Decisões estáveis: [../architecture/decisions/README.md](../architecture/decisions/README.md).

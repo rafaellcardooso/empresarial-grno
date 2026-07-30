@@ -5,7 +5,7 @@ Obrigado por contribuir com o Empresarial GRNO. Este guia cobre o fluxo mínimo 
 ## Antes de começar
 
 1. Leia [README.md](README.md) e o hub [docs/README.md](docs/README.md).
-2. Suba o lab com [docs/2026-07-27-lab.md](docs/2026-07-27-lab.md).
+2. Suba o lab com [docs/getting-started/development.md](docs/getting-started/development.md).
 3. Alinhe env com `npm run env:check` (rule `.cursor/rules/emp-env.mdc`).
 
 ## Fluxo de trabalho
@@ -16,10 +16,9 @@ Obrigado por contribuir com o Empresarial GRNO. Este guia cobre o fluxo mínimo 
 4. Rode validação local:
 
 ```bash
-npm run format
-npm run lint
+npm run validate
 npx tsc --noEmit
-npm run env:check
+npm run env:check   # se tocou env
 ```
 
 5. Abra PR com resumo e plano de teste. Não faça push forçado em `main`.
@@ -31,7 +30,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) em inglês:
 ```text
 feat: add SIR managerial report page
 fix: abort TMIP sync on empty CSV
-docs: add architecture overview
+docs: restructure production runbooks
 ```
 
 - Assunto imperativo, ≤72 caracteres.
@@ -41,28 +40,33 @@ docs: add architecture overview
 
 ## Escopo de mudanças
 
-| Área                                 | Pode                                         | Não pode                      |
-| ------------------------------------ | -------------------------------------------- | ----------------------------- |
-| Next (`app/`, `components/`, `lib/`) | Ler SIR/HFC; escrever tratativas             | Scraper, escrita em `hfc-sls` |
-| Workers                              | Gravar tabelas do próprio domínio            | Misturar units lab/prod       |
-| Migrations                           | Nova migration numerada em `migrations/sir/` | Alterar migration já aplicada |
-| Env                                  | Espelhar example ↔ local                     | Commitar segredos             |
+| Área                                 | Pode                                                             | Não pode                                                     |
+| ------------------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------ |
+| Next (`app/`, `components/`, `lib/`) | Ler SIR/HFC; escrever tabelas de aplicação (auth, tratativas, …) | Scraper; escrita em `hfc-sls` ou tabelas-fonte `rals`/`recs` |
+| Workers                              | Gravar tabelas do próprio domínio                                | Misturar units lab/prod                                      |
+| Migrations                           | Nova migration numerada em `migrations/sir/`                     | Alterar migration já aplicada                                |
+| Env                                  | Espelhar example ↔ local                                         | Commitar segredos                                            |
+
+Fronteiras: [docs/architecture/data-and-write-boundaries.md](docs/architecture/data-and-write-boundaries.md).
 
 ## Documentação obrigatória
 
 Ao adicionar:
 
 - variável de ambiente → atualizar `.env.example` + local + `npm run env:check`
-- passo manual no host → entrada em `docs/operacao-prod/`
-- comportamento de arquitetura → [docs/architecture.md](docs/architecture.md) e/ou [docs/2026-07-26-operacao.md](docs/2026-07-26-operacao.md)
-- release relevante → entrada em [CHANGELOG.md](CHANGELOG.md)
+- procedimento operacional → runbook em `docs/runbooks/` (ou nota histórica em `docs/changes/` se for só registro)
+- comportamento de arquitetura → `docs/architecture/` e/ou `docs/reference/`
+- release relevante → [CHANGELOG.md](CHANGELOG.md)
+
+Documentação viva **sem** data no nome. Datas só em `docs/changes/` e ADRs.
 
 ## Revisão
 
 Checklist sugerido no PR:
 
-- [ ] Lint/format/TypeScript ok
+- [ ] `npm run validate` e `tsc --noEmit` ok
 - [ ] `env:check` ok se tocou env
 - [ ] Migration numerada e documentada, se houver DDL
 - [ ] UI paginada quando houver listagem potencialmente grande
 - [ ] Sem secrets, dumps ou states versionados
+- [ ] Links de docs apontam para caminhos canônicos

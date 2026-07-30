@@ -11,11 +11,13 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 
 - Seção **Normalizados aguardando confirmação** em RAL, REC e SDH (tratativa ativa após normalização da fonte).
 - Encerramento auditado de tratativas RAL/REC já normalizadas, distinto da liberação.
+- Documentação reestruturada: runbooks de produção, inventário de host, referência e ADRs.
 
 ### Changed
 
-- Documentação alinhada ao padrão de mercado: arquitetura, contribuição, segurança e changelog.
+- Documentação alinhada a fontes estáveis (sem monólitos datados como procedimento atual).
 - SDH permite observação/encerramento de alarme inativo com tratativa aberta; claim permanece só em ativo.
+- Deploy produção padronizado em `npm ci` + restart seletivo; TMIP incluído no install.
 
 ## [2026-07-30]
 

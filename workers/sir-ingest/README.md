@@ -31,15 +31,13 @@ Schema MySQL: `npm run db:migrate` na raiz (tabelas vazias). **Em prod os dados 
 
 Filtro SIR no select: **`REC/DSR/TCQ`** (não DSQ). Classificação REC/DSR/TCQ no frontend por prefixo de `num_recup`.
 
-### Produção
+### Produção / lab
 
-Guia completo: [docs/2026-07-26-deploy-producao.md](../../docs/2026-07-26-deploy-producao.md) · units: [deploy/README.md](../../deploy/README.md) · **Pendências prod:** [docs/operacao-prod/README.md](../../docs/operacao-prod/README.md).
+Runbook: [docs/runbooks/sir-ingest.md](../../docs/runbooks/sir-ingest.md) · install: [docs/runbooks/production-install.md](../../docs/runbooks/production-install.md) · lab: [docs/getting-started/development.md](../../docs/getting-started/development.md).
 
-**Lab:** [docs/2026-07-27-lab.md](../../docs/2026-07-27-lab.md).
+**Primeiro deploy:** `.env` com `SIR_DB_*` iguais ao `.env.local` + credenciais SIR + `npm ci`/`npm install` + `npm run install:browsers` (usuário da unit).
 
-**Primeiro deploy:** `.env` com `SIR_DB_*` iguais ao `.env.local` + credenciais SIR + `npm install && npm run install:browsers` (como `datacenter`).
-
-**Atualização:** após `git pull`, se mudou `workers/sir-ingest/` → `npm install` aqui e `sudo systemctl restart sir-ingest-ral sir-ingest-rec` (Next **não** precisa rebuild só por worker).
+**Atualização:** se mudou este worker → deps aqui + restart RAL/REC (Next não precisa rebuild só por worker).
 
 Os arquivos `states/*.json` guardam ciclo local (IDs vistos, encerramentos) e **não entram no git**. Em deploy novo o worker recria ao rodar; zerá-los só atrasa a detecção de “já visto” / encerramento até o próximo ciclo estável.
 
@@ -77,7 +75,7 @@ Melhorias em relação ao fluxo anterior:
 journalctl -u sir-ingest-ral -u sir-ingest-rec -f
 journalctl -u sir-ingest-ral --since today | grep scrape_cycle
 curl -s http://127.0.0.1:3003/api/saude | jq
-curl -s http://127.0.0.1:3003/api/rals | jq length
+curl -s http://127.0.0.1:3003/api/rals | jq '.status, .total_registros'
 ```
 
 ### Variáveis úteis
@@ -145,11 +143,4 @@ telegram/venv/bin/python3 telegram/simulate-datacenter-notify.py
 Units prod: `deploy/systemd/sir-telegram-ops.service`, `sir-telegram-datacenter.service`.  
 Units lab (`User=rcard`): `deploy/systemd/lab/sir-telegram-ops-lab.service`, `sir-telegram-datacenter-lab.service`.
 
-Roteiro prod (primeira vez): [docs/operacao-prod/2026-07-26-telegram-sir-bots.md](../../docs/operacao-prod/2026-07-26-telegram-sir-bots.md) · mapa units: [docs/2026-07-26-bots-telegram.md](../../docs/2026-07-26-bots-telegram.md).
-
-Para promover a `/usr/local/sir-ingest` (requer root):
-
-```bash
-sudo mv /usr/local/empresarial/workers/sir-ingest /usr/local/sir-ingest
-# ajustar WorkingDirectory, TMPDIR e PLAYWRIGHT_BROWSERS_PATH nos .service
-```
+Runbook: [docs/runbooks/telegram-bots.md](../../docs/runbooks/telegram-bots.md).
