@@ -1,16 +1,11 @@
 import { BSOD_LIST_MAX_PAGE_SIZE, BSOD_LIST_PAGE_SIZE } from "@/lib/config/bsod-pagination";
 import type { RowDataPacket } from "mysql2";
 import { hfcQuery } from "@/lib/db/hfc";
-import { getLatestMonitorByMac } from "@/lib/queries/bsod-monitor";
-import { listMergedPmeRows } from "@/lib/queries/bsod-rows";
+import { countMergedPmeRows, listMergedPmeRows } from "@/lib/queries/bsod-rows";
 import {
-  BSOD_INVENTORY_SELECT,
+  BSOD_JOINED_SELECT,
   BSOD_PME_FROM,
-  buildBsodInventoryWhere,
-  bsodHasHealthFilter,
-  compareBsodRows,
   mapPmeRow,
-  mergeInventoryWithMonitor,
   type BsodFilters,
   type PmeBsodRow,
 } from "@/lib/queries/bsod-sql";
@@ -21,6 +16,7 @@ export type {
   BsodFilters,
   BsodHealthCounts,
   BsodHealthFilter,
+  BsodListScope,
   BsodVlanCounts,
   BsodVlanFilter,
   PmeBsodRow,
@@ -37,17 +33,7 @@ export {
 
 /** Conta PME com os mesmos filtros da listagem. */
 export async function countPmeBsod(filters: BsodFilters = {}): Promise<number> {
-  if (!bsodHasHealthFilter(filters)) {
-    const { sql: whereSql, params } = buildBsodInventoryWhere(filters);
-    const [row] = await hfcQuery<RowDataPacket[]>(
-      `SELECT COUNT(*) AS total ${BSOD_PME_FROM} ${whereSql}`,
-      params,
-    );
-    return Number(row?.total ?? 0);
-  }
-
-  const rows = await listMergedPmeRows(filters);
-  return rows.length;
+  return countMergedPmeRows(filters);
 }
 
 /** Lista PME do inventário ordenado por saúde, CMTS, node e MAC. */
@@ -58,10 +44,8 @@ export async function listPmeBsod(filters: BsodFilters = {}) {
   );
   const offset = Math.max(filters.offset ?? 0, 0);
 
-  const rows = await listMergedPmeRows(filters);
-  rows.sort(compareBsodRows);
-
-  return serializeRows(rows.slice(offset, offset + limit));
+  const rows = await listMergedPmeRows({ ...filters, limit, offset });
+  return serializeRows(rows);
 }
 
 /** Lista todo inventário BSOD filtrado para exportação CSV. */
@@ -69,7 +53,6 @@ export async function listAllPmeBsodForExport(
   filters: Omit<BsodFilters, "limit" | "offset"> = {},
 ): Promise<PmeBsodRow[]> {
   const rows = await listMergedPmeRows(filters);
-  rows.sort(compareBsodRows);
   return serializeRows(rows);
 }
 
@@ -78,23 +61,18 @@ export async function getPmeBsodByMac(mac: string): Promise<PmeBsodRow | null> {
   const normalized = mac.trim().toUpperCase();
   if (!normalized) return null;
 
-  const [inventoryRows, monitorByMac] = await Promise.all([
-    hfcQuery<RowDataPacket[]>(
-      `${BSOD_INVENTORY_SELECT}
-       ${BSOD_PME_FROM}
-       WHERE UPPER(i.mac) = ?
-       LIMIT 1`,
-      [normalized],
-    ),
-    getLatestMonitorByMac(),
-  ]);
+  const inventoryRows = await hfcQuery<RowDataPacket[]>(
+    `${BSOD_JOINED_SELECT}
+     ${BSOD_PME_FROM}
+     WHERE UPPER(i.mac) = ?
+     LIMIT 1`,
+    [normalized],
+  );
 
   const row = inventoryRows[0];
   if (!row) return null;
 
-  return serializeRows([
-    mapPmeRow(mergeInventoryWithMonitor(row, monitorByMac.get(String(row.mac)))),
-  ])[0];
+  return serializeRows([mapPmeRow(row)])[0];
 }
 
 /** Testa conectividade com o banco hfc-sls. */

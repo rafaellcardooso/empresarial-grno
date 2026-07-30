@@ -1,42 +1,51 @@
 import type { RowDataPacket } from "mysql2";
 import { hfcQuery } from "@/lib/db/hfc";
-import { getLatestMonitorByMac } from "@/lib/queries/bsod-monitor";
 import {
-  BSOD_INVENTORY_SELECT,
+  BSOD_HEALTH_SORT_SQL,
+  BSOD_JOINED_SELECT,
   BSOD_PME_FROM,
-  buildBsodInventoryWhere,
-  bsodHasHealthFilter,
+  buildBsodWhere,
   mapPmeRow,
-  matchesBsodHealth,
-  mergeInventoryWithMonitor,
   type BsodFilters,
   type BsodWhereOptions,
   type PmeBsodRow,
 } from "@/lib/queries/bsod-sql";
 
-/** Lista inventário PME filtrado e une com a última leitura SNMP em memória. */
+/** Lista inventário PME com última leitura SNMP, filtros e ordenação no SQL. */
 export async function listMergedPmeRows(
   filters: BsodFilters = {},
   options?: BsodWhereOptions,
 ): Promise<PmeBsodRow[]> {
-  const { sql: whereSql, params } = buildBsodInventoryWhere(filters, options);
-  const [inventoryRows, monitorByMac] = await Promise.all([
-    hfcQuery<RowDataPacket[]>(
-      `${BSOD_INVENTORY_SELECT}
-       ${BSOD_PME_FROM}
-       ${whereSql}`,
-      params,
-    ),
-    getLatestMonitorByMac(),
-  ]);
+  const { sql: whereSql, params } = buildBsodWhere(filters, options);
+  const limit = filters.limit;
+  const offset = filters.offset ?? 0;
 
-  const merged = inventoryRows.map((row) =>
-    mapPmeRow(mergeInventoryWithMonitor(row, monitorByMac.get(String(row.mac)))),
-  );
+  let sql = `
+    ${BSOD_JOINED_SELECT}
+    ${BSOD_PME_FROM}
+    ${whereSql}
+    ORDER BY ${BSOD_HEALTH_SORT_SQL}, i.cmts ASC, i.node ASC, i.mac ASC
+  `;
+  const queryParams = [...params];
 
-  if (!bsodHasHealthFilter(filters, options)) {
-    return merged;
+  if (limit != null) {
+    sql += ` LIMIT ? OFFSET ?`;
+    queryParams.push(Math.max(limit, 1), Math.max(offset, 0));
   }
 
-  return merged.filter((row) => matchesBsodHealth(row.monitor_status, filters.health));
+  const rows = await hfcQuery<RowDataPacket[]>(sql, queryParams);
+  return rows.map((row) => mapPmeRow(row));
+}
+
+/** Conta PME com os mesmos filtros da listagem (saúde incluída no SQL). */
+export async function countMergedPmeRows(
+  filters: BsodFilters = {},
+  options?: BsodWhereOptions,
+): Promise<number> {
+  const { sql: whereSql, params } = buildBsodWhere(filters, options);
+  const [row] = await hfcQuery<RowDataPacket[]>(
+    `SELECT COUNT(*) AS total ${BSOD_PME_FROM} ${whereSql}`,
+    params,
+  );
+  return Number(row?.total ?? 0);
 }

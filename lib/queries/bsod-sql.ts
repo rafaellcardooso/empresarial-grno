@@ -1,12 +1,13 @@
+import { bsodOperationLabel } from "@/lib/config/bsod-locations";
 import { BSOD_STATUS_LABELS } from "@/lib/config/metric-labels";
 import { likeContainsPattern, normalizeTableSearch } from "@/lib/config/table-search";
 import { normalizeDateTimeIso } from "@/lib/format/datetime";
-import type { LatestMonitorReading } from "@/lib/queries/bsod-monitor";
 import type { RowDataPacket } from "mysql2";
 
 export type PmeBsodRow = RowDataPacket & {
   id: number;
   ope: string;
+  ope_label: string;
   cmts: string;
   mac: string;
   id_cable: string;
@@ -26,15 +27,21 @@ export type PmeBsodRow = RowDataPacket & {
 
 export type BsodHealthFilter = "online" | "offline" | "sem_leitura";
 export type BsodVlanFilter = "com_vlan" | "sem_vlan";
+export type BsodListScope = "alarms" | "inventory";
 
 export type BsodFilters = {
   cmts?: string;
   node?: string;
   ope?: string;
+  /** Restringe a um conjunto de operações (ex.: DDD 98 → `sls`). */
+  opes?: string[];
   health?: BsodHealthFilter;
   vlan?: BsodVlanFilter;
   q?: string;
   macs?: string[];
+  /** Exclui MACs (ex.: pendentes = offline sem tratativa ativa). */
+  excludeMacs?: string[];
+  scope?: BsodListScope;
   limit?: number;
   offset?: number;
 };
@@ -61,18 +68,34 @@ export type BsodVlanCounts = {
   sem_vlan: number;
 };
 
-export const BSOD_PME_FROM = `FROM tbl_inventory_pme i`;
+/** JOIN inventário + última leitura SNMP por MAC. */
+export const BSOD_PME_FROM = `
+FROM tbl_inventory_pme i
+LEFT JOIN (
+  SELECT m.mac, m.status, m.tx, m.rx, m.mer, m.time
+  FROM tbl_monitor_pme m
+  INNER JOIN (
+    SELECT mac, MAX(\`time\`) AS max_time
+    FROM tbl_monitor_pme
+    WHERE mac IN (SELECT mac FROM tbl_inventory_pme)
+    GROUP BY mac
+  ) latest ON m.mac = latest.mac AND m.\`time\` = latest.max_time
+) mon ON mon.mac = i.mac
+`;
 
-/** Colunas de inventário PME (monitor anexado em memória). */
-export const BSOD_INVENTORY_SELECT = `
+/** Colunas unidas de inventário e monitoramento. */
+export const BSOD_JOINED_SELECT = `
   SELECT
     i.id, i.ope, i.cmts, i.mac, i.id_cable, i.node, i.contrato, i.profile,
     NULLIF(TRIM(i.address), '') AS address,
-    i.bsod_vlan, i.vlan
+    i.bsod_vlan, i.vlan,
+    mon.status AS monitor_status,
+    mon.tx, mon.rx, mon.mer,
+    mon.time AS monitor_time
 `;
 
-/** Monta WHERE só com filtros de inventário (saúde aplicada em memória). */
-export function buildBsodInventoryWhere(
+/** Monta WHERE com inventário, operações, saúde SNMP e busca. */
+export function buildBsodWhere(
   filters: BsodFilters = {},
   options?: BsodWhereOptions,
 ): {
@@ -101,11 +124,31 @@ export function buildBsodInventoryWhere(
     where.push("i.ope = ?");
     params.push(filters.ope);
   }
+  if (!omit.has("ope") && filters.opes && filters.opes.length > 0) {
+    const placeholders = filters.opes.map(() => "?").join(", ");
+    where.push(`i.ope IN (${placeholders})`);
+    params.push(...filters.opes);
+  }
 
   if (filters.macs && filters.macs.length > 0) {
     const placeholders = filters.macs.map(() => "?").join(", ");
     where.push(`UPPER(i.mac) IN (${placeholders})`);
     params.push(...filters.macs.map((mac) => mac.toUpperCase()));
+  }
+  if (filters.excludeMacs && filters.excludeMacs.length > 0) {
+    const placeholders = filters.excludeMacs.map(() => "?").join(", ");
+    where.push(`UPPER(i.mac) NOT IN (${placeholders})`);
+    params.push(...filters.excludeMacs.map((mac) => mac.toUpperCase()));
+  }
+
+  if (!omit.has("health") && filters.health === "online") {
+    where.push("mon.status = 1");
+  }
+  if (!omit.has("health") && filters.health === "offline") {
+    where.push("mon.status = 0");
+  }
+  if (!omit.has("health") && filters.health === "sem_leitura") {
+    where.push("mon.status IS NULL");
   }
 
   if (!omit.has("q")) {
@@ -139,40 +182,14 @@ export function appendWhereCondition(whereSql: string, condition: string): strin
   return `${whereSql} AND ${condition}`;
 }
 
-/** Indica se o filtro de saúde está ativo para a consulta. */
-export function bsodHasHealthFilter(filters: BsodFilters, options?: BsodWhereOptions): boolean {
-  const omit = new Set(options?.omit ?? []);
-  return !omit.has("health") && Boolean(filters.health);
-}
-
-/** Verifica se a linha atende ao filtro de saúde SNMP. */
-export function matchesBsodHealth(
-  monitorStatus: number | null,
-  health: BsodHealthFilter | undefined,
-): boolean {
-  if (!health) return true;
-  if (health === "online") return monitorStatus === 1;
-  if (health === "offline") return monitorStatus === 0;
-  return monitorStatus == null;
-}
-
-/** Rank de ordenação: offline → sem leitura → online. */
-export function bsodHealthSortRank(monitorStatus: number | null): number {
-  if (monitorStatus === 0) return 0;
-  if (monitorStatus == null) return 1;
-  return 2;
-}
-
-/** Compara linhas BSOD na ordem padrão da listagem. */
-export function compareBsodRows(a: PmeBsodRow, b: PmeBsodRow): number {
-  const healthDiff = bsodHealthSortRank(a.monitor_status) - bsodHealthSortRank(b.monitor_status);
-  if (healthDiff !== 0) return healthDiff;
-  const cmtsDiff = a.cmts.localeCompare(b.cmts);
-  if (cmtsDiff !== 0) return cmtsDiff;
-  const nodeDiff = a.node.localeCompare(b.node);
-  if (nodeDiff !== 0) return nodeDiff;
-  return a.mac.localeCompare(b.mac);
-}
+/** Expressão SQL do rank de saúde para ORDER BY. */
+export const BSOD_HEALTH_SORT_SQL = `
+  CASE
+    WHEN mon.status = 0 THEN 0
+    WHEN mon.status IS NULL THEN 1
+    ELSE 2
+  END
+`;
 
 /** Converte código de status SNMP em rótulo de saúde. */
 function monitorStatusLabel(status: number | null | undefined): string {
@@ -181,27 +198,15 @@ function monitorStatusLabel(status: number | null | undefined): string {
   return BSOD_STATUS_LABELS.semLeitura;
 }
 
-/** Une linha de inventário com a última leitura SNMP (se houver). */
-export function mergeInventoryWithMonitor(
-  inventoryRow: RowDataPacket,
-  reading: LatestMonitorReading | undefined,
-): RowDataPacket {
-  return {
-    ...inventoryRow,
-    monitor_status: reading?.status ?? null,
-    tx: reading?.tx ?? null,
-    rx: reading?.rx ?? null,
-    mer: reading?.mer ?? null,
-    monitor_time: reading?.time ?? null,
-  };
-}
-
 /** Normaliza linha unindo inventário PME com última leitura de monitoramento. */
 export function mapPmeRow(row: RowDataPacket): PmeBsodRow {
   const bsodVlan = Number(row.bsod_vlan);
   const addressRaw = row.address == null ? null : String(row.address).trim();
+  const ope = String(row.ope ?? "");
   return {
     ...(row as PmeBsodRow),
+    ope,
+    ope_label: bsodOperationLabel(ope),
     address: addressRaw || null,
     bsod_vlan: bsodVlan > 0 ? bsodVlan : null,
     monitor_status: row.monitor_status == null ? null : Number(row.monitor_status),
