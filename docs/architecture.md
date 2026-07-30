@@ -1,0 +1,104 @@
+# Arquitetura — Empresarial GRNO
+
+> Última revisão: **2026-07-30** · Índice: [README.md](README.md)
+
+Visão estrutural do monorepo: fronteiras de escrita, fluxos de dados e responsabilidades por camada.
+
+Para rotas, env e APIs detalhadas, use [2026-07-26-operacao.md](2026-07-26-operacao.md).
+
+## Visão geral
+
+```mermaid
+flowchart TB
+  subgraph clients [Clientes]
+    browser[Browser]
+    telegram[Bots Telegram]
+  end
+
+  subgraph next [Next.js :3003]
+    ui[UI App Router]
+    bff[BFF app/api]
+  end
+
+  subgraph writers [Writers]
+    sirIngest[sir-ingest Playwright]
+    tmip[tmip SFTP CSV]
+  end
+
+  subgraph data [Dados]
+    sirDb[(MySQL SIR)]
+    hfcDb[(MySQL hfc-sls)]
+    sirWeb[Portal SIR]
+    tmipSftp[SFTP TMIP]
+  end
+
+  browser --> ui --> bff
+  telegram --> bff
+  bff -->|leitura| sirDb
+  bff -->|leitura| hfcDb
+  bff -->|escrita tratativas| sirDb
+  sirIngest --> sirWeb
+  sirIngest -->|upsert rals/recs| sirDb
+  tmip --> tmipSftp
+  tmip -->|upsert sdh_alarms| sirDb
+```
+
+## Fronteiras
+
+| Camada      | Local                          | Lê               | Escreve                      |
+| ----------- | ------------------------------ | ---------------- | ---------------------------- |
+| UI + BFF    | `app/`, `components/`, `lib/`  | SIR, HFC         | Apenas tratativas/SDH no SIR |
+| Ingest SIR  | `workers/sir-ingest/`          | Portal SIR       | `rals`, `recs`               |
+| Ingest TMIP | `workers/tmip/`                | SFTP CSV         | `sdh_alarms`                 |
+| Telegram    | `workers/sir-ingest/telegram/` | HTTP Next `/api` | Não grava DB                 |
+| Migrations  | `migrations/sir/`              | —                | DDL SIR                      |
+
+Regras duras:
+
+- Scrapers e Selenium **não** entram em `app/`.
+- Este repo **não escreve** no MySQL `hfc-sls`.
+- Next e workers compartilham `SIR_DB_*` idênticos (`npm run env:check`).
+
+## Domínios de monitoramento
+
+| Domínio   | Fonte                 | Tabela / leitura                       | Tratativa                        |
+| --------- | --------------------- | -------------------------------------- | -------------------------------- |
+| RAL / REC | Scrape SIR            | `rals`, `recs`                         | `app_tratativas` + eventos       |
+| BSOD      | Inventário + SNMP HFC | `tbl_inventory_pme`, `tbl_monitor_pme` | `app_tratativas` (workflow FCA)  |
+| SDH       | CSV TMIP >6h          | `sdh_alarms`                           | Colunas + `sdh_tratativa_events` |
+
+## Tratativa unificada
+
+O painel lateral (`TratativaPanel`) assume o registro, registra observação/WhatsApp e mostra cronologia.
+
+- BSOD: validação, FCA e conclusão no mesmo painel.
+- RAL/REC: observação e acionamento enquanto o registro estiver aberto; se a fonte encerrar com tratativa ativa, o item permanece em **Normalizados aguardando confirmação** até liberação.
+- SDH: claim/observação/encerramento com eventos `START` / `OBSERVACAO` / `CLOSE`; alarme `is_active=0` com tratativa aberta permanece na mesma seção de normalizados (claim só em ativo).
+- Concorrência: no máximo uma tratativa ativa por domínio/chave (migration `013`).
+
+## Relatórios
+
+| Rota                     | Semântica                                              |
+| ------------------------ | ------------------------------------------------------ |
+| `/relatorios/tratativas` | Coorte BSOD (iniciados no período) + atividade diária  |
+| `/relatorios/sir`        | Backlog ATIVO RAL/REC separados + aberturas no período |
+| `/relatorios/sdh`        | Backlog ativo atual + histórico de eventos no período  |
+| `/relatorios/exportacao` | CSV de listagens filtradas                             |
+
+Rankings de operadores/logins em relatórios ficam restritos a `STAFF` quando expõem identidade operacional.
+
+## Autenticação
+
+- Sessão JWT em cookie HTTP-only.
+- Perfis: `USER` (aprovado) e `STAFF` (administração e rankings sensíveis).
+- Cadastro em `/cadastro` com aprovação em `/admin/usuarios`.
+
+## Deploy
+
+| Ambiente     | Guia                                                           | Units                          |
+| ------------ | -------------------------------------------------------------- | ------------------------------ |
+| Lab          | [2026-07-27-lab.md](2026-07-27-lab.md)                         | `*-lab*` · `User=rcard`        |
+| Produção     | [2026-07-26-deploy-producao.md](2026-07-26-deploy-producao.md) | sem `-lab` · `User=datacenter` |
+| Delta manual | [operacao-prod/README.md](operacao-prod/README.md)             | migrations, env, venv, timers  |
+
+Porta padrão: **3003**.

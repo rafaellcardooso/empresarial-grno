@@ -1,0 +1,52 @@
+# Changelog
+
+Todas as mudanças relevantes deste projeto são registradas neste arquivo.
+
+O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
+e o versionamento de mensagens de commit segue [Conventional Commits](https://www.conventionalcommits.org/).
+
+## [Unreleased]
+
+### Added
+
+- Seção **Normalizados aguardando confirmação** em RAL, REC e SDH (tratativa ativa após normalização da fonte).
+
+### Changed
+
+- Documentação alinhada ao padrão de mercado: arquitetura, contribuição, segurança e changelog.
+- SDH permite observação/encerramento de alarme inativo com tratativa aberta; claim permanece só em ativo.
+
+## [2026-07-30]
+
+### Added
+
+- Relatório gerencial SIR (`/relatorios/sir`) com backlog RAL/REC, idade, aberturas e CSV.
+- Painel unificado de tratativa (BSOD, SIR e SDH) com assunção, observação e cronologia.
+- Migrations `012`–`014` (colunas padronizadas, unicidade de tratativa ativa, eventos SDH tipados).
+- Validação de CSV/atualidade no ingest TMIP (`SFTP_MAX_AGE_HOURS`).
+- KPIs filtráveis Total / Pendente / Em tratativa em SIR, RAL e REC.
+
+### Changed
+
+- Relatório BSOD usa coorte (chamados iniciados no período) no funil e duração média.
+- Relatório SDH preserva histórico de eventos sem exigir alarme ainda ativo.
+- Ranking “Logins no período” do SDH visível apenas para `STAFF`.
+- Indicador de refresh de monitoramento compactado na navbar.
+
+### Fixed
+
+- Deduplicação determinística da última leitura SNMP no inventário BSOD.
+- Ingest TMIP aborta sincronização quando a fonte está vazia, malformada ou desatualizada.
+
+## [2026-07-29]
+
+### Added
+
+- Ingest TMIP/SDH via SFTP e monitoramento `/sdh`.
+- Relatório analítico SDH (`/relatorios/sdh`).
+- Separação de alarmes BSOD do inventário completo.
+- Paginação SQL do inventário BSOD e refresh global de monitoramento.
+
+### Changed
+
+- Documentação operacional reorganizada com hub `docs/` e registro `operacao-prod/`.

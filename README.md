@@ -30,7 +30,11 @@ Tudo em **[docs/](docs/README.md)**. Comece pelo ambiente:
 | **Lab**      | [docs/2026-07-27-lab.md](docs/2026-07-27-lab.md)                         |
 | **Produção** | [docs/2026-07-26-deploy-producao.md](docs/2026-07-26-deploy-producao.md) |
 | Delta manual | [docs/operacao-prod/](docs/operacao-prod/README.md)                      |
+| Arquitetura  | [docs/architecture.md](docs/architecture.md)                             |
 | Referência   | [docs/2026-07-26-operacao.md](docs/2026-07-26-operacao.md)               |
+| Contribuir   | [CONTRIBUTING.md](CONTRIBUTING.md)                                       |
+| Segurança    | [SECURITY.md](SECURITY.md)                                               |
+| Changelog    | [CHANGELOG.md](CHANGELOG.md)                                             |
 
 ## Setup rápido (lab)
 
@@ -113,5 +117,6 @@ empresarial/
 - Este repo **não escreve** no MySQL `hfc-sls`.
 - Env: `.env.example` ↔ `.env.local` + `npm run env:check`.
 - Lab e prod: secrets e units separados.
+- Contribuição: [CONTRIBUTING.md](CONTRIBUTING.md) · segurança: [SECURITY.md](SECURITY.md) · histórico: [CHANGELOG.md](CHANGELOG.md).
 
 Documentação completa: **[docs/README.md](docs/README.md)**
