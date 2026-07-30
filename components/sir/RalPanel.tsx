@@ -28,6 +28,7 @@ type RalPanelProps = {
   activeQ?: string;
   currentPage: number;
   pageSize: number;
+  normalizedPage?: number;
   exportHref: string;
 };
 
@@ -40,6 +41,7 @@ function ralPageHref(
     ddd?: string;
     tratativa?: SirTreatmentFilter;
     q?: string;
+    normalizedPage?: number;
   } = {},
 ): string {
   return buildSirFilterHref("/sir/rals", { ...filters, page });
@@ -88,6 +90,7 @@ export function RalPanel({
   activeQ,
   currentPage,
   pageSize,
+  normalizedPage,
   exportHref,
 }: RalPanelProps) {
   const router = useRouter();
@@ -100,6 +103,7 @@ export function RalPanel({
     ddd: activeDdd,
     tratativa: activeTreatment,
     q: activeQ,
+    normalizedPage: normalizedPage && normalizedPage > 1 ? normalizedPage : undefined,
   };
 
   const handleSearchCommit = useCallback(
@@ -112,11 +116,12 @@ export function RalPanel({
           ddd: activeDdd,
           tratativa: activeTreatment,
           q,
+          normalizedPage: normalizedPage && normalizedPage > 1 ? normalizedPage : undefined,
         }),
         { scroll: false },
       );
     },
-    [router, activeStatus, activeTipo, activeCf, activeDdd, activeTreatment],
+    [router, activeStatus, activeTipo, activeCf, activeDdd, activeTreatment, normalizedPage],
   );
 
   return (

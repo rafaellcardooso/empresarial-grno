@@ -13,6 +13,7 @@ export type SirCfFilterParams = {
   tratativa?: SirTreatmentFilter;
   q?: string;
   page?: number;
+  normalizedPage?: number;
 };
 
 export type SirRecFilterParams = {
@@ -23,6 +24,7 @@ export type SirRecFilterParams = {
   tratativa?: SirTreatmentFilter;
   q?: string;
   page?: number;
+  normalizedPage?: number;
 };
 
 /** Decodifica CF da query string `cf`. */
@@ -56,6 +58,9 @@ export function buildRecFilterHref(basePath: string, filters: SirRecFilterParams
   if (filters.ddd) params.set("ddd", filters.ddd);
   if (filters.q) params.set("q", filters.q);
   if (filters.page && filters.page > 1) params.set("page", String(filters.page));
+  if (filters.normalizedPage && filters.normalizedPage > 1) {
+    params.set("normalizedPage", String(filters.normalizedPage));
+  }
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;
 }
@@ -83,6 +88,9 @@ export function buildSirFilterHref(basePath: string, filters: SirCfFilterParams 
   if (filters.ddd) params.set("ddd", filters.ddd);
   if (filters.q) params.set("q", filters.q);
   if (filters.page && filters.page > 1) params.set("page", String(filters.page));
+  if (filters.normalizedPage && filters.normalizedPage > 1) {
+    params.set("normalizedPage", String(filters.normalizedPage));
+  }
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;
 }

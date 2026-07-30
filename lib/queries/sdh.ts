@@ -143,6 +143,52 @@ export async function countActiveSdhAlarms(filters: SdhListFilters = {}): Promis
   return Number(rows[0]?.total ?? 0);
 }
 
+/** Lista alarmes inativos no TMIP que ainda possuem tratativa ativa. */
+export async function listInactiveSdhTreatments(
+  filters: Pick<SdhListFilters, "vendor" | "ddd" | "limit" | "offset"> = {},
+): Promise<SdhAlarmListItem[]> {
+  const vendor = sdhVendorSql(filters.vendor);
+  const ddd = sdhDddSql(filters.ddd);
+  const pagination =
+    filters.limit == null
+      ? { clause: "", params: [] as number[] }
+      : { clause: "LIMIT ? OFFSET ?", params: [filters.limit, filters.offset ?? 0] };
+  const rows = await sirQuery<SdhRow[]>(
+    `SELECT a.*, u.corporate_id AS tratativa_user_login
+     FROM sdh_alarms a
+     LEFT JOIN app_users u ON u.id = a.tratativa_user_id
+     WHERE a.is_active = 0 AND a.em_tratativa = 1
+     ${vendor.clause}
+     ${ddd.clause}
+     ORDER BY a.data_alarme DESC, a.id DESC
+     ${pagination.clause}`,
+    [...vendor.params, ...ddd.params, ...pagination.params],
+  );
+  const items = serializeRows(rows) as SdhAlarmListItem[];
+  const histories = await listSdhHistories(items.map((item) => item.id));
+  return items.map((item) => ({
+    ...item,
+    tratativa_history: histories[item.id] ?? [],
+  }));
+}
+
+/** Conta alarmes inativos com tratativa ativa no escopo vendor/DDD. */
+export async function countInactiveSdhTreatments(
+  filters: Pick<SdhListFilters, "vendor" | "ddd"> = {},
+): Promise<number> {
+  const vendor = sdhVendorSql(filters.vendor);
+  const ddd = sdhDddSql(filters.ddd);
+  const rows = await sirQuery<CountRow[]>(
+    `SELECT COUNT(*) AS total
+     FROM sdh_alarms a
+     WHERE a.is_active = 0 AND a.em_tratativa = 1
+     ${vendor.clause}
+     ${ddd.clause}`,
+    [...vendor.params, ...ddd.params],
+  );
+  return Number(rows[0]?.total ?? 0);
+}
+
 /** Retorna contagens globais por vendor entre todos os alarmes ativos. */
 export async function countSdhByVendor(): Promise<SdhVendorCounts> {
   const rows = await sirQuery<VendorAggRow[]>(
@@ -238,11 +284,18 @@ export async function listSdhTratativaEvents(alarmId: number): Promise<SdhTratat
 
 /** Retorna um alarme SDH ativo pelo identificador interno. */
 export async function getActiveSdhAlarmById(id: number): Promise<SdhAlarmListItem | null> {
+  const alarm = await getSdhAlarmById(id);
+  if (!alarm || Number(alarm.is_active) !== 1) return null;
+  return alarm;
+}
+
+/** Retorna um alarme SDH pelo id, ativo ou inativo. */
+export async function getSdhAlarmById(id: number): Promise<SdhAlarmListItem | null> {
   const rows = await sirQuery<SdhRow[]>(
     `SELECT a.*, u.corporate_id AS tratativa_user_login
      FROM sdh_alarms a
      LEFT JOIN app_users u ON u.id = a.tratativa_user_id
-     WHERE a.id = ? AND a.is_active = 1
+     WHERE a.id = ?
      LIMIT 1`,
     [id],
   );
@@ -256,7 +309,7 @@ export async function recordSdhAcionamento(input: {
   userRole: AppUserRole;
   messageText: string;
 }): Promise<void> {
-  const alarm = await getActiveSdhAlarmById(input.alarmId);
+  const alarm = await getSdhAlarmById(input.alarmId);
   if (!alarm || Number(alarm.em_tratativa) !== 1) {
     throw new Error("Marque o alarme SDH em tratativa antes de acionar.");
   }

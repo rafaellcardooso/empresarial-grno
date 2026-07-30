@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RalFilterPanel } from "@/components/sir/RalFilterPanel";
 import { RalPanel } from "@/components/sir/RalPanel";
+import { SirNormalizedTreatments } from "@/components/sir/SirNormalizedTreatments";
 import { SirScopeNav } from "@/components/sir/SirScopeNav";
 import {
   cfFilterFromParam,
@@ -35,12 +36,13 @@ type PageProps = {
     tratativa?: string;
     q?: string;
     page?: string;
+    normalizedPage?: string;
   }>;
 };
 
 /** Resumo e tabela de RAL com filtros por status, tipo e CF. */
 export default async function Page({ searchParams }: PageProps) {
-  const { tipo, cf, ddd, status, tratativa, q, page } = await searchParams;
+  const { tipo, cf, ddd, status, tratativa, q, page, normalizedPage } = await searchParams;
   const activeStatus = sirStatusFromParam(status);
   const activeTipo = isRalTipoKey(tipo) ? tipo : undefined;
   const tipoFilter = ralTipoValueFromParam(tipo);
@@ -49,6 +51,7 @@ export default async function Page({ searchParams }: PageProps) {
   const activeTreatment = sirTreatmentFromParam(tratativa);
   const activeQ = searchQueryFromParam(q);
   const currentPage = sirPageFromParam(page);
+  const currentNormalizedPage = sirPageFromParam(normalizedPage);
   const pageSize = SIR_LIST_PAGE_SIZE;
   const chipFilters = {
     status: activeStatus,
@@ -63,11 +66,21 @@ export default async function Page({ searchParams }: PageProps) {
     limit: pageSize,
     offset: sirListOffset(currentPage, pageSize),
   };
+  const normalizedListFilters = {
+    status: "encerrado" as const,
+    tratativa: "em-tratativa" as const,
+    ddd: activeDdd,
+    limit: pageSize,
+    offset: sirListOffset(currentNormalizedPage, pageSize),
+  };
 
   let rows: Record<string, unknown>[] = [];
   let tratativasByKey: Record<string, TratativaPublic> = {};
+  let normalizedRows: Record<string, unknown>[] = [];
+  let normalizedTratativasByKey: Record<string, TratativaPublic> = {};
   let cfRal: { cf_executante: string; total: number }[] = [];
   let totalCount = 0;
+  let normalizedTotal = 0;
   let totalAllTipos = 0;
   let totalAllDdds = 0;
   let treatmentTotal = 0;
@@ -77,31 +90,53 @@ export default async function Page({ searchParams }: PageProps) {
   let error: string | null = null;
 
   try {
-    const [ralRows, total, totalAll, allDdds, byCf, tipoCounts, byDdd, allOpen, activeTreatments] =
-      await Promise.all([
-        listRals(listFilters),
-        countRals(listFilters),
-        countRals({ status: activeStatus, cf: activeCf, ddd: activeDdd }),
-        countRals({
-          status: activeStatus,
-          tipo: tipoFilter,
-          cf: activeCf,
-          q: activeQ,
-        }),
-        countRalsByCf(activeStatus, activeDdd),
-        countRalsByTipo(activeStatus, activeCf, activeDdd),
-        countRalsByDdd({
-          status: activeStatus,
-          tipo: tipoFilter,
-          cf: activeCf,
-          q: activeQ,
-        }),
-        countRals({ status: "ativo" }),
-        countActiveSirTratativasByKind("RAL"),
-      ]);
+    const [
+      ralRows,
+      total,
+      totalAll,
+      allDdds,
+      byCf,
+      tipoCounts,
+      byDdd,
+      allOpen,
+      activeTreatments,
+      normalizedRalRows,
+      normalizedCount,
+    ] = await Promise.all([
+      listRals(listFilters),
+      countRals(listFilters),
+      countRals({ status: activeStatus, cf: activeCf, ddd: activeDdd }),
+      countRals({
+        status: activeStatus,
+        tipo: tipoFilter,
+        cf: activeCf,
+        q: activeQ,
+      }),
+      countRalsByCf(activeStatus, activeDdd),
+      countRalsByTipo(activeStatus, activeCf, activeDdd),
+      countRalsByDdd({
+        status: activeStatus,
+        tipo: tipoFilter,
+        cf: activeCf,
+        q: activeQ,
+      }),
+      countRals({ status: "ativo" }),
+      countActiveSirTratativasByKind("RAL"),
+      listRals(normalizedListFilters),
+      countRals({
+        status: "encerrado",
+        tratativa: "em-tratativa",
+        ddd: activeDdd,
+      }),
+    ]);
     rows = ralRows as Record<string, unknown>[];
-    tratativasByKey = await loadTratativasForSirRows("RAL", ralRows);
+    normalizedRows = normalizedRalRows as Record<string, unknown>[];
+    [tratativasByKey, normalizedTratativasByKey] = await Promise.all([
+      loadTratativasForSirRows("RAL", ralRows),
+      loadTratativasForSirRows("RAL", normalizedRalRows),
+    ]);
     totalCount = total;
+    normalizedTotal = normalizedCount;
     totalAllTipos = totalAll;
     totalAllDdds = allDdds;
     treatmentTotal = allOpen;
@@ -153,6 +188,7 @@ export default async function Page({ searchParams }: PageProps) {
         activeQ={activeQ}
         currentPage={currentPage}
         pageSize={pageSize}
+        normalizedPage={currentNormalizedPage}
         exportHref={buildSirExportHref("/api/export/sir/rals", {
           status: activeStatus,
           tipo: activeTipo,
@@ -161,6 +197,23 @@ export default async function Page({ searchParams }: PageProps) {
           tratativa: activeTreatment,
           q: activeQ,
         })}
+      />
+      <SirNormalizedTreatments
+        recordLabel="RAL"
+        rows={normalizedRows}
+        tratativasByKey={normalizedTratativasByKey}
+        total={normalizedTotal}
+        currentPage={currentNormalizedPage}
+        pageSize={pageSize}
+        listFilters={{
+          status: activeStatus,
+          tipo: activeTipo,
+          cf: activeCf,
+          ddd: activeDdd,
+          tratativa: activeTreatment,
+          q: activeQ,
+          page: currentPage > 1 ? currentPage : undefined,
+        }}
       />
     </>
   );

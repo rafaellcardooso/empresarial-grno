@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RecFilterPanel } from "@/components/sir/RecFilterPanel";
 import { RecPanel } from "@/components/sir/RecPanel";
+import { SirNormalizedTreatments } from "@/components/sir/SirNormalizedTreatments";
 import { SirScopeNav } from "@/components/sir/SirScopeNav";
 import {
   cfFilterFromParam,
@@ -35,12 +36,13 @@ type PageProps = {
     tratativa?: string;
     q?: string;
     page?: string;
+    normalizedPage?: string;
   }>;
 };
 
 /** Resumo e tabela REC/DSR/TCQ com filtros por status, tipo e CF. */
 export default async function Page({ searchParams }: PageProps) {
-  const { tipo, cf, ddd, status, tratativa, q, page } = await searchParams;
+  const { tipo, cf, ddd, status, tratativa, q, page, normalizedPage } = await searchParams;
   const activeStatus = sirStatusFromParam(status);
   const activeTipo = isRecTipoKey(tipo) ? tipo : undefined;
   const activeCf = cfFilterFromParam(cf);
@@ -48,6 +50,7 @@ export default async function Page({ searchParams }: PageProps) {
   const activeTreatment = sirTreatmentFromParam(tratativa);
   const activeQ = searchQueryFromParam(q);
   const currentPage = sirPageFromParam(page);
+  const currentNormalizedPage = sirPageFromParam(normalizedPage);
   const pageSize = SIR_LIST_PAGE_SIZE;
   const chipFilters = {
     status: activeStatus,
@@ -62,11 +65,21 @@ export default async function Page({ searchParams }: PageProps) {
     limit: pageSize,
     offset: sirListOffset(currentPage, pageSize),
   };
+  const normalizedListFilters = {
+    status: "encerrado" as const,
+    tratativa: "em-tratativa" as const,
+    ddd: activeDdd,
+    limit: pageSize,
+    offset: sirListOffset(currentNormalizedPage, pageSize),
+  };
 
   let rows: Record<string, unknown>[] = [];
   let tratativasByKey: Record<string, TratativaPublic> = {};
+  let normalizedRows: Record<string, unknown>[] = [];
+  let normalizedTratativasByKey: Record<string, TratativaPublic> = {};
   let cfRec: { cf_executante: string; total: number }[] = [];
   let totalCount = 0;
+  let normalizedTotal = 0;
   let totalAllTipos = 0;
   let totalAllDdds = 0;
   let treatmentTotal = 0;
@@ -76,31 +89,53 @@ export default async function Page({ searchParams }: PageProps) {
   let error: string | null = null;
 
   try {
-    const [recRows, total, totalAll, allDdds, byCf, tipoCounts, byDdd, allOpen, activeTreatments] =
-      await Promise.all([
-        listRecs(listFilters),
-        countRecs(listFilters),
-        countRecs({ status: activeStatus, cf: activeCf, ddd: activeDdd }),
-        countRecs({
-          status: activeStatus,
-          tipo: activeTipo,
-          cf: activeCf,
-          q: activeQ,
-        }),
-        countRecsByCf(activeStatus, activeDdd),
-        countRecsByTipo(activeStatus, activeCf, activeDdd),
-        countRecsByDdd({
-          status: activeStatus,
-          tipo: activeTipo,
-          cf: activeCf,
-          q: activeQ,
-        }),
-        countRecs({ status: "ativo" }),
-        countActiveSirTratativasByKind("REC"),
-      ]);
+    const [
+      recRows,
+      total,
+      totalAll,
+      allDdds,
+      byCf,
+      tipoCounts,
+      byDdd,
+      allOpen,
+      activeTreatments,
+      normalizedRecRows,
+      normalizedCount,
+    ] = await Promise.all([
+      listRecs(listFilters),
+      countRecs(listFilters),
+      countRecs({ status: activeStatus, cf: activeCf, ddd: activeDdd }),
+      countRecs({
+        status: activeStatus,
+        tipo: activeTipo,
+        cf: activeCf,
+        q: activeQ,
+      }),
+      countRecsByCf(activeStatus, activeDdd),
+      countRecsByTipo(activeStatus, activeCf, activeDdd),
+      countRecsByDdd({
+        status: activeStatus,
+        tipo: activeTipo,
+        cf: activeCf,
+        q: activeQ,
+      }),
+      countRecs({ status: "ativo" }),
+      countActiveSirTratativasByKind("REC"),
+      listRecs(normalizedListFilters),
+      countRecs({
+        status: "encerrado",
+        tratativa: "em-tratativa",
+        ddd: activeDdd,
+      }),
+    ]);
     rows = recRows as Record<string, unknown>[];
-    tratativasByKey = await loadTratativasForSirRows("REC", recRows);
+    normalizedRows = normalizedRecRows as Record<string, unknown>[];
+    [tratativasByKey, normalizedTratativasByKey] = await Promise.all([
+      loadTratativasForSirRows("REC", recRows),
+      loadTratativasForSirRows("REC", normalizedRecRows),
+    ]);
     totalCount = total;
+    normalizedTotal = normalizedCount;
     totalAllTipos = totalAll;
     totalAllDdds = allDdds;
     treatmentTotal = allOpen;
@@ -152,6 +187,7 @@ export default async function Page({ searchParams }: PageProps) {
         activeQ={activeQ}
         currentPage={currentPage}
         pageSize={pageSize}
+        normalizedPage={currentNormalizedPage}
         exportHref={buildRecExportHref("/api/export/sir/recs", {
           status: activeStatus,
           tipo: activeTipo,
@@ -160,6 +196,23 @@ export default async function Page({ searchParams }: PageProps) {
           tratativa: activeTreatment,
           q: activeQ,
         })}
+      />
+      <SirNormalizedTreatments
+        recordLabel="REC"
+        rows={normalizedRows}
+        tratativasByKey={normalizedTratativasByKey}
+        total={normalizedTotal}
+        currentPage={currentNormalizedPage}
+        pageSize={pageSize}
+        listFilters={{
+          status: activeStatus,
+          tipo: activeTipo,
+          cf: activeCf,
+          ddd: activeDdd,
+          tratativa: activeTreatment,
+          q: activeQ,
+          page: currentPage > 1 ? currentPage : undefined,
+        }}
       />
     </>
   );

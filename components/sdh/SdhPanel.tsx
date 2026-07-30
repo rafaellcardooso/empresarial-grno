@@ -37,6 +37,7 @@ type SdhPanelProps = {
   activeQ?: string;
   currentPage: number;
   pageSize: number;
+  normalizedPage?: number;
   exportHref: string;
 };
 
@@ -53,9 +54,11 @@ export function SdhPanel({
   activeQ,
   currentPage,
   pageSize,
+  normalizedPage,
   exportHref,
 }: SdhPanelProps) {
   const router = useRouter();
+  const preservedNormalized = normalizedPage && normalizedPage > 1 ? normalizedPage : undefined;
 
   const handleSearchCommit = useCallback(
     (q: string | undefined) => {
@@ -65,11 +68,12 @@ export function SdhPanel({
           ddd: activeDdd,
           status: activeStatus,
           q,
+          normalizedPage: preservedNormalized,
         }),
         { scroll: false },
       );
     },
-    [activeDdd, activeStatus, activeVendor, router],
+    [activeDdd, activeStatus, activeVendor, preservedNormalized, router],
   );
 
   const vendorLabel = activeVendor ? SDH_VENDOR_LABELS[activeVendor] : "Todos";
@@ -103,6 +107,7 @@ export function SdhPanel({
                     ddd: item.ddd,
                     status: activeStatus,
                     q: activeQ,
+                    normalizedPage: preservedNormalized,
                   })}
                   active={activeDdd === item.ddd}
                 />
@@ -145,6 +150,7 @@ export function SdhPanel({
                 ddd: activeDdd,
                 status: item.status,
                 q: activeQ,
+                normalizedPage: preservedNormalized,
               })}
               active={activeStatus === item.status}
               variant={item.variant}
@@ -178,6 +184,7 @@ export function SdhPanel({
               status: activeStatus,
               q: activeQ,
               page,
+              normalizedPage: preservedNormalized,
             })
           }
         />

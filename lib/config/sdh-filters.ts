@@ -43,6 +43,7 @@ type SdhHrefFilters = {
   status?: SdhStatusFilter;
   q?: string;
   page?: number;
+  normalizedPage?: number;
 };
 
 /** Monta href da página SDH com filtros de vendor e DDD. */
@@ -53,6 +54,9 @@ export function buildSdhFilterHref(filters: SdhHrefFilters = {}): string {
   if (filters.status) params.set("status", filters.status);
   if (filters.q) params.set("q", filters.q);
   if (filters.page && filters.page > 1) params.set("page", String(filters.page));
+  if (filters.normalizedPage && filters.normalizedPage > 1) {
+    params.set("normalizedPage", String(filters.normalizedPage));
+  }
   const qs = params.toString();
   return qs ? `/sdh?${qs}` : "/sdh";
 }

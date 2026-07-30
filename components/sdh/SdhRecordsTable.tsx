@@ -13,14 +13,17 @@ import { formatDateTimePtBr } from "@/lib/format/datetime";
 
 type SdhRecordsTableProps = {
   rows: SdhAlarmListItem[];
+  variant?: "default" | "normalized";
   empty?: string;
 };
 
 /** Tabela SDH prioritária com painel unificado de tratativa. */
 export function SdhRecordsTable({
   rows,
+  variant = "default",
   empty = "Nenhum alarme SDH ativo para os filtros selecionados.",
 }: SdhRecordsTableProps) {
+  void variant;
   const router = useRouter();
   const [selected, setSelected] = useState<SdhAlarmListItem | null>(null);
   const [treatId, setTreatId] = useState<string | null>(null);

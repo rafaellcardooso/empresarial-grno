@@ -1,3 +1,4 @@
+import { SdhNormalizedTreatments } from "@/components/sdh/SdhNormalizedTreatments";
 import { SdhPanel } from "@/components/sdh/SdhPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
@@ -10,10 +11,12 @@ import {
 import { SDH_LIST_PAGE_SIZE, sdhListOffset, sdhPageFromParam } from "@/lib/config/sdh-pagination";
 import {
   countActiveSdhAlarms,
+  countInactiveSdhTreatments,
   countSdhByDdd,
   countSdhByStatus,
   countSdhByVendor,
   listActiveSdhAlarms,
+  listInactiveSdhTreatments,
 } from "@/lib/queries/sdh";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +29,7 @@ type PageProps = {
     status?: string;
     q?: string;
     page?: string;
+    normalizedPage?: string;
   }>;
 };
 
@@ -37,6 +41,7 @@ export default async function Page({ searchParams }: PageProps) {
   const status = parseSdhStatusParam(params.status);
   const q = parseSdhSearchParam(params.q);
   const currentPage = sdhPageFromParam(params.page);
+  const currentNormalizedPage = sdhPageFromParam(params.normalizedPage);
   const pageSize = SDH_LIST_PAGE_SIZE;
   const filters = {
     vendor,
@@ -46,14 +51,23 @@ export default async function Page({ searchParams }: PageProps) {
     limit: pageSize,
     offset: sdhListOffset(currentPage, pageSize),
   };
+  const normalizedFilters = {
+    vendor,
+    ddd,
+    limit: pageSize,
+    offset: sdhListOffset(currentNormalizedPage, pageSize),
+  };
 
-  const [rows, total, vendorCounts, dddCounts, statusCounts] = await Promise.all([
-    listActiveSdhAlarms(filters),
-    countActiveSdhAlarms(filters),
-    countSdhByVendor(),
-    countSdhByDdd(vendor),
-    countSdhByStatus({ vendor, ddd, q }),
-  ]);
+  const [rows, total, vendorCounts, dddCounts, statusCounts, normalizedRows, normalizedTotal] =
+    await Promise.all([
+      listActiveSdhAlarms(filters),
+      countActiveSdhAlarms(filters),
+      countSdhByVendor(),
+      countSdhByDdd(vendor),
+      countSdhByStatus({ vendor, ddd, q }),
+      listInactiveSdhTreatments(normalizedFilters),
+      countInactiveSdhTreatments({ vendor, ddd }),
+    ]);
 
   return (
     <>
@@ -73,7 +87,19 @@ export default async function Page({ searchParams }: PageProps) {
         activeQ={q}
         currentPage={currentPage}
         pageSize={pageSize}
+        normalizedPage={currentNormalizedPage}
         exportHref={buildSdhExportHref({ vendor, ddd, status, q })}
+      />
+      <SdhNormalizedTreatments
+        rows={normalizedRows}
+        total={normalizedTotal}
+        currentPage={currentNormalizedPage}
+        pageSize={pageSize}
+        activeVendor={vendor}
+        activeDdd={ddd}
+        activeStatus={status}
+        activeQ={q}
+        page={currentPage > 1 ? currentPage : undefined}
       />
     </>
   );

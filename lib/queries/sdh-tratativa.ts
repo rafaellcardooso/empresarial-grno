@@ -24,13 +24,13 @@ export class SdhTratativaConflictError extends Error {
   }
 }
 
-/** Lê alarme ativo para checagem de conflito pós-claim. */
-async function readActiveAlarm(id: number): Promise<SdhAlarmListItem | null> {
+/** Lê alarme por id para checagem pós-update (ativo ou inativo). */
+async function readAlarm(id: number): Promise<SdhAlarmListItem | null> {
   const rows = await sirQuery<SdhRow[]>(
     `SELECT a.*, u.corporate_id AS tratativa_user_login
      FROM sdh_alarms a
      LEFT JOIN app_users u ON u.id = a.tratativa_user_id
-     WHERE a.id = ? AND a.is_active = 1
+     WHERE a.id = ?
      LIMIT 1`,
     [id],
   );
@@ -70,7 +70,7 @@ export async function updateSdhTratativaStatus(
              tratativa_user_id = NULL,
              tratativa_marked_at = NOW(),
              tratativa_observacao = ?
-         WHERE id = ? AND is_active = 1 AND em_tratativa = 1
+         WHERE id = ? AND em_tratativa = 1
            AND (tratativa_user_id = ? OR ? = 1)`;
       params = [observacao, input.id, input.userId, isStaff ? 1 : 0];
     } else {
@@ -79,7 +79,7 @@ export async function updateSdhTratativaStatus(
              tratativa_user_id = COALESCE(tratativa_user_id, ?),
              tratativa_marked_at = NOW(),
              tratativa_observacao = ?
-         WHERE id = ? AND is_active = 1 AND em_tratativa = 1
+         WHERE id = ? AND em_tratativa = 1
            AND (tratativa_user_id = ? OR ? = 1)`;
       params = [input.userId, observacao, input.id, input.userId, isStaff ? 1 : 0];
     }
@@ -88,7 +88,7 @@ export async function updateSdhTratativaStatus(
     if ("affectedRows" in result && result.affectedRows === 0) {
       await connection.rollback();
       if (mode === "claim") {
-        const current = await readActiveAlarm(input.id);
+        const current = await readAlarm(input.id);
         if (current && Number(current.em_tratativa) === 1) {
           throw new SdhTratativaConflictError(current.tratativa_user_login ?? null);
         }
@@ -111,5 +111,5 @@ export async function updateSdhTratativaStatus(
     connection.release();
   }
 
-  return readActiveAlarm(input.id);
+  return readAlarm(input.id);
 }

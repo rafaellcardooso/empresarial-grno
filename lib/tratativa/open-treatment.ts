@@ -9,6 +9,7 @@ import {
 } from "@/lib/queries/tratativas";
 import {
   getActiveSdhAlarmById,
+  getSdhAlarmById,
   listSdhTratativaEvents,
   SdhTratativaConflictError,
   updateSdhTratativaStatus,
@@ -93,20 +94,31 @@ async function openSharedSession(
   };
 }
 
-/** Monta sessão SDH com assunção automática. */
+/** Monta sessão SDH com assunção automática em alarmes ativos. */
 async function openSdhSession(input: OpenTreatmentInput): Promise<TreatmentSession> {
   const alarmId = Number(input.recordKey);
   if (!Number.isInteger(alarmId) || alarmId <= 0) {
     throw new Error("Alarme SDH inválido.");
   }
 
-  let alarm = await getActiveSdhAlarmById(alarmId);
+  let alarm = await getSdhAlarmById(alarmId);
   if (!alarm) throw new Error("Alarme SDH não encontrado.");
 
   let canManage = false;
   let readOnlyReason: string | undefined;
+  const isActive = Number(alarm.is_active) === 1;
+  const inTreatment = Number(alarm.em_tratativa) === 1;
 
-  if (Number(alarm.em_tratativa) !== 1) {
+  if (!isActive) {
+    if (!inTreatment) {
+      throw new Error("Alarme SDH inativo sem tratativa aberta.");
+    }
+    if (alarm.tratativa_user_id === input.userId || input.userRole === "STAFF") {
+      canManage = true;
+    } else {
+      readOnlyReason = `Em tratativa por ${alarm.tratativa_user_login ?? "outro usuário"}.`;
+    }
+  } else if (!inTreatment) {
     try {
       const claimed = await updateSdhTratativaStatus({
         id: alarmId,

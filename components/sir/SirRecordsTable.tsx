@@ -19,6 +19,7 @@ type SirRecordsTableProps = {
   rows: Record<string, unknown>[];
   recordLabel: "RAL" | "REC";
   tratativasByKey?: Record<string, TratativaPublic>;
+  variant?: "default" | "normalized";
   empty?: string;
 };
 
@@ -37,6 +38,7 @@ export function SirRecordsTable({
   rows,
   recordLabel,
   tratativasByKey = {},
+  variant = "default",
   empty,
 }: SirRecordsTableProps) {
   const router = useRouter();
@@ -106,7 +108,16 @@ export function SirRecordsTable({
         rows={rows}
         empty={empty}
         renderCell={(key, value, row) =>
-          renderSirCell(key, value, row, openDetalhes, recordLabel, tratativas, setTreatKey)
+          renderSirCell(
+            key,
+            value,
+            row,
+            openDetalhes,
+            recordLabel,
+            tratativas,
+            setTreatKey,
+            variant,
+          )
         }
       />
 
@@ -137,6 +148,7 @@ function renderSirCell(
   recordLabel: "RAL" | "REC",
   tratativas: Record<string, TratativaPublic>,
   onTreat: (recordKey: string) => void,
+  variant: "default" | "normalized",
 ) {
   const recordKey = String(row.num_recup ?? "");
   const normalizedKey = normalizeTratativaKey(recordLabel, recordKey);
@@ -159,6 +171,10 @@ function renderSirCell(
     return <TratativaStatusCell tratativa={tratativa} isRecordOpen={isRecordOpen} />;
   }
   if (key === "tratativa_actions") {
+    if (variant === "normalized") {
+      if (!tratativa) return "—";
+      return <TratativaTreatButton onClick={() => onTreat(recordKey)} />;
+    }
     if (!isRecordOpen) return "—";
     return <TratativaTreatButton onClick={() => onTreat(recordKey)} />;
   }

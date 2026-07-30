@@ -11,6 +11,13 @@ export const UI_COPY = {
   tableSearchBsod: "Buscar por MAC, contrato, node ou CMTS…",
   sirViewDetails: "Ver detalhes",
   tratativaTreat: "Tratar",
+  normalizedAwaitingTitle: "Normalizados aguardando confirmação",
+  normalizedAwaitingSirLead:
+    "Registros encerrados na fonte com tratativa ativa permanecem visíveis até a liberação.",
+  normalizedAwaitingSirEmpty: "Nenhuma tratativa normalizada aguardando confirmação.",
+  normalizedAwaitingSdhLead:
+    "Alarmes inativos no TMIP com tratativa ativa permanecem visíveis até o encerramento.",
+  normalizedAwaitingSdhEmpty: "Nenhuma tratativa SDH normalizada aguardando confirmação.",
   tratativaAssume: "Assumir",
   tratativaRelease: "Liberar",
   tratativaSince: "Desde",
@@ -21,7 +28,6 @@ export const UI_COPY = {
   acionamentoOpen: "Acionar",
   acionamentoTechnicianSection: "Dados do técnico",
   acionamentoPreviewSection: "Mensagem",
-  acionamentoWhatsappTarget: "Menção no grupo",
   acionamentoJanela: "JANELA",
   acionamentoPreviewEmpty:
     "Preencha a janela e os dados do técnico (nome, cidade, login, RG) para visualizar a mensagem.",

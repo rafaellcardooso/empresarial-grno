@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import {
   listSdhTratativaEvents,
-  getActiveSdhAlarmById,
+  getSdhAlarmById,
   updateSdhTratativaStatus,
 } from "@/lib/queries/sdh";
 
@@ -55,16 +55,26 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const current = await getActiveSdhAlarmById(id);
+    const current = await getSdhAlarmById(id);
     if (!current) {
       return NextResponse.json({ error: "Alarme não encontrado" }, { status: 404 });
     }
 
-    const mode = !body.emTratativa
-      ? "close"
-      : Number(current.em_tratativa) === 1
-        ? "update"
-        : "claim";
+    const isActive = Number(current.is_active) === 1;
+    const inTreatment = Number(current.em_tratativa) === 1;
+
+    if (!body.emTratativa) {
+      if (!inTreatment) {
+        return NextResponse.json({ error: "Alarme sem tratativa ativa." }, { status: 409 });
+      }
+    } else if (!inTreatment && !isActive) {
+      return NextResponse.json(
+        { error: "Não é possível assumir alarme SDH já normalizado." },
+        { status: 409 },
+      );
+    }
+
+    const mode = !body.emTratativa ? "close" : inTreatment ? "update" : "claim";
 
     const alarm = await updateSdhTratativaStatus({
       id,

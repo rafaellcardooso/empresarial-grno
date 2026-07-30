@@ -28,6 +28,7 @@ type RecPanelProps = {
   activeQ?: string;
   currentPage: number;
   pageSize: number;
+  normalizedPage?: number;
   exportHref: string;
 };
 
@@ -40,6 +41,7 @@ function recPageHref(
     ddd?: string;
     tratativa?: SirTreatmentFilter;
     q?: string;
+    normalizedPage?: number;
   } = {},
 ): string {
   return buildRecFilterHref("/sir/recs", { ...filters, page });
@@ -88,6 +90,7 @@ export function RecPanel({
   activeQ,
   currentPage,
   pageSize,
+  normalizedPage,
   exportHref,
 }: RecPanelProps) {
   const router = useRouter();
@@ -100,6 +103,7 @@ export function RecPanel({
     ddd: activeDdd,
     tratativa: activeTreatment,
     q: activeQ,
+    normalizedPage: normalizedPage && normalizedPage > 1 ? normalizedPage : undefined,
   };
 
   const handleSearchCommit = useCallback(
@@ -112,11 +116,12 @@ export function RecPanel({
           ddd: activeDdd,
           tratativa: activeTreatment,
           q,
+          normalizedPage: normalizedPage && normalizedPage > 1 ? normalizedPage : undefined,
         }),
         { scroll: false },
       );
     },
-    [router, activeStatus, activeTipo, activeCf, activeDdd, activeTreatment],
+    [router, activeStatus, activeTipo, activeCf, activeDdd, activeTreatment, normalizedPage],
   );
 
   return (

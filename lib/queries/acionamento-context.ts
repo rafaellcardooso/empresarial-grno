@@ -6,7 +6,7 @@ import type {
   SirAcionamentoContext,
 } from "@/lib/models/acionamento";
 import { getPmeBsodByMac } from "@/lib/queries/bsod";
-import { getActiveSdhAlarmById } from "@/lib/queries/sdh";
+import { getSdhAlarmById } from "@/lib/queries/sdh";
 import { getRalByNum, getRecByNum } from "@/lib/queries/sir";
 import { bsodSintomaFromMonitorLabel } from "@/lib/tratativa/build-acionamento-message";
 import { sirSintomaFromContext } from "@/lib/tratativa/build-sir-acionamento-message";
@@ -33,8 +33,8 @@ export async function getAcionamentoContext(
 async function getSdhAcionamentoContext(recordKey: string): Promise<SdhAcionamentoContext | null> {
   const alarmId = Number(recordKey);
   if (!Number.isInteger(alarmId) || alarmId <= 0) return null;
-  const row = await getActiveSdhAlarmById(alarmId);
-  if (!row) return null;
+  const row = await getSdhAlarmById(alarmId);
+  if (!row || Number(row.em_tratativa) !== 1) return null;
   return {
     recordKind: "SDH",
     recordKey,
