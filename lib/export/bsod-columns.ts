@@ -3,8 +3,8 @@ import type { CsvColumn } from "@/lib/export/csv";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
 
 export const BSOD_EXPORT_COLUMNS: CsvColumn<Record<string, unknown>>[] = [
-  { key: "monitor_label", label: "STATUS" },
-  { key: "ope", label: "OPERAÇÃO" },
+  { key: "monitor_label", label: "STATUS SNMP" },
+  { key: "ope_label", label: "OPERAÇÃO" },
   { key: "cmts", label: "CMTS" },
   { key: "node", label: "NODE" },
   { key: "mac", label: "MAC" },
@@ -27,7 +27,7 @@ export const BSOD_EXPORT_COLUMNS: CsvColumn<Record<string, unknown>>[] = [
     label: "MER",
     format: (value) => formatBsodMetric(value),
   },
-  { key: "monitor_time", label: "ÚLTIMA LEITURA" },
+  { key: "monitor_time", label: "ATUALIZADO EM" },
 ];
 
 /** Formata métrica numérica BSOD para CSV. */

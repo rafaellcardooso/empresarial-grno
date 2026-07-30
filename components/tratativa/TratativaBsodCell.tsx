@@ -3,8 +3,8 @@
 import { useCallback, useState } from "react";
 import { AcionamentoModal } from "@/components/tratativa/AcionamentoModal";
 import { TratativaBsodWorkflow } from "@/components/tratativa/TratativaBsodWorkflow";
-import { TratativaWorkflowBadge } from "@/components/tratativa/TratativaWorkflowBadge";
 import { useSession } from "@/components/layout/SessionProvider";
+import { TRATATIVA_WORKFLOW_LABELS } from "@/lib/config/tratativa-workflow";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 import { normalizeTratativaKey } from "@/lib/tratativa/keys";
@@ -15,8 +15,37 @@ type TratativaBsodCellProps = {
   onChange: (next: TratativaPublic | null) => void;
 };
 
-/** Célula de ações BSOD com matrícula, status e botões com rótulo completo. */
-export function TratativaBsodCell({ recordKey, tratativa, onChange }: TratativaBsodCellProps) {
+/** Badge somente leitura do status operacional da tratativa BSOD. */
+export function TratativaBsodStatusCell({ tratativa }: { tratativa?: TratativaPublic | null }) {
+  if (!tratativa) {
+    return (
+      <span className="tratativa-workflow-badge tratativa-workflow-badge--pendente">
+        Sem tratativa
+      </span>
+    );
+  }
+
+  const status = tratativa.workflowStatus ?? "em_tratativa";
+  const className =
+    status === "acionado"
+      ? "tratativa-workflow-badge tratativa-workflow-badge--acionado"
+      : status === "validacao_pendente"
+        ? "tratativa-workflow-badge tratativa-workflow-badge--pendente"
+        : status === "validacao_reprovada"
+          ? "tratativa-workflow-badge tratativa-workflow-badge--reprovada"
+          : status === "validado"
+            ? "tratativa-workflow-badge tratativa-workflow-badge--validado"
+            : "tratativa-workflow-badge tratativa-workflow-badge--em-tratativa";
+
+  return <span className={className}>{TRATATIVA_WORKFLOW_LABELS[status]}</span>;
+}
+
+/** Controles de ação BSOD (Assumir, Acionar, Validar, Concluir, Liberar). */
+export function TratativaBsodActionsCell({
+  recordKey,
+  tratativa,
+  onChange,
+}: TratativaBsodCellProps) {
   const { user } = useSession();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +142,6 @@ export function TratativaBsodCell({ recordKey, tratativa, onChange }: TratativaB
             {tratativa.userName}
           </span>
           <span className="tratativa-bsod-owner-meta">{tratativa.userCorporateId}</span>
-          <TratativaWorkflowBadge status={tratativa.workflowStatus} />
         </div>
         <div className="tratativa-cell__toolbar">
           {canManage ? (
@@ -150,5 +178,15 @@ export function TratativaBsodCell({ recordKey, tratativa, onChange }: TratativaB
         onRegistered={() => onChange({ ...tratativa, workflowStatus: "acionado" })}
       />
     </>
+  );
+}
+
+/** Célula BSOD combinando status e ações (inventário). */
+export function TratativaBsodCell({ recordKey, tratativa, onChange }: TratativaBsodCellProps) {
+  return (
+    <div className="tratativa-cell tratativa-cell--bsod-combined">
+      <TratativaBsodStatusCell tratativa={tratativa} />
+      <TratativaBsodActionsCell recordKey={recordKey} tratativa={tratativa} onChange={onChange} />
+    </div>
   );
 }

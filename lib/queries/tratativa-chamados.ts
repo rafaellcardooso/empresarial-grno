@@ -137,6 +137,16 @@ export async function listTratativaChamados(input: {
   return { rows, counts: emptyCounts };
 }
 
+/** Lista MACs com qualquer tratativa BSOD ativa. */
+export async function listActiveBsodKeys(): Promise<string[]> {
+  const active = await sirQuery<Array<{ record_key: string } & RowDataPacket>>(
+    `SELECT t.record_key
+     FROM app_tratativas t
+     WHERE t.record_kind = 'BSOD' AND t.released_at IS NULL`,
+  );
+  return active.map((row) => String(row.record_key).toUpperCase());
+}
+
 /** Lista MACs com tratativa BSOD ativa no status informado (filtro inventário). */
 export async function listActiveBsodKeysByChamadoStatus(
   status: TratativaChamadoStatus,

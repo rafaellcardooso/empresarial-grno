@@ -23,6 +23,9 @@ type BsodInventoryTableProps = {
   activeFilter?: BsodFilterKey;
   filterSummary?: string;
   exportHref: string;
+  variant?: "alarms" | "inventory";
+  title?: string;
+  basePath?: "/bsod" | "/bsod/inventario";
 };
 
 /** Card da listagem BSOD com tabela compacta, paginação e exportação CSV. */
@@ -36,25 +39,35 @@ export function BsodInventoryTable({
   activeFilter,
   filterSummary,
   exportHref,
+  variant = "inventory",
+  title,
+  basePath = "/bsod/inventario",
 }: BsodInventoryTableProps) {
   const router = useRouter();
   const suffix = filterSummary ?? (activeFilter ? filterLabel(activeFilter) : undefined);
   const titleSuffix = suffix ? ` — ${suffix}` : "";
+  const cardTitle =
+    title ??
+    (variant === "alarms"
+      ? `Alarmes BSOD${titleSuffix} (${total})`
+      : `${METRIC_LABELS.bsod.inventario}${titleSuffix} (${total})`);
 
   function buildPageHref(page: number): string {
-    return buildBsodHref({ ...activeUrlState, page: page <= 1 ? undefined : page });
+    return buildBsodHref({ ...activeUrlState, page: page <= 1 ? undefined : page }, basePath);
   }
 
   const handleSearchCommit = useCallback(
     (q: string | undefined) => {
-      router.push(buildBsodHref({ ...activeUrlState, q, page: undefined }), { scroll: false });
+      router.push(buildBsodHref({ ...activeUrlState, q, page: undefined }, basePath), {
+        scroll: false,
+      });
     },
-    [router, activeUrlState],
+    [router, activeUrlState, basePath],
   );
 
   return (
     <ContentCard
-      title={`${METRIC_LABELS.bsod.inventario}${titleSuffix} (${total})`}
+      title={cardTitle}
       headerAside={
         <CardHeaderActions>
           <ExportCsvLink href={exportHref} />
@@ -66,7 +79,16 @@ export function BsodInventoryTable({
         placeholder={UI_COPY.tableSearchBsod}
         onCommit={handleSearchCommit}
       />
-      <BsodRecordsTable rows={rows} tratativasByKey={tratativasByKey} />
+      <BsodRecordsTable
+        rows={rows}
+        tratativasByKey={tratativasByKey}
+        variant={variant}
+        empty={
+          variant === "alarms"
+            ? "Nenhum modem offline para o filtro selecionado."
+            : "Nenhum PME para o filtro selecionado."
+        }
+      />
       <TablePagination
         currentPage={currentPage}
         pageSize={pageSize}

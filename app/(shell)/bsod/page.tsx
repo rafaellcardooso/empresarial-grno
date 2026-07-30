@@ -1,11 +1,16 @@
-import { BsodFilterToolbar } from "@/components/bsod/BsodFilterToolbar";
+import { BsodAlarmToolbar } from "@/components/bsod/BsodAlarmToolbar";
 import { BsodInventoryTable } from "@/components/bsod/BsodInventoryTable";
+import { BsodNormalizedTreatments } from "@/components/bsod/BsodNormalizedTreatments";
+import { BsodScopeNav } from "@/components/bsod/BsodScopeNav";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   bsodFilterSummary,
   bsodUrlStateFromParams,
   buildBsodExportHref,
+  defaultBsodAlarmDdd,
   parseBsodSearchParams,
 } from "@/lib/config/bsod-filters";
+import { listBsodDddOptions } from "@/lib/config/bsod-locations";
 import {
   BSOD_LIST_PAGE_SIZE,
   bsodListOffset,
@@ -14,15 +19,11 @@ import {
 import {
   countPmeBsod,
   getCachedBsodCmts,
-  getCachedBsodHealthCounts,
   getCachedBsodNodes,
-  getCachedBsodVlanCounts,
   listPmeBsod,
+  type BsodFilters,
 } from "@/lib/queries/bsod";
-import {
-  countActiveBsodByChamadoStatus,
-  listActiveBsodKeysByChamadoStatus,
-} from "@/lib/queries/tratativa-chamados";
+import { listActiveBsodKeys } from "@/lib/queries/tratativa-chamados";
 import { loadTratativasForBsodRows } from "@/lib/tratativa/load-for-rows";
 
 export const dynamic = "force-dynamic";
@@ -30,91 +31,139 @@ export const metadata = { title: "BSOD" };
 
 type PageProps = {
   searchParams: Promise<{
-    filtro?: string;
-    saude?: string;
     cmts?: string;
     node?: string;
     q?: string;
     page?: string;
-    tratativa?: string;
+    ddd?: string;
+    status?: string;
+    normalizedPage?: string;
   }>;
 };
 
-/** Inventário PME filtrado por saúde, VLAN, tratativa, CMTS e node. */
+/** Aplica filtro operacional pendente / em tratativa sobre MACs ativos. */
+function applyAlarmStatusFilter(
+  filters: BsodFilters,
+  status: string | undefined,
+  activeMacs: string[],
+): { filters: BsodFilters; empty: boolean } {
+  if (status === "pendente") {
+    if (activeMacs.length === 0) return { filters, empty: false };
+    return { filters: { ...filters, excludeMacs: activeMacs }, empty: false };
+  }
+  if (status === "em-tratativa") {
+    if (activeMacs.length === 0) return { filters, empty: true };
+    return { filters: { ...filters, macs: activeMacs }, empty: false };
+  }
+  return { filters, empty: false };
+}
+
+/** Monitor operacional de modems PME atualmente offline. */
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
-  const urlState = bsodUrlStateFromParams(params);
-  const queryFilters = parseBsodSearchParams(params);
+  const parsedState = bsodUrlStateFromParams(params);
+  const urlState = {
+    ...parsedState,
+    ddd: parsedState.ddd ?? defaultBsodAlarmDdd(),
+  };
+  const queryFilters = parseBsodSearchParams(params, { scope: "alarms" });
   const currentPage = bsodPageFromParam(params.page);
+  const normalizedPage = bsodPageFromParam(params.normalizedPage);
   const pageSize = BSOD_LIST_PAGE_SIZE;
-  const healthScope = {
-    vlan: queryFilters.vlan,
+  const facetScope: BsodFilters = {
+    health: "offline",
+    opes: queryFilters.opes,
     cmts: queryFilters.cmts,
     node: queryFilters.node,
-    ope: queryFilters.ope,
-  };
-  const vlanScope = {
-    health: queryFilters.health,
-    cmts: queryFilters.cmts,
-    node: queryFilters.node,
-    ope: queryFilters.ope,
-  };
-  const facetScope = {
-    health: queryFilters.health,
-    vlan: queryFilters.vlan,
-    cmts: queryFilters.cmts,
-    node: queryFilters.node,
-    ope: queryFilters.ope,
   };
 
   try {
-    const [tratativaCounts, tratativaMacs] = await Promise.all([
-      countActiveBsodByChamadoStatus(),
-      urlState.tratativa
-        ? listActiveBsodKeysByChamadoStatus(urlState.tratativa)
-        : Promise.resolve<string[] | null>(null),
-    ]);
-
-    if (tratativaMacs) {
-      queryFilters.macs = tratativaMacs;
-    }
-
-    const emptyByTratativa = Boolean(tratativaMacs && tratativaMacs.length === 0);
+    const activeMacs = await listActiveBsodKeys();
+    const { filters: scopedFilters, empty } = applyAlarmStatusFilter(
+      queryFilters,
+      urlState.status,
+      activeMacs,
+    );
 
     const listFilters = {
-      ...queryFilters,
+      ...scopedFilters,
       limit: pageSize,
       offset: bsodListOffset(currentPage, pageSize),
     };
 
-    const [rows, total, healthCounts, vlanCounts, cmtsOptions, nodeOptions] = emptyByTratativa
-      ? await Promise.all([
-          Promise.resolve([]),
-          Promise.resolve(0),
-          getCachedBsodHealthCounts(healthScope),
-          getCachedBsodVlanCounts(vlanScope),
-          getCachedBsodCmts(facetScope),
-          getCachedBsodNodes(facetScope),
-        ])
-      : await Promise.all([
-          listPmeBsod(listFilters),
-          countPmeBsod(queryFilters),
-          getCachedBsodHealthCounts(healthScope),
-          getCachedBsodVlanCounts(vlanScope),
-          getCachedBsodCmts(facetScope),
-          getCachedBsodNodes(facetScope),
-        ]);
+    const baseOffline: BsodFilters = {
+      health: "offline",
+      opes: queryFilters.opes,
+      cmts: queryFilters.cmts,
+      node: queryFilters.node,
+      q: queryFilters.q,
+    };
 
-    const tratativasByKey = await loadTratativasForBsodRows(rows);
+    const dddOptions = listBsodDddOptions();
+    const normalizedFilters: BsodFilters = {
+      health: "online",
+      opes: queryFilters.opes,
+      macs: activeMacs,
+    };
+
+    const [
+      rows,
+      total,
+      normalizedRows,
+      normalizedTotal,
+      kpiTotal,
+      kpiPending,
+      kpiInProgress,
+      cmtsOptions,
+      nodeOptions,
+      dddCountRows,
+    ] = await Promise.all([
+      empty ? Promise.resolve([]) : listPmeBsod(listFilters),
+      empty ? Promise.resolve(0) : countPmeBsod(scopedFilters),
+      activeMacs.length
+        ? listPmeBsod({
+            ...normalizedFilters,
+            limit: pageSize,
+            offset: bsodListOffset(normalizedPage, pageSize),
+          })
+        : Promise.resolve([]),
+      activeMacs.length ? countPmeBsod(normalizedFilters) : Promise.resolve(0),
+      countPmeBsod(baseOffline),
+      countPmeBsod(activeMacs.length ? { ...baseOffline, excludeMacs: activeMacs } : baseOffline),
+      activeMacs.length ? countPmeBsod({ ...baseOffline, macs: activeMacs }) : Promise.resolve(0),
+      getCachedBsodCmts(facetScope),
+      getCachedBsodNodes(facetScope),
+      Promise.all(
+        dddOptions.map((option) => countPmeBsod({ health: "offline", opes: option.opes })),
+      ),
+    ]);
+
+    const [tratativasByKey, normalizedTratativasByKey] = await Promise.all([
+      loadTratativasForBsodRows(rows),
+      loadTratativasForBsodRows(normalizedRows),
+    ]);
+    const dddCounts = dddOptions.map((option, index) => ({
+      ddd: option.ddd,
+      label: option.label,
+      total: Number(dddCountRows[index] ?? 0),
+    }));
 
     return (
       <>
-        <BsodFilterToolbar
-          healthCounts={healthCounts}
-          vlanCounts={vlanCounts}
+        <PageHeader
+          title="BSOD"
+          description="Modems PME com última leitura SNMP offline — escopo inicial DDD 98 (MA)."
+        />
+        <BsodScopeNav active="alarms" />
+        <BsodAlarmToolbar
+          kpiCounts={{
+            total: kpiTotal,
+            pending: kpiPending,
+            inProgress: kpiInProgress,
+          }}
+          dddCounts={dddCounts}
           cmtsOptions={cmtsOptions}
           nodeOptions={nodeOptions}
-          tratativaCounts={tratativaCounts}
           activeState={urlState}
         />
         <BsodInventoryTable
@@ -125,7 +174,17 @@ export default async function Page({ searchParams }: PageProps) {
           pageSize={pageSize}
           activeUrlState={urlState}
           filterSummary={bsodFilterSummary(urlState)}
-          exportHref={buildBsodExportHref(urlState)}
+          exportHref={buildBsodExportHref(urlState, { scope: "alarms" })}
+          variant="alarms"
+          basePath="/bsod"
+        />
+        <BsodNormalizedTreatments
+          rows={normalizedRows}
+          tratativasByKey={normalizedTratativasByKey}
+          total={normalizedTotal}
+          currentPage={normalizedPage}
+          pageSize={pageSize}
+          activeUrlState={urlState}
         />
       </>
     );

@@ -1,21 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseBsodSearchParams } from "@/lib/config/bsod-filters";
+import type { BsodListScope } from "@/lib/queries/bsod";
 import { listPmeBsod } from "@/lib/queries/bsod";
 
 export const dynamic = "force-dynamic";
 
-/** Lista inventário PME/BSOD com filtros via query string. */
+/** Lista inventário ou alarmes PME/BSOD com filtros via query string. */
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
+  const scope: BsodListScope = sp.get("scope") === "alarms" ? "alarms" : "inventory";
   try {
     const data = await listPmeBsod({
-      ...parseBsodSearchParams({
-        filtro: sp.get("filtro") ?? undefined,
-        saude: sp.get("saude") ?? undefined,
-        cmts: sp.get("cmts") ?? undefined,
-        node: sp.get("node") ?? undefined,
-        q: sp.get("q") ?? undefined,
-      }),
+      ...parseBsodSearchParams(
+        {
+          filtro: sp.get("filtro") ?? undefined,
+          saude: sp.get("saude") ?? undefined,
+          cmts: sp.get("cmts") ?? undefined,
+          node: sp.get("node") ?? undefined,
+          q: sp.get("q") ?? undefined,
+          ddd: sp.get("ddd") ?? undefined,
+          status: sp.get("status") ?? undefined,
+        },
+        { scope },
+      ),
       ope: sp.get("ope") || undefined,
       limit: sp.get("limit") ? Number(sp.get("limit")) : 500,
     });

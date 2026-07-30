@@ -38,7 +38,7 @@ export const UI_COPY = {
   tratativaRegisterValidacao: "Validar sinal",
   tratativaValidacaoTitle: "Validação do sinal",
   tratativaValidacaoHint:
-    "O técnico solicitou validação a você (acionador). Registre o resultado e o FCA para",
+    "O técnico solicitou a validação do sinal. Registre o resultado e o FCA do modem",
   tratativaValidacaoOutcome: "Resultado",
   tratativaValidacaoFcaSection: "FCA",
   tratativaValidacaoFato: "Fato",

@@ -4,9 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 import { BsodDetalhesPanel } from "@/components/bsod/BsodDetalhesPanel";
 import { BsodHealthBadge } from "@/components/bsod/bsod-table-cells";
 import { TratativaCell } from "@/components/tratativa/TratativaCell";
+import {
+  TratativaBsodActionsCell,
+  TratativaBsodStatusCell,
+} from "@/components/tratativa/TratativaBsodCell";
 import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
 import { SortableDataTable } from "@/components/ui/SortableDataTable";
-import { BSOD_TABLE_COLUMNS } from "@/lib/config/bsod-tables";
+import {
+  BSOD_ALARM_TABLE_COLUMNS,
+  BSOD_INVENTORY_TABLE_COLUMNS,
+  BSOD_NORMALIZED_TABLE_COLUMNS,
+} from "@/lib/config/bsod-tables";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
@@ -16,6 +24,7 @@ type BsodRecordsTableProps = {
   rows: PmeBsodRow[];
   tratativasByKey?: Record<string, TratativaPublic>;
   empty?: string;
+  variant?: "alarms" | "inventory" | "normalized";
 };
 
 /** Tabela BSOD compacta com painel lateral para métricas e endereço. */
@@ -23,9 +32,16 @@ export function BsodRecordsTable({
   rows,
   tratativasByKey = {},
   empty = "Nenhum PME para o filtro selecionado.",
+  variant = "inventory",
 }: BsodRecordsTableProps) {
   const [selectedRow, setSelectedRow] = useState<PmeBsodRow | null>(null);
   const [tratativas, setTratativas] = useState(tratativasByKey);
+  const columns =
+    variant === "alarms"
+      ? BSOD_ALARM_TABLE_COLUMNS
+      : variant === "normalized"
+        ? BSOD_NORMALIZED_TABLE_COLUMNS
+        : BSOD_INVENTORY_TABLE_COLUMNS;
 
   useEffect(() => {
     setTratativas(tratativasByKey);
@@ -57,11 +73,19 @@ export function BsodRecordsTable({
     <>
       <SortableDataTable
         className="sortable-data-table--bsod"
-        columns={BSOD_TABLE_COLUMNS}
+        columns={columns}
         rows={rows as Record<string, unknown>[]}
         empty={empty}
-        defaultSort={{ key: "monitor_status", direction: "asc" }}
-        sortTieBreakers={["monitor_status", "cmts", "node", "mac"]}
+        defaultSort={
+          variant === "inventory"
+            ? { key: "monitor_status", direction: "asc" }
+            : { key: "monitor_time", direction: "desc" }
+        }
+        sortTieBreakers={
+          variant === "inventory"
+            ? ["monitor_status", "cmts", "node", "mac"]
+            : ["cmts", "node", "mac"]
+        }
         renderCell={(key, value, row) =>
           renderBsodCell(key, value, row, setSelectedRow, tratativas, handleTratativaChange)
         }
@@ -84,14 +108,28 @@ function renderBsodCell(
   tratativas: Record<string, TratativaPublic>,
   onTratativaChange: (recordKey: string, next: TratativaPublic | null) => void,
 ) {
+  const mac = String(row.mac ?? "");
+  const normalized = normalizeTratativaKey("BSOD", mac);
+  const tratativa = tratativas[normalized] ?? null;
+
+  if (key === "tratativa_status") {
+    return <TratativaBsodStatusCell tratativa={tratativa} />;
+  }
+  if (key === "tratativa_actions") {
+    return (
+      <TratativaBsodActionsCell
+        recordKey={mac}
+        tratativa={tratativa}
+        onChange={(next) => onTratativaChange(mac, next)}
+      />
+    );
+  }
   if (key === "tratativa") {
-    const mac = String(row.mac ?? "");
-    const normalized = normalizeTratativaKey("BSOD", mac);
     return (
       <TratativaCell
         recordKind="BSOD"
         recordKey={mac}
-        tratativa={tratativas[normalized] ?? null}
+        tratativa={tratativa}
         onChange={(next) => onTratativaChange(mac, next)}
       />
     );
@@ -103,7 +141,6 @@ function renderBsodCell(
     return <DateTimeStacked value={value as string | null} />;
   }
   if (key === "detalhes") {
-    const mac = String(row.mac ?? "");
     return (
       <button
         type="button"

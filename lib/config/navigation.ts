@@ -14,6 +14,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/sir/rals": "RAL",
   "/sir/recs": "REC",
   "/bsod": "BSOD",
+  "/bsod/inventario": "Inventário BSOD",
   "/sdh": "SDH",
   "/tmip": "SDH",
   "/gpon": "GPON",
@@ -107,6 +108,7 @@ export function getPageTitle(pathname: string): string {
 export function isNavItemActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   if (href === "/sir") return pathname === "/sir" || pathname.startsWith("/sir/");
+  if (href === "/bsod") return pathname === "/bsod" || pathname.startsWith("/bsod/");
   if (href === "/admin/usuarios") return pathname.startsWith("/admin/usuarios");
   if (href === "/admin/notificacoes") return pathname.startsWith("/admin/notificacoes");
   return pathname === href;
