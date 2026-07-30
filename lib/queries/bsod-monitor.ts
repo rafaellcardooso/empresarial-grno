@@ -26,14 +26,22 @@ type BsodMonitorGlobal = typeof globalThis & {
  * Escopo em `tbl_inventory_pme` evita full scan + window sobre todo o histórico.
  */
 export const LATEST_MONITOR_FOR_INVENTORY_SQL = `
-  SELECT m.mac, m.status, m.tx, m.rx, m.mer, m.time
-  FROM tbl_monitor_pme m
-  INNER JOIN (
-    SELECT mac, MAX(\`time\`) AS max_time
-    FROM tbl_monitor_pme
-    WHERE mac IN (SELECT mac FROM tbl_inventory_pme)
-    GROUP BY mac
-  ) latest ON m.mac = latest.mac AND m.\`time\` = latest.max_time
+  SELECT mac, status, tx, rx, mer, \`time\`
+  FROM (
+    SELECT
+      m.mac, m.status, m.tx, m.rx, m.mer, m.\`time\`,
+      ROW_NUMBER() OVER (
+        PARTITION BY m.mac
+        ORDER BY m.\`time\` DESC,
+                 IFNULL(m.status, -1) DESC,
+                 IFNULL(m.tx, -9999) DESC,
+                 IFNULL(m.rx, -9999) DESC,
+                 IFNULL(m.mer, -9999) DESC
+      ) AS rn
+    FROM tbl_monitor_pme m
+    WHERE m.mac IN (SELECT mac FROM tbl_inventory_pme)
+  ) ranked
+  WHERE rn = 1
 `;
 
 /** Carrega mapa MAC → última leitura a partir do hfc-sls. */

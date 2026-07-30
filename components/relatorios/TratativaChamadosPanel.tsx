@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TratativaChamadosTable } from "@/components/relatorios/TratativaChamadosTable";
+import { TablePagination } from "@/components/ui/TablePagination";
 import {
   TRATATIVA_CHAMADO_STATUS_LABELS,
   TRATATIVA_CHAMADO_STATUS_ORDER,
@@ -13,16 +14,27 @@ type TratativaChamadosPanelProps = {
   filters: TratativaReportFilters;
   rows: TratativaChamadoRow[];
   counts: Record<TratativaChamadoStatusFilter, number>;
+  total: number;
+  page: number;
+  pageSize: number;
 };
 
-/** Painel de listagem de chamados com chips de status. */
-export function TratativaChamadosPanel({ filters, rows, counts }: TratativaChamadosPanelProps) {
+/** Painel de listagem de chamados com chips de status e paginação. */
+export function TratativaChamadosPanel({
+  filters,
+  rows,
+  counts,
+  total,
+  page,
+  pageSize,
+}: TratativaChamadosPanelProps) {
   const activeStatus = filters.status ?? "all";
 
   function statusHref(status: TratativaChamadoStatusFilter): string {
     return buildTratativaReportHref({
       ...filters,
       status,
+      page: 1,
     });
   }
 
@@ -53,7 +65,18 @@ export function TratativaChamadosPanel({ filters, rows, counts }: TratativaChama
         </div>
       </div>
 
-      <TratativaChamadosTable rows={rows} />
+      <TratativaChamadosTable rows={rows} total={total} />
+      <TablePagination
+        currentPage={page}
+        pageSize={pageSize}
+        totalItems={total}
+        buildPageHref={(nextPage) =>
+          buildTratativaReportHref({
+            ...filters,
+            page: nextPage,
+          })
+        }
+      />
     </div>
   );
 }

@@ -30,6 +30,7 @@ export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFo
         to: end,
         recordKind: "BSOD",
         status: filters.status,
+        page: 1,
       }),
     );
   };
@@ -44,6 +45,7 @@ export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFo
         to: toDate,
         recordKind: "BSOD",
         status: filters.status,
+        page: 1,
       }),
     );
   };

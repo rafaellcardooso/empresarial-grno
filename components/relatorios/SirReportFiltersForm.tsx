@@ -2,34 +2,37 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { listOperationalDdds } from "@/lib/config/locations";
+import { listOperationalDdds, operationalDddLabel } from "@/lib/config/locations";
 import { formatRelatorioDateParam } from "@/lib/config/relatorios-filters";
 import { RELATORIOS_COPY } from "@/lib/config/relatorios-copy";
-import { SDH_DDD_EMPTY, sdhDddLabel } from "@/lib/config/sdh-filters";
-import { SDH_REPORT_VENDOR_OPTIONS, buildSdhReportHref } from "@/lib/config/sdh-report-filters";
-import type { SdhReportFilters } from "@/lib/models/sdh-report";
-import type { SdhVendorFilter } from "@/lib/config/sdh-filters";
+import {
+  SIR_REPORT_DOMAIN_OPTIONS,
+  SIR_REPORT_TREATMENT_OPTIONS,
+  buildSirReportHref,
+} from "@/lib/config/sir-report-filters";
+import type { SirTreatmentFilter } from "@/lib/config/sir-filters";
+import type { SirReportDomain, SirReportFilters } from "@/lib/models/sir-report";
 
-type SdhReportFiltersFormProps = {
-  filters: SdhReportFilters;
+type SirReportFiltersFormProps = {
+  filters: SirReportFilters;
 };
 
 const DDD_OPTIONS = [
   { value: "", label: RELATORIOS_COPY.allDdds },
-  ...listOperationalDdds().map((ddd) => ({ value: ddd, label: sdhDddLabel(ddd) })),
-  { value: SDH_DDD_EMPTY, label: sdhDddLabel(SDH_DDD_EMPTY) },
+  ...listOperationalDdds().map((ddd) => ({ value: ddd, label: operationalDddLabel(ddd) })),
 ];
 
-/** Formulário de período, gerência e DDD do relatório SDH. */
-export function SdhReportFiltersForm({ filters }: SdhReportFiltersFormProps) {
+/** Formulário de período, domínio, tratativa e DDD do relatório SIR. */
+export function SirReportFiltersForm({ filters }: SirReportFiltersFormProps) {
   const router = useRouter();
   const [from, setFrom] = useState(formatRelatorioDateParam(filters.from));
   const [to, setTo] = useState(formatRelatorioDateParam(filters.to));
-  const [vendor, setVendor] = useState(filters.vendor ?? "");
+  const [domain, setDomain] = useState<SirReportDomain>(filters.domain);
+  const [tratativa, setTratativa] = useState(filters.tratativa ?? "");
   const [ddd, setDdd] = useState(filters.ddd ?? "");
 
-  function pushFilters(next: { from: Date; to: Date; vendor?: SdhVendorFilter; ddd?: string }) {
-    router.push(buildSdhReportHref(next));
+  function pushFilters(next: SirReportFilters) {
+    router.push(buildSirReportHref(next));
   }
 
   const applyPreset = (days: number) => {
@@ -40,7 +43,8 @@ export function SdhReportFiltersForm({ filters }: SdhReportFiltersFormProps) {
     pushFilters({
       from: start,
       to: end,
-      vendor: (vendor || undefined) as SdhVendorFilter | undefined,
+      domain,
+      tratativa: (tratativa || undefined) as SirTreatmentFilter | undefined,
       ddd: ddd || undefined,
     });
   };
@@ -50,7 +54,8 @@ export function SdhReportFiltersForm({ filters }: SdhReportFiltersFormProps) {
     pushFilters({
       from: new Date(`${from}T00:00:00`),
       to: new Date(`${to}T00:00:00`),
-      vendor: (vendor || undefined) as SdhVendorFilter | undefined,
+      domain,
+      tratativa: (tratativa || undefined) as SirTreatmentFilter | undefined,
       ddd: ddd || undefined,
     });
   };
@@ -58,24 +63,24 @@ export function SdhReportFiltersForm({ filters }: SdhReportFiltersFormProps) {
   return (
     <form className="relatorio-tratativa-filters" onSubmit={handleSubmit}>
       <div className="row g-2 align-items-end">
-        <div className="col-sm-6 col-md-3">
-          <label className="form-label relatorio-export__label" htmlFor="sdh-report-de">
+        <div className="col-sm-6 col-md-2">
+          <label className="form-label relatorio-export__label" htmlFor="sir-report-de">
             De
           </label>
           <input
-            id="sdh-report-de"
+            id="sir-report-de"
             type="date"
             className="form-control form-control-sm"
             value={from}
             onChange={(event) => setFrom(event.target.value)}
           />
         </div>
-        <div className="col-sm-6 col-md-3">
-          <label className="form-label relatorio-export__label" htmlFor="sdh-report-ate">
+        <div className="col-sm-6 col-md-2">
+          <label className="form-label relatorio-export__label" htmlFor="sir-report-ate">
             Até
           </label>
           <input
-            id="sdh-report-ate"
+            id="sir-report-ate"
             type="date"
             className="form-control form-control-sm"
             value={to}
@@ -83,16 +88,33 @@ export function SdhReportFiltersForm({ filters }: SdhReportFiltersFormProps) {
           />
         </div>
         <div className="col-sm-6 col-md-2">
-          <label className="form-label relatorio-export__label" htmlFor="sdh-report-vendor">
-            {RELATORIOS_COPY.vendorLabel}
+          <label className="form-label relatorio-export__label" htmlFor="sir-report-domain">
+            {RELATORIOS_COPY.sirDomainLabel}
           </label>
           <select
-            id="sdh-report-vendor"
+            id="sir-report-domain"
             className="form-select form-select-sm"
-            value={vendor}
-            onChange={(event) => setVendor(event.target.value)}
+            value={domain}
+            onChange={(event) => setDomain(event.target.value as SirReportDomain)}
           >
-            {SDH_REPORT_VENDOR_OPTIONS.map((option) => (
+            {SIR_REPORT_DOMAIN_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-sm-6 col-md-2">
+          <label className="form-label relatorio-export__label" htmlFor="sir-report-tratativa">
+            {RELATORIOS_COPY.sirTreatmentLabel}
+          </label>
+          <select
+            id="sir-report-tratativa"
+            className="form-select form-select-sm"
+            value={tratativa}
+            onChange={(event) => setTratativa(event.target.value)}
+          >
+            {SIR_REPORT_TREATMENT_OPTIONS.map((option) => (
               <option key={option.value || "all"} value={option.value}>
                 {option.label}
               </option>
@@ -100,11 +122,11 @@ export function SdhReportFiltersForm({ filters }: SdhReportFiltersFormProps) {
           </select>
         </div>
         <div className="col-sm-6 col-md-2">
-          <label className="form-label relatorio-export__label" htmlFor="sdh-report-ddd">
+          <label className="form-label relatorio-export__label" htmlFor="sir-report-ddd">
             {RELATORIOS_COPY.dddLabel}
           </label>
           <select
-            id="sdh-report-ddd"
+            id="sir-report-ddd"
             className="form-select form-select-sm"
             value={ddd}
             onChange={(event) => setDdd(event.target.value)}
@@ -116,8 +138,8 @@ export function SdhReportFiltersForm({ filters }: SdhReportFiltersFormProps) {
             ))}
           </select>
         </div>
-        <div className="col-sm-6 col-md-2 d-flex gap-2">
-          <button type="submit" className="btn btn-primary btn-sm flex-grow-1">
+        <div className="col-sm-6 col-md-2">
+          <button type="submit" className="btn btn-primary btn-sm w-100">
             {RELATORIOS_COPY.applyFilters}
           </button>
         </div>

@@ -21,11 +21,12 @@ export const RELATORIO_HUB_ITEMS: RelatorioHubItem[] = [
   },
   {
     id: "sir",
+    href: "/relatorios/sir",
     title: "SIR",
     description:
-      "Análise de RAL e REC: volume por tipo, CF, tempo em aberto e tendências operacionais.",
+      "Backlog de RAL e REC: pendentes/em tratativa, idade em aberto, aberturas no período e recortes por CF e localidade.",
     icon: "bi-diagram-3",
-    available: false,
+    available: true,
   },
   {
     id: "gpon",
@@ -39,7 +40,7 @@ export const RELATORIO_HUB_ITEMS: RelatorioHubItem[] = [
     href: "/relatorios/sdh",
     title: "SDH",
     description:
-      "Backlog ativo de alarmes SDH, idade, DDD/gerência e atividade de tratativa no período.",
+      "Backlog ativo de alarmes SDH, idade, DDD/gerência e atividade histórica de tratativa no período.",
     icon: "bi-broadcast",
     available: true,
   },

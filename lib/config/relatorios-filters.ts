@@ -3,6 +3,7 @@ import {
   parseTratativaChamadoStatusFilter,
   type TratativaChamadoStatusFilter,
 } from "@/lib/config/tratativa-chamados";
+import { tratativaChamadosPageFromParam } from "@/lib/config/tratativa-report-pagination";
 
 const DEFAULT_RANGE_DAYS = 30;
 const MAX_RANGE_DAYS = 366;
@@ -38,6 +39,7 @@ export function parseTratativaReportParams(params: {
   de?: string;
   ate?: string;
   status?: string;
+  page?: string;
 }): TratativaReportFilters {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -69,6 +71,7 @@ export function parseTratativaReportParams(params: {
     to,
     recordKind: "BSOD",
     status,
+    page: tratativaChamadosPageFromParam(params.page),
   };
 }
 
@@ -79,6 +82,9 @@ export function buildTratativaReportHref(filters: TratativaReportFilters): strin
   params.set("ate", formatRelatorioDateParam(filters.to));
   if (filters.status && filters.status !== "all") {
     params.set("status", filters.status);
+  }
+  if (filters.page && filters.page > 1) {
+    params.set("page", String(filters.page));
   }
   const query = params.toString();
   return `/relatorios/tratativas?${query}`;

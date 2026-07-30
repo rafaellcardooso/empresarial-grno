@@ -99,11 +99,14 @@ def row_to_params(row: dict[str, Any], now: datetime) -> dict[str, Any]:
 def upsert_sdh_rows(rows: Iterable[dict[str, Any]]) -> tuple[int, list[int]]:
     """Faz upsert dos alarmes presentes no scrape e desativa ausentes.
 
+    Exige pelo menos um ID ativo; CSV vazio/ inválido deve falhar antes desta etapa.
     Retorna (quantidade upserted, ids ativos no scrape).
     """
     now = datetime.now()
     params_list = [row_to_params(row, now) for row in rows]
     active_ids = [item["id"] for item in params_list]
+    if not active_ids:
+        raise RuntimeError("Nenhum alarme válido para upsert — sincronização abortada")
 
     conn = get_connection()
     try:
@@ -111,11 +114,8 @@ def upsert_sdh_rows(rows: Iterable[dict[str, Any]]) -> tuple[int, list[int]]:
             for params in params_list:
                 cursor.execute(UPSERT_SQL, params)
 
-            if active_ids:
-                placeholders = ", ".join(["%s"] * len(active_ids))
-                cursor.execute(CLOSE_MISSING_SQL.format(placeholders=placeholders), active_ids)
-            else:
-                cursor.execute("UPDATE sdh_alarms SET is_active = 0 WHERE is_active = 1")
+            placeholders = ", ".join(["%s"] * len(active_ids))
+            cursor.execute(CLOSE_MISSING_SQL.format(placeholders=placeholders), active_ids)
         conn.commit()
     except Exception:
         conn.rollback()

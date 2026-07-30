@@ -5,6 +5,11 @@ import {
 } from "@/lib/config/tratativa-chamados";
 import { parseValidacaoOutcomeFromNote } from "@/lib/config/tratativa-workflow";
 import { endExclusiveFromInclusiveDate } from "@/lib/config/relatorios-filters";
+import {
+  TRATATIVA_CHAMADOS_MAX_PAGE_SIZE,
+  TRATATIVA_CHAMADOS_PAGE_SIZE,
+  tratativaChamadosOffset,
+} from "@/lib/config/tratativa-report-pagination";
 import { sirQuery } from "@/lib/db/sir";
 import type { TratativaChamadoRow } from "@/lib/models/tratativa-report";
 import { normalizeDateTimeIso } from "@/lib/format/datetime";
@@ -28,8 +33,6 @@ type EventListRow = RowDataPacket & {
   created_at: Date | string;
 };
 
-const LIST_LIMIT = 500;
-
 const WORKFLOW_EVENT_TYPES = [
   "ACIONAMENTO",
   "VALIDACAO_SOLICITADA",
@@ -47,18 +50,28 @@ export function deriveTratativaChamadoStatus(
   return deriveTratativaWorkflowStatus(events);
 }
 
-/** Lista chamados BSOD do período com status derivado e filtro opcional. */
+/** Lista chamados BSOD da coorte (iniciados no período) com paginação e total real. */
 export async function listTratativaChamados(input: {
   from: Date;
   to: Date;
   status?: TratativaChamadoStatusFilter;
+  page?: number;
+  pageSize?: number;
 }): Promise<{
   rows: TratativaChamadoRow[];
   counts: Record<TratativaChamadoStatusFilter, number>;
+  total: number;
+  page: number;
+  pageSize: number;
 }> {
   const from = input.from;
   const toExclusive = endExclusiveFromInclusiveDate(input.to);
   const statusFilter = input.status ?? "all";
+  const pageSize = Math.min(
+    Math.max(input.pageSize ?? TRATATIVA_CHAMADOS_PAGE_SIZE, 1),
+    TRATATIVA_CHAMADOS_MAX_PAGE_SIZE,
+  );
+  const page = Math.max(input.page ?? 1, 1);
 
   const tratativas = await sirQuery<TratativaListRow[]>(
     `SELECT t.id, t.record_key, u.name AS user_name, u.corporate_id AS user_corporate_id,
@@ -66,23 +79,15 @@ export async function listTratativaChamados(input: {
      FROM app_tratativas t
      INNER JOIN app_users u ON u.id = t.user_id
      WHERE t.record_kind = 'BSOD'
-       AND (
-         (t.started_at >= ? AND t.started_at < ?)
-         OR EXISTS (
-           SELECT 1 FROM app_tratativa_events e
-           WHERE e.tratativa_id = t.id
-             AND e.created_at >= ?
-             AND e.created_at < ?
-         )
-       )
-     ORDER BY t.started_at DESC
-     LIMIT ${LIST_LIMIT}`,
-    [from, toExclusive, from, toExclusive],
+       AND t.started_at >= ?
+       AND t.started_at < ?
+     ORDER BY t.started_at DESC`,
+    [from, toExclusive],
   );
 
   const emptyCounts = emptyStatusCounts();
   if (tratativas.length === 0) {
-    return { rows: [], counts: emptyCounts };
+    return { rows: [], counts: emptyCounts, total: 0, page, pageSize };
   }
 
   const ids = tratativas.map((row) => row.id);
@@ -131,10 +136,18 @@ export async function listTratativaChamados(input: {
     emptyCounts[row.status] += 1;
   }
 
-  const rows =
+  const filtered =
     statusFilter === "all" ? allRows : allRows.filter((row) => row.status === statusFilter);
+  const offset = tratativaChamadosOffset(page, pageSize);
+  const rows = filtered.slice(offset, offset + pageSize);
 
-  return { rows, counts: emptyCounts };
+  return {
+    rows,
+    counts: emptyCounts,
+    total: filtered.length,
+    page,
+    pageSize,
+  };
 }
 
 /** Lista MACs com qualquer tratativa BSOD ativa. */

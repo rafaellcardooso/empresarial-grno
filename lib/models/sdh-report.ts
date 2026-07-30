@@ -14,7 +14,12 @@ export type SdhReportSummary = {
   pending: number;
   inProgress: number;
   neverTouched: number;
-  updatesInPeriod: number;
+  /** Assunções (START) no período. */
+  startsInPeriod: number;
+  /** Observações no período. */
+  observationsInPeriod: number;
+  /** Eventos UPDATE legados (anteriores à tipagem START/OBSERVACAO). */
+  legacyUpdatesInPeriod: number;
   closesInPeriod: number;
   alarmsTouchedInPeriod: number;
 };
@@ -44,7 +49,9 @@ export type SdhReportRankRow = {
 /** Ponto diário de eventos de tratativa. */
 export type SdhReportDailyPoint = {
   date: string;
-  updates: number;
+  starts: number;
+  observations: number;
+  legacyUpdates: number;
   closes: number;
   total: number;
 };
@@ -52,7 +59,9 @@ export type SdhReportDailyPoint = {
 /** Ranking de login por eventos no período. */
 export type SdhReportOperatorRow = {
   userLogin: string;
-  updates: number;
+  starts: number;
+  observations: number;
+  legacyUpdates: number;
   closes: number;
   total: number;
 };

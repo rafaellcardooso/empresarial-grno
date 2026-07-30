@@ -12,10 +12,11 @@ import type { TratativaChamadoRow } from "@/lib/models/tratativa-report";
 
 type TratativaChamadosTableProps = {
   rows: TratativaChamadoRow[];
+  total: number;
 };
 
 /** Tabela de chamados BSOD por status, com FCA expansível quando houver validação. */
-export function TratativaChamadosTable({ rows }: TratativaChamadosTableProps) {
+export function TratativaChamadosTable({ rows, total }: TratativaChamadosTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   return (
@@ -27,7 +28,7 @@ export function TratativaChamadosTable({ rows }: TratativaChamadosTableProps) {
         <p className="text-body-secondary small mb-0">{RELATORIOS_COPY.chamadosLead}</p>
       </header>
 
-      <ContentCard title={`${rows.length} chamado(s)`} bodyClassName="p-0">
+      <ContentCard title={`${total} chamado(s)`} bodyClassName="p-0">
         {rows.length === 0 ? (
           <p className="text-body-secondary mb-0 p-3">{RELATORIOS_COPY.emptyChamados}</p>
         ) : (

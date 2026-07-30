@@ -20,12 +20,20 @@ export async function TratativaReportAsync({ filters }: TratativaReportAsyncProp
       from: filters.from,
       to: filters.to,
       status: filters.status ?? "all",
+      page: filters.page ?? 1,
     }),
   ]);
 
   return (
     <>
-      <TratativaChamadosPanel filters={filters} rows={chamados.rows} counts={chamados.counts} />
+      <TratativaChamadosPanel
+        filters={filters}
+        rows={chamados.rows}
+        counts={chamados.counts}
+        total={chamados.total}
+        page={chamados.page}
+        pageSize={chamados.pageSize}
+      />
       <TratativaReportPanel filters={filters} data={report} showOperatorsRanking={isStaff} />
     </>
   );

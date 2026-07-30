@@ -15,6 +15,7 @@ import { buildSdhInsightHighlights } from "@/lib/relatorios/sdh-insights";
 type SdhReportPanelProps = {
   filters: SdhReportFilters;
   data: SdhReportData;
+  showOperatorsRanking?: boolean;
 };
 
 /** Formata YYYY-MM-DD para rótulo curto do eixo diário. */
@@ -24,7 +25,11 @@ function formatDayLabel(isoDate: string): string {
 }
 
 /** Painel analítico do backlog SDH ativo e atividade de tratativa. */
-export function SdhReportPanel({ filters, data }: SdhReportPanelProps) {
+export function SdhReportPanel({
+  filters,
+  data,
+  showOperatorsRanking = false,
+}: SdhReportPanelProps) {
   const {
     summary,
     statusSlices,
@@ -38,7 +43,7 @@ export function SdhReportPanel({ filters, data }: SdhReportPanelProps) {
   } = data;
 
   const hasBacklog = summary.totalActive > 0;
-  const insights = buildSdhInsightHighlights(data);
+  const insights = buildSdhInsightHighlights(data, { includeOperators: showOperatorsRanking });
   const monitorHref = buildSdhMonitorHref(filters);
   const exportHref = buildSdhReportExportHref(filters);
 
@@ -72,7 +77,7 @@ export function SdhReportPanel({ filters, data }: SdhReportPanelProps) {
           <RelatorioInsightsStrip items={insights} />
 
           <div className="row g-3 relatorio-dashboard__kpis">
-            <div className="col-6 col-xl-2">
+            <div className="col-6 col-xl-3">
               <RelatorioInsightKpi
                 icon="bi-broadcast"
                 label={RELATORIOS_COPY.sdhKpiTotal}
@@ -80,7 +85,7 @@ export function SdhReportPanel({ filters, data }: SdhReportPanelProps) {
                 tone="primary"
               />
             </div>
-            <div className="col-6 col-xl-2">
+            <div className="col-6 col-xl-3">
               <RelatorioInsightKpi
                 icon="bi-hourglass-split"
                 label={RELATORIOS_COPY.sdhKpiPending}
@@ -88,7 +93,7 @@ export function SdhReportPanel({ filters, data }: SdhReportPanelProps) {
                 tone="warning"
               />
             </div>
-            <div className="col-6 col-xl-2">
+            <div className="col-6 col-xl-3">
               <RelatorioInsightKpi
                 icon="bi-tools"
                 label={RELATORIOS_COPY.sdhKpiInProgress}
@@ -96,7 +101,7 @@ export function SdhReportPanel({ filters, data }: SdhReportPanelProps) {
                 tone="success"
               />
             </div>
-            <div className="col-6 col-xl-2">
+            <div className="col-6 col-xl-3">
               <RelatorioInsightKpi
                 icon="bi-exclamation-circle"
                 label={RELATORIOS_COPY.sdhKpiNeverTouched}
@@ -104,16 +109,32 @@ export function SdhReportPanel({ filters, data }: SdhReportPanelProps) {
                 tone="warning"
               />
             </div>
-            <div className="col-6 col-xl-2">
+            <div className="col-6 col-xl-3">
               <RelatorioInsightKpi
-                icon="bi-chat-left-text"
-                label={RELATORIOS_COPY.sdhKpiUpdates}
-                value={summary.updatesInPeriod}
+                icon="bi-person-check"
+                label={RELATORIOS_COPY.sdhKpiStarts}
+                value={summary.startsInPeriod}
                 hint={`${summary.alarmsTouchedInPeriod} alarmes no período`}
                 tone="info"
               />
             </div>
-            <div className="col-6 col-xl-2">
+            <div className="col-6 col-xl-3">
+              <RelatorioInsightKpi
+                icon="bi-chat-left-text"
+                label={RELATORIOS_COPY.sdhKpiObservations}
+                value={summary.observationsInPeriod}
+                tone="info"
+              />
+            </div>
+            <div className="col-6 col-xl-3">
+              <RelatorioInsightKpi
+                icon="bi-clock-history"
+                label={RELATORIOS_COPY.sdhKpiLegacyUpdates}
+                value={summary.legacyUpdatesInPeriod}
+                tone="info"
+              />
+            </div>
+            <div className="col-6 col-xl-3">
               <RelatorioInsightKpi
                 icon="bi-check2-circle"
                 label={RELATORIOS_COPY.sdhKpiCloses}
@@ -213,7 +234,7 @@ export function SdhReportPanel({ filters, data }: SdhReportPanelProps) {
           </div>
 
           <div className="row g-3">
-            <div className="col-lg-8">
+            <div className={showOperatorsRanking ? "col-lg-8" : "col-12"}>
               <RelatorioChartCard
                 title={RELATORIOS_COPY.sdhDailyTitle}
                 lead={RELATORIOS_COPY.sdhDailyLead}
@@ -222,22 +243,24 @@ export function SdhReportPanel({ filters, data }: SdhReportPanelProps) {
                 <RelatorioColumnChart points={dailyPoints} empty={RELATORIOS_COPY.sdhEmptyDaily} />
               </RelatorioChartCard>
             </div>
-            <div className="col-lg-4">
-              <RelatorioChartCard
-                title={RELATORIOS_COPY.sdhOperatorsTitle}
-                lead={RELATORIOS_COPY.sdhOperatorsLead}
-                icon="bi-people"
-              >
-                <RelatorioRankedBarChart
-                  items={operators.map((row) => ({
-                    label: row.userLogin,
-                    value: row.total,
-                    hint: `${row.updates} atualizações · ${row.closes} encerramentos`,
-                  }))}
-                  empty={RELATORIOS_COPY.sdhEmptyOperators}
-                />
-              </RelatorioChartCard>
-            </div>
+            {showOperatorsRanking ? (
+              <div className="col-lg-4">
+                <RelatorioChartCard
+                  title={RELATORIOS_COPY.sdhOperatorsTitle}
+                  lead={RELATORIOS_COPY.sdhOperatorsLead}
+                  icon="bi-people"
+                >
+                  <RelatorioRankedBarChart
+                    items={operators.map((row) => ({
+                      label: row.userLogin,
+                      value: row.total,
+                      hint: `${row.starts} assumidos · ${row.observations} obs. · ${row.closes} encerramentos`,
+                    }))}
+                    empty={RELATORIOS_COPY.sdhEmptyOperators}
+                  />
+                </RelatorioChartCard>
+              </div>
+            ) : null}
           </div>
         </>
       )}

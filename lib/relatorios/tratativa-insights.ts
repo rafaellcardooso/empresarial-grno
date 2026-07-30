@@ -26,7 +26,7 @@ export function buildTratativaInsightHighlights(
     highlights.push({
       id: "conclusao",
       icon: "bi-check2-circle",
-      label: "Taxa de conclusão",
+      label: "Taxa de conclusão (coorte)",
       value: `${conclusaoRate}%`,
       tone: conclusaoRate >= 60 ? "success" : conclusaoRate >= 35 ? "warning" : "danger",
     });
@@ -59,7 +59,7 @@ export function buildTratativaInsightHighlights(
     highlights.push({
       id: "cliente",
       icon: "bi-building",
-      label: "Mais VTs no período",
+      label: "Mais VTs na coorte",
       value: `${topClient.label} (${topClient.total})`,
       tone: "danger",
     });
@@ -70,7 +70,7 @@ export function buildTratativaInsightHighlights(
     highlights.push({
       id: "pico",
       icon: "bi-graph-up",
-      label: "Dia mais movimentado",
+      label: "Dia com mais atividade",
       value: `${formatShortDate(peak.date)} · ${peak.total} eventos`,
       tone: "default",
     });

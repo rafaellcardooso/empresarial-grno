@@ -29,6 +29,16 @@ type AcionamentoRow = RowDataPacket & {
   record_key: string;
   message_text: string | null;
 };
+type CohortSummaryRow = RowDataPacket & {
+  assuncoes: number;
+  acionamentos: number;
+  validacoes_solicitadas: number;
+  validacoes: number;
+  validacoes_aprovadas: number;
+  validacoes_reprovadas: number;
+  concluidas: number;
+  liberacoes: number;
+};
 
 /** Monta cláusula SQL opcional por record_kind. */
 function kindClause(
@@ -60,25 +70,28 @@ export async function getTratativaReport(
   const kindTratativas = kindClause("t", kind);
 
   const [summary, durationRow, daily, operators, acionamentos] = await Promise.all([
-    loadSummary(from, toExclusive, kindEvents),
+    loadCohortSummary(from, toExclusive, kindTratativas),
     sirQuery<DurationRow[]>(
-      `SELECT AVG(TIMESTAMPDIFF(MINUTE, t.started_at, t.released_at)) AS avg_minutes
+      `SELECT AVG(TIMESTAMPDIFF(MINUTE, t.started_at, concluded.concluded_at)) AS avg_minutes
        FROM app_tratativas t
-       WHERE t.released_at IS NOT NULL
-         AND t.started_at >= ?
+       INNER JOIN (
+         SELECT e.tratativa_id, MIN(e.created_at) AS concluded_at
+         FROM app_tratativa_events e
+         WHERE e.event_type = 'CONCLUIDA'
+           AND e.created_at < ?
+           ${kindEvents.sql}
+         GROUP BY e.tratativa_id
+       ) concluded ON concluded.tratativa_id = t.id
+       WHERE t.started_at >= ?
          AND t.started_at < ?
-         ${kindTratativas.sql}
-         AND EXISTS (
-           SELECT 1 FROM app_tratativa_events e
-           WHERE e.tratativa_id = t.id AND e.event_type = 'CONCLUIDA'
-         )`,
-      [from, toExclusive, ...kindTratativas.params],
+         ${kindTratativas.sql}`,
+      [toExclusive, ...kindEvents.params, from, toExclusive, ...kindTratativas.params],
     ).then((rows) => rows[0]),
     loadDailySeries(from, toExclusive, kindEvents),
     includeOperators
       ? loadOperators(from, toExclusive, kindEvents)
       : Promise.resolve([] as TratativaReportOperatorRow[]),
-    loadAcionamentoRows(from, toExclusive, kindEvents),
+    loadCohortAcionamentoRows(from, toExclusive, kindTratativas, kindEvents),
   ]);
 
   summary.duracaoMediaMinutos =
@@ -96,50 +109,72 @@ export async function getTratativaReport(
   };
 }
 
-async function loadSummary(
+/** Conta etapas por chamado da coorte (iniciados no período), até o fim do período. */
+async function loadCohortSummary(
   from: Date,
   toExclusive: Date,
-  kindEvents: { sql: string; params: unknown[] },
+  kindTratativas: { sql: string; params: unknown[] },
 ): Promise<TratativaReportSummary> {
-  const [rows, validacaoRows] = await Promise.all([
-    sirQuery<Array<RowDataPacket & { event_type: string; total: number }>>(
-      `SELECT event_type, COUNT(*) AS total
+  const rows = await sirQuery<CohortSummaryRow[]>(
+    `SELECT
+       COUNT(*) AS assuncoes,
+       COUNT(DISTINCT CASE WHEN stage.has_acionamento = 1 THEN t.id END) AS acionamentos,
+       COUNT(DISTINCT CASE WHEN stage.has_validacao_solicitada = 1 THEN t.id END)
+         AS validacoes_solicitadas,
+       COUNT(DISTINCT CASE WHEN stage.has_validacao = 1 THEN t.id END) AS validacoes,
+       COUNT(DISTINCT CASE WHEN stage.has_validacao_aprovada = 1 THEN t.id END)
+         AS validacoes_aprovadas,
+       COUNT(DISTINCT CASE WHEN stage.has_validacao_reprovada = 1 THEN t.id END)
+         AS validacoes_reprovadas,
+       COUNT(DISTINCT CASE WHEN stage.has_concluida = 1 THEN t.id END) AS concluidas,
+       COUNT(DISTINCT CASE WHEN t.released_at IS NOT NULL AND t.released_at < ? THEN t.id END)
+         AS liberacoes
+     FROM app_tratativas t
+     LEFT JOIN (
+       SELECT
+         e.tratativa_id,
+         MAX(CASE WHEN e.event_type = 'ACIONAMENTO' THEN 1 ELSE 0 END) AS has_acionamento,
+         MAX(CASE WHEN e.event_type = 'VALIDACAO_SOLICITADA' THEN 1 ELSE 0 END)
+           AS has_validacao_solicitada,
+         MAX(CASE WHEN e.event_type = 'VALIDACAO' THEN 1 ELSE 0 END) AS has_validacao,
+         MAX(
+           CASE
+             WHEN e.event_type = 'VALIDACAO' AND e.note NOT LIKE 'reprovada%' THEN 1
+             ELSE 0
+           END
+         ) AS has_validacao_aprovada,
+         MAX(
+           CASE
+             WHEN e.event_type = 'VALIDACAO' AND e.note LIKE 'reprovada%' THEN 1
+             ELSE 0
+           END
+         ) AS has_validacao_reprovada,
+         MAX(CASE WHEN e.event_type = 'CONCLUIDA' THEN 1 ELSE 0 END) AS has_concluida
        FROM app_tratativa_events e
-       WHERE e.created_at >= ? AND e.created_at < ?
-       ${kindEvents.sql}
-       GROUP BY event_type`,
-      [from, toExclusive, ...kindEvents.params],
-    ),
-    sirQuery<Array<RowDataPacket & { outcome: string; total: number }>>(
-      `SELECT
-         CASE WHEN e.note LIKE 'reprovada%' THEN 'reprovada' ELSE 'aprovada' END AS outcome,
-         COUNT(*) AS total
-       FROM app_tratativa_events e
-       WHERE e.event_type = 'VALIDACAO'
-         AND e.created_at >= ? AND e.created_at < ?
-         ${kindEvents.sql}
-       GROUP BY outcome`,
-      [from, toExclusive, ...kindEvents.params],
-    ),
-  ]);
+       WHERE e.created_at < ?
+       GROUP BY e.tratativa_id
+     ) stage ON stage.tratativa_id = t.id
+     WHERE t.started_at >= ?
+       AND t.started_at < ?
+       ${kindTratativas.sql}`,
+    [toExclusive, toExclusive, from, toExclusive, ...kindTratativas.params],
+  );
 
-  const counts = new Map(rows.map((row) => [row.event_type, Number(row.total)]));
-
-  const validacaoMap = new Map(validacaoRows.map((row) => [row.outcome, Number(row.total)]));
-
+  const row = rows[0];
   return {
-    assuncoes: counts.get("START") ?? 0,
-    acionamentos: counts.get("ACIONAMENTO") ?? 0,
-    validacoesSolicitadas: counts.get("VALIDACAO_SOLICITADA") ?? 0,
-    validacoes: counts.get("VALIDACAO") ?? 0,
-    validacoesAprovadas: validacaoMap.get("aprovada") ?? 0,
-    validacoesReprovadas: validacaoMap.get("reprovada") ?? 0,
-    concluidas: counts.get("CONCLUIDA") ?? 0,
-    liberacoes: counts.get("RELEASE") ?? 0,
+    assuncoes: Number(row?.assuncoes ?? 0),
+    acionamentos: Number(row?.acionamentos ?? 0),
+    validacoesSolicitadas: Number(row?.validacoes_solicitadas ?? 0),
+    validacoes: Number(row?.validacoes ?? 0),
+    validacoesAprovadas: Number(row?.validacoes_aprovadas ?? 0),
+    validacoesReprovadas: Number(row?.validacoes_reprovadas ?? 0),
+    concluidas: Number(row?.concluidas ?? 0),
+    liberacoes: Number(row?.liberacoes ?? 0),
     duracaoMediaMinutos: null,
   };
 }
 
+/** Série de atividade diária (eventos ocorridos no período, não coorte). */
 async function loadDailySeries(
   from: Date,
   toExclusive: Date,
@@ -191,6 +226,7 @@ function buildEventDistribution(summary: TratativaReportSummary): TratativaRepor
   return slices.filter((item) => item.total > 0);
 }
 
+/** Ranking de operadores por eventos ocorridos no período. */
 async function loadOperators(
   from: Date,
   toExclusive: Date,
@@ -220,18 +256,23 @@ async function loadOperators(
   }));
 }
 
-async function loadAcionamentoRows(
+/** VTs da coorte registradas até o fim do período (sintomas e clientes). */
+async function loadCohortAcionamentoRows(
   from: Date,
   toExclusive: Date,
+  kindTratativas: { sql: string; params: unknown[] },
   kindEvents: { sql: string; params: unknown[] },
 ): Promise<AcionamentoRow[]> {
   return sirQuery<AcionamentoRow[]>(
     `SELECT e.record_key, e.message_text
      FROM app_tratativa_events e
-     WHERE e.created_at >= ? AND e.created_at < ?
+     INNER JOIN app_tratativas t ON t.id = e.tratativa_id
+     WHERE t.started_at >= ? AND t.started_at < ?
+       ${kindTratativas.sql}
        AND e.event_type = 'ACIONAMENTO'
+       AND e.created_at < ?
        ${kindEvents.sql}`,
-    [from, toExclusive, ...kindEvents.params],
+    [from, toExclusive, ...kindTratativas.params, toExclusive, ...kindEvents.params],
   );
 }
 

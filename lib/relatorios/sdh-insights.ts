@@ -8,14 +8,17 @@ export type SdhInsightHighlight = {
   tone: "default" | "success" | "warning" | "danger";
 };
 
-/** Monta destaques curtos do relatório SDH a partir do payload agregado. */
-export function buildSdhInsightHighlights(data: SdhReportData): SdhInsightHighlight[] {
+/** Monta destaques curtos do relatório SDH, incluindo login somente para administradores. */
+export function buildSdhInsightHighlights(
+  data: SdhReportData,
+  options: { includeOperators?: boolean } = {},
+): SdhInsightHighlight[] {
   const { summary, byDdd, byVendor, operators } = data;
   const topDdd = byDdd[0];
   const topVendor = byVendor[0];
   const topOperator = operators[0];
 
-  return [
+  const highlights: SdhInsightHighlight[] = [
     {
       id: "backlog",
       icon: "bi-broadcast",
@@ -44,12 +47,17 @@ export function buildSdhInsightHighlights(data: SdhReportData): SdhInsightHighli
       value: topVendor ? `${topVendor.label} (${topVendor.total})` : "—",
       tone: "success",
     },
-    {
+  ];
+
+  if (options.includeOperators) {
+    highlights.push({
       id: "top-login",
       icon: "bi-person-badge",
       label: "Login mais ativo",
       value: topOperator ? `${topOperator.userLogin} (${topOperator.total})` : "—",
       tone: operators.length > 0 ? "success" : "danger",
-    },
-  ];
+    });
+  }
+
+  return highlights;
 }

@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "BSOD" };
 
 type PageProps = {
-  searchParams: Promise<{ de?: string; ate?: string; status?: string }>;
+  searchParams: Promise<{ de?: string; ate?: string; status?: string; page?: string }>;
 };
 
 /** Análise operacional e listagem de tratativas BSOD por status. */
@@ -25,6 +25,7 @@ export default async function Page({ searchParams }: PageProps) {
     formatRelatorioDateParam(filters.from),
     formatRelatorioDateParam(filters.to),
     filters.status ?? "all",
+    String(filters.page ?? 1),
   ].join(":");
 
   return (

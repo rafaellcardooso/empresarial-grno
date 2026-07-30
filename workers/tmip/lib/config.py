@@ -29,6 +29,13 @@ def get_sftp_config() -> dict:
     local_path = Path(local_raw)
     if not local_path.is_absolute():
         local_path = WORKER_ROOT / local_path
+    max_age_raw = os.environ.get("SFTP_MAX_AGE_HOURS", "24").strip() or "24"
+    try:
+        max_age_hours = float(max_age_raw)
+    except ValueError as exc:
+        raise RuntimeError("SFTP_MAX_AGE_HOURS inválido") from exc
+    if max_age_hours <= 0:
+        raise RuntimeError("SFTP_MAX_AGE_HOURS deve ser > 0")
     return {
         "host": required("SFTP_HOST"),
         "port": int(os.environ.get("SFTP_PORT", "22")),
@@ -36,6 +43,7 @@ def get_sftp_config() -> dict:
         "password": required("SFTP_PASSWORD"),
         "remote_path": required("SFTP_REMOTE_PATH"),
         "local_path": local_path,
+        "max_age_hours": max_age_hours,
     }
 
 

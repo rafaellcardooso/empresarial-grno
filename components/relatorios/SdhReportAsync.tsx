@@ -1,4 +1,5 @@
 import { SdhReportPanel } from "@/components/relatorios/SdhReportPanel";
+import { getSession } from "@/lib/auth/session";
 import type { SdhReportFilters } from "@/lib/models/sdh-report";
 import { getSdhReport } from "@/lib/queries/sdh-reports";
 
@@ -8,6 +9,11 @@ type SdhReportAsyncProps = {
 
 /** Carrega agregações do relatório SDH no servidor. */
 export async function SdhReportAsync({ filters }: SdhReportAsyncProps) {
-  const data = await getSdhReport(filters);
-  return <SdhReportPanel filters={filters} data={data} />;
+  const session = await getSession();
+  const showOperatorsRanking = session?.role === "STAFF";
+  const data = await getSdhReport(filters, { includeOperators: showOperatorsRanking });
+
+  return (
+    <SdhReportPanel filters={filters} data={data} showOperatorsRanking={showOperatorsRanking} />
+  );
 }
