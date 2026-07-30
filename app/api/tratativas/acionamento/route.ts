@@ -97,7 +97,6 @@ function normalizeTechnicianInput(
   raw: Partial<AcionamentoTechnicianInput> | undefined,
 ): AcionamentoTechnicianInput {
   return {
-    whatsappTarget: String(raw?.whatsappTarget ?? "").trim(),
     janela: String(raw?.janela ?? "").trim(),
     nome: String(raw?.nome ?? "").trim(),
     cidade: String(raw?.cidade ?? "").trim(),

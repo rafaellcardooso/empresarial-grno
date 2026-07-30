@@ -1,6 +1,5 @@
 /** Campos do técnico preenchidos no acionamento WhatsApp. */
 export type AcionamentoTechnicianInput = {
-  whatsappTarget: string;
   janela: string;
   nome: string;
   cidade: string;

@@ -73,14 +73,6 @@ export const ACIONAMENTO_TECHNICIAN_FIELDS: AcionamentoFormField[] = [
   },
 ];
 
-export const ACIONAMENTO_WHATSAPP_MENTION_FIELD: AcionamentoFormField = {
-  key: "whatsappTarget",
-  label: "Menção no grupo",
-  placeholder: "Digite a menção no grupo",
-  hint: "Opcional. Aparece no topo da mensagem.",
-  col: 12,
-};
-
 export const ACIONAMENTO_SINTOMA_FIELD: AcionamentoFormField = {
   key: "sintoma",
   label: "Sintoma",

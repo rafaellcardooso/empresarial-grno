@@ -57,19 +57,13 @@ export function buildSirAcionamentoMessage(
     context.descricao?.trim() ||
     "sem sinal.";
 
-  const lines: string[] = [];
-  const mention = technician.whatsappTarget?.trim();
-  if (mention) {
-    lines.push(mention.startsWith("@") ? mention : `@${mention}`);
-  }
-
-  lines.push(
+  const lines = [
     "Favor informar dados do técnico para VT:",
     ...buildSirTechnicianBlock(technician),
     "",
     "",
     ...buildSirRecordBlock(context, sintoma),
-  );
+  ];
 
   return lines.join("\n").trim();
 }

@@ -8,7 +8,6 @@ import {
   ACIONAMENTO_SINTOMA_FIELD,
   ACIONAMENTO_SINTOMA_FIELD_SIR,
   ACIONAMENTO_TECHNICIAN_FIELDS,
-  ACIONAMENTO_WHATSAPP_MENTION_FIELD,
 } from "@/lib/config/acionamento-form";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import { copyTextToClipboard } from "@/lib/browser/clipboard";
@@ -31,7 +30,6 @@ type AcionamentoFormProps = {
 };
 
 const EMPTY_TECHNICIAN: AcionamentoTechnicianInput = {
-  whatsappTarget: "",
   janela: "",
   nome: "",
   cidade: "",
@@ -59,9 +57,6 @@ export function AcionamentoForm({
 
   const isSir = recordKind === "RAL" || recordKind === "REC";
   const sintomaField = isSir ? ACIONAMENTO_SINTOMA_FIELD_SIR : ACIONAMENTO_SINTOMA_FIELD;
-  const scheduleFields = isSir
-    ? [...ACIONAMENTO_SCHEDULE_FIELDS, ACIONAMENTO_WHATSAPP_MENTION_FIELD]
-    : ACIONAMENTO_SCHEDULE_FIELDS;
 
   const previewMessage = useMemo(() => {
     if (!context || !isAcionamentoTechnicianComplete(technician)) return "";
@@ -158,7 +153,7 @@ export function AcionamentoForm({
           <section className="acionamento-form-section mt-3">
             <p className="acionamento-section-label">Agendamento</p>
             <AcionamentoFormFields
-              fields={scheduleFields}
+              fields={ACIONAMENTO_SCHEDULE_FIELDS}
               technician={technician}
               onChange={updateField}
             />
