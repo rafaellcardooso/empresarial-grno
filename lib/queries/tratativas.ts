@@ -1,5 +1,5 @@
 import type { RowDataPacket } from "mysql2";
-import { sirExecute, sirQuery } from "@/lib/db/sir";
+import { getSirPool, sirExecute, sirQuery } from "@/lib/db/sir";
 import type { AppUserRole } from "@/lib/models/app-user";
 import { SIR_TABLES } from "@/lib/models";
 import type {
@@ -13,6 +13,7 @@ import { isOpenSirRecord } from "@/lib/queries/sir";
 import { normalizeTratativaKey } from "@/lib/tratativa/keys";
 
 type ActiveTratativaRow = ActiveTratativaRecord & RowDataPacket;
+type SirStatusRow = RowDataPacket & { status: string | null };
 type TratativaHistoryRow = RowDataPacket & {
   record_key: string;
   event_type: string;
@@ -64,6 +65,14 @@ export class TratativaClosedError extends Error {
   }
 }
 
+/** Registro SIR indisponível para conclusão operacional. */
+export class TratativaConclusionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TratativaConclusionError";
+  }
+}
+
 /** Bloqueia novas ações quando o RAL/REC já está encerrado. */
 async function assertOpenSirTarget(
   recordKind: TratativaRecordKind,
@@ -72,6 +81,25 @@ async function assertOpenSirTarget(
   if (recordKind !== "RAL" && recordKind !== "REC") return;
   if (!(await isOpenSirRecord(recordKind, recordKey))) {
     throw new TratativaClosedError();
+  }
+}
+
+/** Confirma que o registro SIR existe e foi encerrado na fonte. */
+async function assertClosedSirTarget(recordKind: "RAL" | "REC", recordKey: string): Promise<void> {
+  const table = recordKind === "RAL" ? SIR_TABLES.rals : SIR_TABLES.recs;
+  const rows = await sirQuery<SirStatusRow[]>(
+    `SELECT status FROM ${table} WHERE num_recup = ? LIMIT 1`,
+    [recordKey],
+  );
+  if (!rows[0]) {
+    throw new TratativaConclusionError("Registro SIR não encontrado.");
+  }
+  if (
+    String(rows[0].status ?? "")
+      .trim()
+      .toUpperCase() !== "ENCERRADO"
+  ) {
+    throw new TratativaConclusionError("Encerre a tratativa somente após o SIR normalizar.");
   }
 }
 
@@ -347,6 +375,60 @@ export async function releaseTratativa(input: {
      VALUES (?, ?, ?, 'RELEASE', ?)`,
     [active.id, input.recordKind, key, input.userId],
   );
+}
+
+/** Conclui tratativa RAL/REC já encerrada na fonte e registra auditoria. */
+export async function concludeSirTratativa(input: {
+  recordKind: "RAL" | "REC";
+  recordKey: string;
+  userId: number;
+  userRole: AppUserRole;
+  note: string;
+}): Promise<void> {
+  const key = normalizeTratativaKey(input.recordKind, input.recordKey);
+  const note = input.note.trim().slice(0, 500);
+  if (!note) throw new TratativaConclusionError("Informe a observação de encerramento.");
+  await assertClosedSirTarget(input.recordKind, key);
+
+  const connection = await getSirPool().getConnection();
+  try {
+    await connection.beginTransaction();
+    const [rows] = await connection.execute<Array<{ id: number; user_id: number } & RowDataPacket>>(
+      `SELECT id, user_id FROM app_tratativas
+       WHERE record_kind = ? AND record_key = ? AND released_at IS NULL
+       LIMIT 1 FOR UPDATE`,
+      [input.recordKind, key],
+    );
+    const active = rows[0];
+    if (!active) throw new TratativaNotFoundError();
+    if (input.userRole !== "STAFF" && active.user_id !== input.userId) {
+      throw new TratativaForbiddenError();
+    }
+
+    await connection.execute(
+      `INSERT INTO app_tratativa_events
+         (tratativa_id, record_kind, record_key, event_type, user_id, note)
+       VALUES (?, ?, ?, 'CONCLUIDA', ?, ?)`,
+      [active.id, input.recordKind, key, input.userId, note],
+    );
+    await connection.execute(
+      `UPDATE app_tratativas SET released_at = NOW(), released_by = ?
+       WHERE id = ? AND released_at IS NULL`,
+      [input.userId, active.id],
+    );
+    await connection.execute(
+      `INSERT INTO app_tratativa_events
+         (tratativa_id, record_kind, record_key, event_type, user_id)
+       VALUES (?, ?, ?, 'RELEASE', ?)`,
+      [active.id, input.recordKind, key, input.userId],
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 /** Registra acionamento WhatsApp vinculado à tratativa ativa. */

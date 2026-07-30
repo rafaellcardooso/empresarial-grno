@@ -78,6 +78,7 @@ async function openSharedSession(
     const enriched = await enrichTratativasWorkflow({ [tratativa.recordKey]: tratativa });
     tratativa = enriched[tratativa.recordKey] ?? tratativa;
   }
+  const sirStatus = summary.find((item) => item.label === "Status SIR")?.value;
 
   return {
     domain: input.domain,
@@ -91,6 +92,9 @@ async function openSharedSession(
     tratativa,
     history: tratativa?.history ?? [],
     workflowStatus: tratativa?.workflowStatus,
+    canConclude:
+      (input.domain === "RAL" || input.domain === "REC") &&
+      sirStatus?.trim().toUpperCase() === "ENCERRADO",
   };
 }
 

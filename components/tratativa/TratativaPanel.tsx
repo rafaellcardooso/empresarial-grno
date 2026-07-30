@@ -123,46 +123,70 @@ export function TratativaPanel({
     }
   }, [note, refreshAfterAction, session]);
 
-  const handleRelease = useCallback(async () => {
-    if (!session) return;
-    setBusy(true);
-    setError(null);
-    try {
-      if (session.domain === "SDH") {
-        const observacao = note.trim() || "Encerramento via painel Tratar.";
-        const response = await fetch(`/api/sdh/${session.recordKey}/status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ emTratativa: false, observacao }),
-        });
-        const payload = (await response.json()) as { error?: string };
-        if (!response.ok) {
-          setError(payload.error ?? UI_COPY.tratativaReleaseError);
-          return;
-        }
-      } else {
-        const response = await fetch("/api/tratativas/release", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            recordKind: session.domain,
-            recordKey: session.recordKey,
-          }),
-        });
-        const payload = (await response.json()) as { error?: string };
-        if (!response.ok) {
-          setError(payload.error ?? UI_COPY.tratativaReleaseError);
-          return;
-        }
+  const handleEndTreatment = useCallback(
+    async (action: "release" | "conclude") => {
+      if (!session) return;
+      if (action === "conclude" && !note.trim()) {
+        setError("Informe a observação de encerramento.");
+        return;
       }
-      onChanged?.();
-      onClose();
-    } catch {
-      setError(UI_COPY.tratativaReleaseError);
-    } finally {
-      setBusy(false);
-    }
-  }, [note, onChanged, onClose, session]);
+      setBusy(true);
+      setError(null);
+      try {
+        if (action === "conclude") {
+          const response = await fetch("/api/tratativas/concluir", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recordKind: session.domain,
+              recordKey: session.recordKey,
+              note: note.trim(),
+            }),
+          });
+          const payload = (await response.json()) as { error?: string };
+          if (!response.ok) {
+            setError(payload.error ?? UI_COPY.tratativaCloseError);
+            return;
+          }
+        } else if (session.domain === "SDH") {
+          const observacao = note.trim() || "Encerramento via painel Tratar.";
+          const response = await fetch(`/api/sdh/${session.recordKey}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ emTratativa: false, observacao }),
+          });
+          const payload = (await response.json()) as { error?: string };
+          if (!response.ok) {
+            setError(payload.error ?? UI_COPY.tratativaReleaseError);
+            return;
+          }
+        } else {
+          const response = await fetch("/api/tratativas/release", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recordKind: session.domain,
+              recordKey: session.recordKey,
+            }),
+          });
+          const payload = (await response.json()) as { error?: string };
+          if (!response.ok) {
+            setError(payload.error ?? UI_COPY.tratativaReleaseError);
+            return;
+          }
+        }
+        onChanged?.();
+        onClose();
+      } catch {
+        setError(
+          action === "conclude" ? UI_COPY.tratativaCloseError : UI_COPY.tratativaReleaseError,
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [note, onChanged, onClose, session],
+  );
 
   if (!open) return null;
 
@@ -230,14 +254,26 @@ export function TratativaPanel({
                     Salvar observação
                   </button>
                   {session.canManage ? (
-                    <button
-                      type="button"
-                      className="btn btn-outline-danger btn-sm"
-                      onClick={() => void handleRelease()}
-                      disabled={busy}
-                    >
-                      {session.domain === "SDH" ? "Encerrar" : UI_COPY.tratativaRelease}
-                    </button>
+                    <>
+                      {session.canConclude ? (
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-sm"
+                          onClick={() => void handleEndTreatment("conclude")}
+                          disabled={busy || !note.trim()}
+                        >
+                          {UI_COPY.tratativaClose}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={() => void handleEndTreatment("release")}
+                        disabled={busy}
+                      >
+                        {session.domain === "SDH" ? "Encerrar" : UI_COPY.tratativaRelease}
+                      </button>
+                    </>
                   ) : null}
                 </div>
               </section>

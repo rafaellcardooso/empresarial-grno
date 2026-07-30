@@ -18,6 +18,7 @@ export type TreatmentSession = {
   sdhAlarm?: SdhAlarmListItem | null;
   history: TratativaHistoryEntry[];
   workflowStatus?: string;
+  canConclude?: boolean;
 };
 
 /** Rótulos de eventos para cronologia. */

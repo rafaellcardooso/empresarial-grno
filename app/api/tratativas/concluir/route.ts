@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { parseTratativaRecordKind } from "@/lib/tratativa/keys";
-import { TratativaForbiddenError, TratativaRequiredError } from "@/lib/queries/tratativas";
+import {
+  concludeSirTratativa,
+  TratativaConclusionError,
+  TratativaForbiddenError,
+  TratativaNotFoundError,
+  TratativaRequiredError,
+} from "@/lib/queries/tratativas";
 import { TratativaWorkflowError, concludeTratativa } from "@/lib/queries/tratativa-workflow";
 
 type ConcluirBody = {
@@ -10,7 +16,7 @@ type ConcluirBody = {
   note?: string | null;
 };
 
-/** Conclui tratativa BSOD após validação e libera o registro. */
+/** Conclui tratativa BSOD validada ou SIR já encerrada na fonte. */
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session || session.status !== "ACTIVE") {
@@ -26,13 +32,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    await concludeTratativa({
-      recordKind,
-      recordKey,
-      userId: session.userId,
-      userRole: session.role,
-      note: body?.note ?? null,
-    });
+    if (recordKind === "RAL" || recordKind === "REC") {
+      await concludeSirTratativa({
+        recordKind,
+        recordKey,
+        userId: session.userId,
+        userRole: session.role,
+        note: body?.note ?? "",
+      });
+    } else {
+      await concludeTratativa({
+        recordKind,
+        recordKey,
+        userId: session.userId,
+        userRole: session.role,
+        note: body?.note ?? null,
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     return workflowErrorResponse(error);
@@ -41,7 +57,11 @@ export async function POST(request: Request) {
 
 /** Mapeia erros do fluxo de tratativa para resposta HTTP. */
 function workflowErrorResponse(error: unknown) {
-  if (error instanceof TratativaRequiredError) {
+  if (
+    error instanceof TratativaRequiredError ||
+    error instanceof TratativaNotFoundError ||
+    error instanceof TratativaConclusionError
+  ) {
     return NextResponse.json({ error: error.message }, { status: 409 });
   }
   if (error instanceof TratativaForbiddenError) {

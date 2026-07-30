@@ -10,6 +10,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 ### Added
 
 - Seção **Normalizados aguardando confirmação** em RAL, REC e SDH (tratativa ativa após normalização da fonte).
+- Encerramento auditado de tratativas RAL/REC já normalizadas, distinto da liberação.
 
 ### Changed
 
