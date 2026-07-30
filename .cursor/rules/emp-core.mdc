@@ -1,33 +1,33 @@
 ---
-description: Estrutura Empresarial GRNO — Next.js + workers SIR + leitura HFC
+description: Estrutura Empresarial GRNO — Next.js + workers SIR/TMIP + leitura HFC
 alwaysApply: true
 ---
 
 # Empresarial — estrutura
 
-Monorepo em `/usr/local/empresarial`. **Next.js só lê**; **workers gravam** no MySQL `sir`.
+Monorepo em `/usr/local/empresarial`. Workers gravam tabelas-fonte; Next lê SIR/HFC e escreve tabelas de **aplicação** no SIR.
 
-| Tipo                     | Local                                                   | Escreve DB?               |
-| ------------------------ | ------------------------------------------------------- | ------------------------- |
-| UI + BFF (App Router)    | `app/(shell)/`, `app/api/`, `components/`, `lib/`       | Não (SIR + HFC read-only) |
-| Queries / pools / models | `lib/db/`, `lib/queries/`, `lib/models/`                | Não                       |
-| Migrations SIR           | `migrations/sir/`, `scripts/db/`                        | Migrate/seed dev          |
-| Ingest SIR (Playwright)  | `workers/sir-ingest/sources/`                           | Sim → MySQL `sir`         |
-| Bot Telegram SIR         | `workers/sir-ingest/telegram/`                          | Não (HTTP → Next `/api`)  |
-| Systemd                  | `deploy/systemd/`, `workers/sir-ingest/deploy/systemd/` | —                         |
+| Tipo                     | Local                                          | Escreve DB?                                                                                                   |
+| ------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| UI + BFF                 | `app/`, `components/`, `lib/`                  | SIR app (users, preferências, notificações, tratativas/SDH events) — **não** `rals`/`recs` fonte; **não** HFC |
+| Queries / pools / models | `lib/db/`, `lib/queries/`, `lib/models/`       | Conforme camada acima                                                                                         |
+| Migrations SIR           | `migrations/sir/`, `scripts/db/`               | DDL (+ seed/import só lab)                                                                                    |
+| Ingest SIR               | `workers/sir-ingest/sources/`                  | `rals` / `recs`                                                                                               |
+| Ingest TMIP              | `workers/tmip/`                                | `sdh_alarms`                                                                                                  |
+| Bot Telegram             | `workers/sir-ingest/telegram/`                 | Não (HTTP → Next `/api`)                                                                                      |
+| Systemd                  | `deploy/systemd/`, `workers/*/deploy/systemd/` | —                                                                                                             |
 
 ## Fronteiras
 
 - **Não** colocar Selenium, scrapers ou bots dentro de `app/`.
 - **Não** escrever no MySQL do `hfc-sls` a partir deste repo.
-- BSOD/PME: ler `tbl_inventory_pme` (enrich continua no `hfc-sls`).
-- Porta padrão: **3003** (`npm run dev` / `npm start`).
-- Documentação: `docs/README.md` (índice) · deploy: `docs/2026-07-26-deploy-producao.md` + `deploy/README.md`.
-- Mudança de deploy/ops: atualizar `docs/2026-07-26-deploy-producao.md` e/ou `docs/2026-07-26-operacao.md`.
-- Passos manuais no host (units, venv, migrations, tokens): entrada em `docs/operacao-prod/` + índice README (Lab/Prod).
+- Detalhe: `docs/architecture/data-and-write-boundaries.md`.
+- Porta padrão: **3003**.
+- Documentação: `docs/README.md` · deploy: `docs/runbooks/production-*.md` + `docs/operations/`.
+- Passos no host: atualizar runbook relevante; histórico opcional em `docs/changes/`.
 
 ## Antes de mudar frontend
 
-Priorizar estabilidade do ingest (`AlertasRalRede.js`, `AlertasRecRede.js`) e contrato das tabelas `rals` / `recs` com `lib/queries/sir.ts`.
+Priorizar estabilidade do ingest (`AlertasRalRede.js`, `AlertasRecRede.js`) e contrato `rals`/`recs` com `lib/queries/sir.ts`.
 
-Skills: `emp-deploy-producao`, `emp-revisar-sir-ingest`, `emp-align-env`, `emp-db-setup`. Rules: `emp-env`, `emp-deploy`, `emp-telegram`, `emp-docs`. Env: `npm run env:check`. Comentários: rule `emp-comments`.
+Skills: `emp-deploy-producao`, `emp-revisar-sir-ingest`, `emp-align-env`, `emp-db-setup`. Env: `npm run env:check`.

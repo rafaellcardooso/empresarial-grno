@@ -9,8 +9,7 @@ alwaysApply: false
 - Dois processos: `main-ops-bot.py` (ops + dashboard PNG) e `notify-datacenter.py` (push datacenter).
 - **Lab:** units `*-lab*` com `User=rcard`. **Produção:** units sem `-lab` com `User=datacenter`.
 - Código do bot **não** entra em `app/` Next.
-- Consome `EMPRESARIAL_API_URL` (default `http://127.0.0.1:3003/api`) — Next deve estar no ar antes dos bots.
-- venv em `telegram/venv/`; **não** definir `PYTHONPATH=.../telegram` nas units (conflita com `python-telegram-bot`).
-- Nova variável no bot: skill **`emp-align-env`** — atualizar `workers/sir-ingest/.env.example` **e** `.env` local no mesmo turno.
-- Passos manuais no host: entrada em `docs/operacao-prod/` + índice README (Lab/Prod).
-- Docs: `docs/2026-07-26-bots-telegram.md`, `workers/sir-ingest/README.md`.
+- Consome `EMPRESARIAL_API_URL` (default `http://127.0.0.1:3003/api`) — Next saudável antes dos bots.
+- venv em `telegram/venv/`; **não** definir `PYTHONPATH=.../telegram` nas units.
+- Nova variável: skill **`emp-align-env`**.
+- Runbook: `docs/runbooks/telegram-bots.md`.

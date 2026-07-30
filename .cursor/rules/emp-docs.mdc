@@ -1,18 +1,18 @@
 ---
-description: Documentação em docs/ — índice e conteúdo
+description: Documentação canônica — índice, runbooks e histórico
 globs: docs/**/*.md
 alwaysApply: false
 ---
 
 # Documentação
 
-- Tudo em `docs/`; nomes datados `AAAA-MM-DD-tema-kebab.md` (português, kebab-case).
-- Atualizar `docs/README.md` ao criar ou revisar doc relevante.
-- **Lab:** `docs/2026-07-27-lab.md` · **Produção:** `docs/2026-07-26-deploy-producao.md` · arquitetura: `docs/architecture.md` · referência: `docs/2026-07-26-operacao.md`.
-- **Contribuição / changelog:** `CONTRIBUTING.md` e `CHANGELOG.md` na raiz (Keep a Changelog + Conventional Commits).
-- **Ações manuais lab/prod:** `docs/operacao-prod/AAAA-MM-DD-tema.md` + índice `docs/operacao-prod/README.md` (status Lab/Prod). Usar quando a mudança exige systemd, venv Python, migrations, disable de unit legada, etc.
-- **Planos estáveis** (aprovados / em implementação): `docs/plans/AAAA-MM-DD-tema.md` + índice `docs/plans/README.md`. Rascunhos do Cursor ficam fora do repo (`~/.cursor/plans/`).
-- Units + troubleshooting: `deploy/README.md` — checklist de install fica em `docs/` (lab ou produção), não duplicar.
-- Ao alterar doc operacional: atualizar cabeçalho `Última revisão: **AAAA-MM-DD**` e a linha do índice em `docs/README.md` (nome do arquivo pode permanecer).
-- Mudança relevante de produto/ops: registrar em `CHANGELOG.md` (`[Unreleased]` ou data do release).
-- Sem secrets reais (placeholders). README na raiz só resume e aponta para `docs/`.
+- Hub: `docs/README.md`. Conteúdo vivo **sem** data no nome (`getting-started/`, `architecture/`, `operations/`, `runbooks/`, `reference/`).
+- Datas apenas em `docs/changes/deployment-notes/` e `docs/architecture/decisions/`.
+- Lab: `docs/getting-started/development.md` · Produção: `docs/runbooks/production-install.md` + `production-release.md`.
+- Inventário de host (estado desconhecido): `docs/runbooks/production-inventory.md`.
+- Contribuição / changelog: `CONTRIBUTING.md`, `CHANGELOG.md`.
+- Units: `deploy/README.md` (inventário) · procedimentos nos runbooks — não duplicar checklist longo em `deploy/`.
+- Caminhos datados antigos são **stubs** de redirecionamento; não reintroduzir monólitos.
+- Ao revisar doc: cabeçalho `Última revisão` e índice em `docs/README.md` se necessário.
+- Mudança relevante: `CHANGELOG.md` (`[Unreleased]`).
+- Sem secrets reais. README na raiz só resume e aponta para `docs/`.

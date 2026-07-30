@@ -1,9 +1,11 @@
 ---
 name: emp-db-setup
-description: Subir MySQL SIR local, rodar migrations e seed de dev
+description: Subir MySQL SIR local, rodar migrations e seed de lab
 ---
 
-# Setup banco SIR (dev)
+# Setup banco SIR
+
+Docs: `docs/getting-started/database.md` · migrations: `docs/runbooks/database-migrations.md`.
 
 ## 1. Env
 
@@ -13,94 +15,31 @@ cp .env.example .env.local
 npm run env:check
 ```
 
-Valores padrão dev (WSL MariaDB):
-
-- `SIR_DB_HOST=127.0.0.1`
-- `SIR_DB_PORT=3306`
-- `SIR_DB_USER=monitor` (mesmo usuário do hfc-sls)
-- `SIR_DB_PASSWORD=` igual ao `HFC_DB_PASSWORD`
-- `SIR_DB_NAME=claroEmpresarial`
-
-## 2. Banco local
-
-### WSL + MariaDB (porta 3306)
-
-MariaDB já instalado no WSL — sem Docker:
+## 2. Lab
 
 ```bash
 npm run db:bootstrap
+npm run db:migrate
+npm run db:import      # snapshot — NÃO use em prod
+npm run db:seed-staff
 ```
 
-`.env.local`: `SIR_DB_HOST=127.0.0.1`, `SIR_DB_PORT=3306`, user `monitor`, database `claroEmpresarial`.
+Ou dados fake: `npm run db:setup` (`migrate` + `db:seed`).
 
-### Docker (porta 3307)
+Docker opcional: `docker-compose.dev.yml` (porta 3307) — ajustar `SIR_DB_PORT`.
 
-```bash
-docker compose -f docker-compose.dev.yml up -d
-docker compose -f docker-compose.dev.yml ps
-```
-
-Aguardar `healthy` no container `empresarial-mysql-sir`. Ajustar `SIR_DB_PORT=3307`.
-
-## 3. Schema + dados
-
-### Produção (via ingest — padrão GRNO)
-
-Sempre `cd /usr/local/empresarial` antes de `npm`. Instalar deps (`npm install`) **antes** dos scripts de banco.
-
-Banco **vazio** após migrate; workers preenchem:
+## 3. Produção
 
 ```bash
-cd /usr/local/empresarial
-npm install
-node scripts/db/bootstrap-sir.mjs | sudo mariadb   # não: npm run … | mariadb -u root -p
+node scripts/db/bootstrap-sir.mjs | sudo mariadb
 npm run db:migrate
 npm run db:seed-staff
-# workers: install:browsers + systemd — ver deploy/README.md
 ```
 
-Não rodar `db:import` / `db:seed` em prod.
-
-### Dev local
-
-**Dados fake:**
-
-````bash
-npm run db:migrate    # cria DB + tabelas + schema_migrations
-npm run db:seed       # RAL/REC fake para UI
-# ou
-```bash
-npm run db:setup      # migrate + seed
-npm run env:check     # validar .env.example ↔ .env.local
-````
-
-**Dev com snapshot de produção** (`backup_sir_16052026.sql` na raiz ou em `data/backups/`):
-
-```bash
-docker compose -f docker-compose.dev.yml up -d
-npm run db:import
-# caminho customizado:
-npm run db:import -- /caminho/para/backup.sql
-```
-
-O import restaura ~5.5k RALs e ~5.7k REC/DSRs. Só roda em `127.0.0.1`/`localhost` (use `--force` para remoto).
-
-Dumps `backup_*.sql` estão no `.gitignore` — **não commitar**.
-
-## 4. Verificar
-
-```bash
-curl -s http://127.0.0.1:3003/api/saude | jq
-npm run dev
-```
+**Proibido:** `db:import` / `db:seed`. Install completo: `docs/runbooks/production-install.md`.
 
 ## Troubleshooting
 
-- `Unknown database` / banco inexistente em prod: `node scripts/db/bootstrap-sir.mjs | sudo mariadb` e depois `npm run db:migrate`.
-- `ERROR 1698` no root MariaDB: use `sudo mariadb`, não `-u root -p`.
-- `ENOENT package.json`: rodar comandos em `/usr/local/empresarial`, não em `~` ou `/root`.
-- Deploy completo: [deploy/README.md](../../deploy/README.md).
-- `ECONNREFUSED`: container parado ou `SIR_DB_PORT` errado.
-- `Access denied`: credenciais `.env.local` ≠ `docker-compose.dev.yml` ou bootstrap MariaDB.
-- Env desalinhado: `npm run env:check` — ver rule `emp-env`.
-- Migration já aplicada: normal; `schema_migrations` controla idempotência.
+- `ERROR 1698`: `sudo mariadb`, não `-u root -p`.
+- `ENOENT package.json`: comandos em `/usr/local/empresarial`.
+- Env: `npm run env:check`.

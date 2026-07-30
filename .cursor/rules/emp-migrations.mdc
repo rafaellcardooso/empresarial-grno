@@ -1,5 +1,5 @@
 ---
-description: Migrations e schema MySQL SIR (rals/recs)
+description: Migrations e schema MySQL SIR
 globs: migrations/**/*,lib/models/**/*,scripts/db/**/*
 alwaysApply: false
 ---
@@ -8,43 +8,31 @@ alwaysApply: false
 
 ## Fonte de verdade
 
-| Artefato                           | Papel                                         |
-| ---------------------------------- | --------------------------------------------- |
-| `migrations/sir/*.sql`             | DDL versionado (única definição de schema)    |
-| `lib/models/*.ts`                  | Tipos TypeScript espelhando colunas MySQL     |
-| `scripts/db/migrate-sir.mjs`       | Aplica migrations + `schema_migrations`       |
-| `scripts/db/seed-sir-dev.mjs`      | Dados de exemplo só para dev                  |
-| `scripts/db/import-sir-backup.mjs` | Restaura dump MariaDB de produção (dev local) |
+| Artefato                           | Papel                                      |
+| ---------------------------------- | ------------------------------------------ |
+| `migrations/sir/*.sql`             | DDL versionado (única definição de schema) |
+| `lib/models/*.ts`                  | Tipos TypeScript espelhando colunas MySQL  |
+| `scripts/db/migrate-sir.mjs`       | Aplica migrations + `schema_migrations`    |
+| `scripts/db/seed-sir-dev.mjs`      | Dados de exemplo só para lab               |
+| `scripts/db/import-sir-backup.mjs` | Snapshot lab — **proibido em prod**        |
 
-**Não** duplicar `CREATE TABLE` inline no Next ou nos workers — ler `migrations/sir/001_initial_schema.sql`.
-
-Schema de produção (dump `backup_sir_16052026.sql`): `rals` usa `id` AUTO_INCREMENT + `UNIQUE(num_recup)`; `recs` mantém PK em `num_recup`.
-
-## Fluxo dev (sem banco ainda)
-
-```bash
-cp .env.example .env.local
-docker compose -f docker-compose.dev.yml up -d
-npm run db:setup          # migrate + seed
-npm run dev
-```
+**Não** duplicar `CREATE TABLE` inline no Next ou nos workers.
 
 ## Nova migration
 
-1. Criar `migrations/sir/00N_descricao.sql` (próximo número sequencial).
-2. Atualizar `lib/models/ral.ts` e/ou `lib/models/rec.ts`.
-3. Atualizar queries em `lib/queries/sir.ts` e upsert nos workers se necessário.
-4. Rodar `npm run db:migrate`.
-5. **Nunca** editar migration já aplicada em ambiente compartilhado — criar revisão nova.
-6. Se deploy em prod exige passo manual além de `db:migrate`: entrada em `docs/operacao-prod/` + índice README (Lab/Prod). Mencionar no checklist `docs/2026-07-26-deploy-producao.md` se for release.
+1. Criar `migrations/sir/00N_descricao.sql` (próximo número).
+2. Atualizar models/queries/workers se necessário.
+3. Rodar `npm run db:migrate`.
+4. **Nunca** editar migration já aplicada — criar revisão nova.
+5. Procedimento operacional: `docs/runbooks/database-migrations.md`.
 
-## Convenções de coluna
+## Convenções
 
-- MySQL: **snake_case** (`num_recup`, `cf_executante`, `detalhes_title`).
-- TypeScript models: mesmos nomes da coluna (espelho 1:1).
-- Status: `ATIVO` | `ENCERRADO` (`SirRecordStatus`).
+- MySQL: **snake_case**. TypeScript models: mesmos nomes.
+- Status SIR: `ATIVO` | `ENCERRADO`.
 
-## Workers
+## Workers vs Next
 
-- Escrita continua só nos scrapers; Next permanece read-only.
-- DDL aplicado por `npm run db:migrate` — não no boot do worker.
+- Tabelas-fonte `rals`/`recs`/`sdh_alarms` (upsert bruto): workers.
+- Tratativas/app: Next pode escrever — ver `docs/architecture/data-and-write-boundaries.md`.
+- DDL só via `npm run db:migrate`, não no boot do worker.

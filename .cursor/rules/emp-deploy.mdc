@@ -6,10 +6,10 @@ alwaysApply: false
 
 # Deploy
 
-- Lab: `docs/2026-07-27-lab.md` · Produção: `docs/2026-07-26-deploy-producao.md` (não criar markdown longo em `deploy/`).
-- Pendências manuais: `docs/operacao-prod/README.md` — aplicar entradas **Prod: pendente** antes de systemd/bots.
-- Units + troubleshooting: `deploy/README.md`.
-- App Next: `deploy/systemd/empresarial-next.service`; lab: `deploy/systemd/lab/empresarial-next-lab.service`.
-- Ingest + Telegram: `workers/sir-ingest/deploy/systemd/`; lab: `.../lab/*-lab.service`.
+- Lab: `docs/getting-started/development.md`.
+- Produção: `docs/runbooks/production-install.md` · release: `docs/runbooks/production-release.md`.
+- Estado desconhecido: `docs/runbooks/production-inventory.md` (não afirmar pendente/aplicado sem evidência).
+- Units + troubleshooting: `deploy/README.md` · `docs/operations/services.md` · `docs/operations/troubleshooting.md`.
+- Não criar markdown longo de checklist em `deploy/`.
 - Align de env: rule `emp-env` + skill `emp-align-env`; secrets nunca copiar lab → prod.
-- Release rotineira: skill `emp-deploy-producao`.
+- Release: skill `emp-deploy-producao` (consome os runbooks).

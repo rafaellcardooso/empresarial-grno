@@ -49,4 +49,4 @@ cd ../.. && npm run env:check
 curl -s http://127.0.0.1:3003/api/saude | jq
 ```
 
-Deploy produção: [deploy/README.md](../../deploy/README.md) · skill `.cursor/skills/emp-deploy-producao/SKILL.md`.
+Deploy: skill `emp-deploy-producao` · runbooks em `docs/runbooks/` · config: `docs/reference/configuration.md`.
