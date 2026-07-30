@@ -13,8 +13,10 @@ import type {
   SdhTratativaEvent,
   SdhVendorCounts,
 } from "@/lib/models/sdh";
-import { getSirPool, sirQuery } from "@/lib/db/sir";
+import { sirQuery } from "@/lib/db/sir";
 import { serializeRows } from "@/lib/serialize";
+import type { AppUserRole } from "@/lib/models/app-user";
+import type { TratativaHistoryEntry } from "@/lib/models/tratativa";
 
 export type SdhListFilters = {
   vendor?: SdhVendorFilter;
@@ -40,6 +42,35 @@ type StatusAggRow = RowDataPacket & {
 };
 type SdhRow = RowDataPacket & SdhAlarmListItem;
 type TratativaEventRow = RowDataPacket & SdhTratativaEvent;
+
+/** Carrega cronologias SDH agrupadas por alarme. */
+async function listSdhHistories(
+  alarmIds: number[],
+): Promise<Record<number, TratativaHistoryEntry[]>> {
+  if (alarmIds.length === 0) return {};
+  const placeholders = alarmIds.map(() => "?").join(", ");
+  const rows = await sirQuery<TratativaEventRow[]>(
+    `SELECT e.id, e.alarm_id, e.user_id, u.corporate_id AS user_login,
+            e.event_type, e.observacao, e.created_at
+     FROM sdh_tratativa_events e
+     INNER JOIN app_users u ON u.id = e.user_id
+     WHERE e.alarm_id IN (${placeholders})
+     ORDER BY e.created_at ASC, e.id ASC`,
+    alarmIds,
+  );
+  const serialized = serializeRows(rows) as SdhTratativaEvent[];
+  return serialized.reduce<Record<number, TratativaHistoryEntry[]>>((histories, row) => {
+    const current = histories[row.alarm_id] ?? [];
+    current.push({
+      eventType: row.event_type,
+      note: row.event_type === "ACIONAMENTO" ? null : row.observacao,
+      userName: row.user_login,
+      createdAt: row.created_at,
+    });
+    histories[row.alarm_id] = current;
+    return histories;
+  }, {});
+}
 
 /** Monta busca textual nos campos operacionais visíveis da tabela SDH. */
 function sdhSearchSql(q: string | undefined): { clause: string; params: string[] } {
@@ -84,7 +115,12 @@ export async function listActiveSdhAlarms(
      ${pagination.clause}`,
     [...vendor.params, ...ddd.params, ...status.params, ...search.params, ...pagination.params],
   );
-  return serializeRows(rows) as SdhAlarmListItem[];
+  const items = serializeRows(rows) as SdhAlarmListItem[];
+  const histories = await listSdhHistories(items.map((item) => item.id));
+  return items.map((item) => ({
+    ...item,
+    tratativa_history: histories[item.id] ?? [],
+  }));
 }
 
 /** Conta alarmes SDH ativos com os mesmos filtros da listagem. */
@@ -200,60 +236,39 @@ export async function listSdhTratativaEvents(alarmId: number): Promise<SdhTratat
   return serializeRows(rows) as SdhTratativaEvent[];
 }
 
-type MarkSdhStatusInput = {
-  id: number;
-  emTratativa: boolean;
-  userId: number;
-  observacao?: string | null;
-};
-
-/** Registra atualização cronológica e altera o responsável/status da tratativa SDH. */
-export async function updateSdhTratativaStatus(
-  input: MarkSdhStatusInput,
-): Promise<SdhAlarmListItem | null> {
-  const observacao = input.observacao?.trim();
-  if (!observacao) {
-    throw new Error("Observação obrigatória para atualizar a tratativa.");
-  }
-
-  const connection = await getSirPool().getConnection();
-  try {
-    await connection.beginTransaction();
-    const [result] = await connection.execute(
-      `UPDATE sdh_alarms
-       SET em_tratativa = ?,
-           tratativa_user_id = ?,
-           tratativa_marked_at = NOW(),
-           tratativa_observacao = ?
-       WHERE id = ? AND is_active = 1`,
-      [input.emTratativa ? 1 : 0, input.userId, observacao, input.id],
-    );
-    if ("affectedRows" in result && result.affectedRows === 0) {
-      await connection.rollback();
-      return null;
-    }
-    await connection.execute(
-      `INSERT INTO sdh_tratativa_events
-         (alarm_id, user_id, event_type, observacao)
-       VALUES (?, ?, ?, ?)`,
-      [input.id, input.userId, input.emTratativa ? "UPDATE" : "CLOSE", observacao],
-    );
-    await connection.commit();
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
-
+/** Retorna um alarme SDH ativo pelo identificador interno. */
+export async function getActiveSdhAlarmById(id: number): Promise<SdhAlarmListItem | null> {
   const rows = await sirQuery<SdhRow[]>(
     `SELECT a.*, u.corporate_id AS tratativa_user_login
      FROM sdh_alarms a
      LEFT JOIN app_users u ON u.id = a.tratativa_user_id
-     WHERE a.id = ?
+     WHERE a.id = ? AND a.is_active = 1
      LIMIT 1`,
-    [input.id],
+    [id],
   );
-  if (!rows[0]) return null;
-  return serializeRows(rows)[0] as SdhAlarmListItem;
+  return rows[0] ? (serializeRows(rows)[0] as SdhAlarmListItem) : null;
 }
+
+/** Registra acionamento SDH na cronologia da tratativa ativa. */
+export async function recordSdhAcionamento(input: {
+  alarmId: number;
+  userId: number;
+  userRole: AppUserRole;
+  messageText: string;
+}): Promise<void> {
+  const alarm = await getActiveSdhAlarmById(input.alarmId);
+  if (!alarm || Number(alarm.em_tratativa) !== 1) {
+    throw new Error("Marque o alarme SDH em tratativa antes de acionar.");
+  }
+  if (input.userRole !== "STAFF" && alarm.tratativa_user_id !== input.userId) {
+    throw new Error("Sem permissão para acionar esta tratativa.");
+  }
+  await sirQuery(
+    `INSERT INTO sdh_tratativa_events
+       (alarm_id, user_id, event_type, observacao)
+     VALUES (?, ?, 'ACIONAMENTO', ?)`,
+    [input.alarmId, input.userId, input.messageText],
+  );
+}
+
+export { SdhTratativaConflictError, updateSdhTratativaStatus } from "@/lib/queries/sdh-tratativa";

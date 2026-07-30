@@ -1,5 +1,5 @@
 import type { RowDataPacket } from "mysql2";
-import { sirExecute, sirQuery } from "@/lib/db/sir";
+import { getSirPool, sirExecute, sirQuery } from "@/lib/db/sir";
 import type { AppUserRole } from "@/lib/models/app-user";
 import type { ValidacaoFcaInput } from "@/lib/models/validacao";
 import { parseValidacaoOutcomeFromNote } from "@/lib/config/tratativa-workflow";
@@ -50,6 +50,13 @@ export class TratativaWorkflowError extends Error {
   }
 }
 
+/** Restringe validação/conclusão ao domínio BSOD. */
+function assertBsodWorkflow(recordKind: TratativaRecordKind): void {
+  if (recordKind !== "BSOD") {
+    throw new TratativaWorkflowError("Fluxo de validação disponível somente para BSOD.");
+  }
+}
+
 /** Deriva fase operacional a partir da sequência de eventos da tratativa. */
 export function deriveTratativaWorkflowStatus(events: WorkflowEvent[]): TratativaWorkflowStatus {
   let status: TratativaWorkflowStatus = "em_tratativa";
@@ -78,7 +85,7 @@ export async function enrichTratativasWorkflow(
      FROM app_tratativa_events
      WHERE tratativa_id IN (${placeholders})
        AND event_type IN (${WORKFLOW_EVENT_TYPES.map(() => "?").join(", ")})
-     ORDER BY tratativa_id ASC, created_at ASC`,
+     ORDER BY tratativa_id ASC, created_at ASC, id ASC`,
     [...ids, ...WORKFLOW_EVENT_TYPES],
   );
 
@@ -108,6 +115,7 @@ async function getActiveTratativaForWorkflow(input: {
   userId: number;
   userRole: AppUserRole;
 }): Promise<{ id: number; workflowStatus: TratativaWorkflowStatus }> {
+  assertBsodWorkflow(input.recordKind);
   const key = normalizeTratativaKey(input.recordKind, input.recordKey);
   const [active] = await sirQuery<Array<{ id: number; user_id: number } & RowDataPacket>>(
     ACTIVE_TRATATIVA_LOOKUP,
@@ -127,7 +135,7 @@ async function getActiveTratativaForWorkflow(input: {
     `SELECT event_type, note FROM app_tratativa_events
      WHERE tratativa_id = ?
        AND event_type IN (${WORKFLOW_EVENT_TYPES.map(() => "?").join(", ")})
-     ORDER BY created_at ASC`,
+     ORDER BY created_at ASC, id ASC`,
     [active.id, ...WORKFLOW_EVENT_TYPES],
   );
 
@@ -206,25 +214,35 @@ export async function concludeTratativa(input: {
   }
 
   const note = input.note?.trim() ? input.note.trim().slice(0, 500) : null;
-
-  await sirExecute(
-    `INSERT INTO app_tratativa_events
-       (tratativa_id, record_kind, record_key, event_type, user_id, note)
-     VALUES (?, ?, ?, 'CONCLUIDA', ?, ?)`,
-    [active.id, input.recordKind, key, input.userId, note],
-  );
-
-  await sirExecute(
-    `UPDATE app_tratativas
-     SET released_at = NOW(), released_by = ?
-     WHERE id = ? AND released_at IS NULL`,
-    [input.userId, active.id],
-  );
-
-  await sirExecute(
-    `INSERT INTO app_tratativa_events
-       (tratativa_id, record_kind, record_key, event_type, user_id)
-     VALUES (?, ?, ?, 'RELEASE', ?)`,
-    [active.id, input.recordKind, key, input.userId],
-  );
+  const connection = await getSirPool().getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.execute(
+      `INSERT INTO app_tratativa_events
+         (tratativa_id, record_kind, record_key, event_type, user_id, note)
+       VALUES (?, ?, ?, 'CONCLUIDA', ?, ?)`,
+      [active.id, input.recordKind, key, input.userId, note],
+    );
+    const [result] = await connection.execute(
+      `UPDATE app_tratativas
+       SET released_at = NOW(), released_by = ?
+       WHERE id = ? AND released_at IS NULL`,
+      [input.userId, active.id],
+    );
+    if ("affectedRows" in result && result.affectedRows === 0) {
+      throw new TratativaWorkflowError("Tratativa já liberada por outro processo.");
+    }
+    await connection.execute(
+      `INSERT INTO app_tratativa_events
+         (tratativa_id, record_kind, record_key, event_type, user_id)
+       VALUES (?, ?, ?, 'RELEASE', ?)`,
+      [active.id, input.recordKind, key, input.userId],
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }

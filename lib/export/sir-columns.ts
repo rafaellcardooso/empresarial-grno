@@ -5,6 +5,7 @@ const sharedFormatters = {
 };
 
 export const RAL_EXPORT_COLUMNS: CsvColumn<Record<string, unknown>>[] = [
+  { key: "ddd", label: "DDD", format: sharedFormatters.plain },
   { key: "num_recup", label: "Nº", format: sharedFormatters.plain },
   { key: "status", label: "STATUS", format: sharedFormatters.plain },
   { key: "tipo_ral", label: "TIPO", format: sharedFormatters.plain },
@@ -16,6 +17,7 @@ export const RAL_EXPORT_COLUMNS: CsvColumn<Record<string, unknown>>[] = [
 ];
 
 export const REC_EXPORT_COLUMNS: CsvColumn<Record<string, unknown>>[] = [
+  { key: "ddd", label: "DDD", format: sharedFormatters.plain },
   { key: "num_recup", label: "Nº", format: sharedFormatters.plain },
   { key: "status", label: "STATUS", format: sharedFormatters.plain },
   { key: "prioridade", label: "PRIORIDADE", format: sharedFormatters.plain },

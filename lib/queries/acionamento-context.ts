@@ -1,10 +1,12 @@
 import type {
   AcionamentoContext,
+  AcionamentoRecordKind,
   BsodAcionamentoContext,
+  SdhAcionamentoContext,
   SirAcionamentoContext,
 } from "@/lib/models/acionamento";
-import type { TratativaRecordKind } from "@/lib/models/tratativa";
 import { getPmeBsodByMac } from "@/lib/queries/bsod";
+import { getActiveSdhAlarmById } from "@/lib/queries/sdh";
 import { getRalByNum, getRecByNum } from "@/lib/queries/sir";
 import { bsodSintomaFromMonitorLabel } from "@/lib/tratativa/build-acionamento-message";
 import { sirSintomaFromContext } from "@/lib/tratativa/build-sir-acionamento-message";
@@ -13,16 +15,39 @@ import { normalizeTratativaKey } from "@/lib/tratativa/keys";
 
 /** Carrega contexto para montar acionamento WhatsApp (BSOD, RAL ou REC). */
 export async function getAcionamentoContext(
-  recordKind: TratativaRecordKind,
+  recordKind: AcionamentoRecordKind,
   recordKey: string,
 ): Promise<AcionamentoContext | null> {
-  const key = normalizeTratativaKey(recordKind, recordKey);
+  const key =
+    recordKind === "SDH" ? recordKey.trim() : normalizeTratativaKey(recordKind, recordKey);
   if (!key) return null;
 
   if (recordKind === "BSOD") return getBsodAcionamentoContext(key);
   if (recordKind === "RAL") return getSirAcionamentoContext("RAL", key);
   if (recordKind === "REC") return getSirAcionamentoContext("REC", key);
+  if (recordKind === "SDH") return getSdhAcionamentoContext(key);
   return null;
+}
+
+/** Carrega contexto SDH para preencher acionamento WhatsApp. */
+async function getSdhAcionamentoContext(recordKey: string): Promise<SdhAcionamentoContext | null> {
+  const alarmId = Number(recordKey);
+  if (!Number.isInteger(alarmId) || alarmId <= 0) return null;
+  const row = await getActiveSdhAlarmById(alarmId);
+  if (!row) return null;
+  return {
+    recordKind: "SDH",
+    recordKey,
+    ddd: row.ddd ?? undefined,
+    municipio: row.municipio ?? undefined,
+    ne: row.ne ?? undefined,
+    porta: row.porta ?? undefined,
+    alarme: row.alarme ?? undefined,
+    circuito: row.circuito ?? undefined,
+    sir: row.sir ?? undefined,
+    ip: row.ip ?? undefined,
+    sintoma: row.alarme ?? undefined,
+  };
 }
 
 /** Carrega contexto BSOD para preencher acionamento WhatsApp. */

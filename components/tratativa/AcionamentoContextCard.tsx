@@ -27,6 +27,26 @@ export function AcionamentoContextCard({ context }: AcionamentoContextCardProps)
     );
   }
 
+  if (context.recordKind === "SDH") {
+    const items = [
+      { label: "DDD", value: context.ddd },
+      { label: "Município", value: context.municipio },
+      { label: "NE", value: context.ne },
+      { label: "Porta", value: context.porta },
+      { label: "Alarme", value: context.alarme },
+      { label: "Circuito", value: context.circuito },
+      { label: "SIR", value: context.sir },
+      { label: "IP", value: context.ip },
+    ];
+    return (
+      <ContextCardShell title="Registro SDH">
+        {items.map(({ label, value }) => (
+          <ContextItem key={label} label={label} value={value} />
+        ))}
+      </ContextCardShell>
+    );
+  }
+
   const items = [
     { label: "Número", value: context.numRecup },
     { label: "Contrato NETSALES", value: context.contratoNetsales },

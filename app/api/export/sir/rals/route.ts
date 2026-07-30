@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cfFilterFromParam, searchQueryFromParam } from "@/lib/config/sir-filters";
+import { operationalDddFromParam } from "@/lib/config/locations";
+import {
+  cfFilterFromParam,
+  searchQueryFromParam,
+  sirTreatmentFromParam,
+} from "@/lib/config/sir-filters";
 import { ralTipoValueFromParam } from "@/lib/config/ral-types";
 import { sirStatusFromParam } from "@/lib/config/sir-status";
 import { buildCsvFilename, rowsToCsv } from "@/lib/export/csv";
@@ -17,6 +22,8 @@ export async function GET(request: NextRequest) {
       status: sirStatusFromParam(sp.get("status") ?? undefined),
       tipo: ralTipoValueFromParam(sp.get("tipo") ?? undefined),
       cf: cfFilterFromParam(sp.get("cf") ?? undefined),
+      ddd: operationalDddFromParam(sp.get("ddd")),
+      tratativa: sirTreatmentFromParam(sp.get("tratativa")),
       q: searchQueryFromParam(sp.get("q")),
     });
 

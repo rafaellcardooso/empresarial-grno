@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { listSdhTratativaEvents, updateSdhTratativaStatus } from "@/lib/queries/sdh";
+import {
+  listSdhTratativaEvents,
+  getActiveSdhAlarmById,
+  updateSdhTratativaStatus,
+} from "@/lib/queries/sdh";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -51,21 +55,42 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
+    const current = await getActiveSdhAlarmById(id);
+    if (!current) {
+      return NextResponse.json({ error: "Alarme não encontrado" }, { status: 404 });
+    }
+
+    const mode = !body.emTratativa
+      ? "close"
+      : Number(current.em_tratativa) === 1
+        ? "update"
+        : "claim";
+
     const alarm = await updateSdhTratativaStatus({
       id,
       emTratativa: body.emTratativa,
       userId: session.userId,
+      userRole: session.role,
       observacao: body.observacao ?? null,
+      mode,
     });
 
     if (!alarm) {
-      return NextResponse.json({ error: "Alarme não encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Sem permissão ou alarme indisponível para esta ação." },
+        { status: 409 },
+      );
     }
 
     return NextResponse.json({ alarm });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro ao atualizar status.";
-    const status = message.includes("obrigatória") ? 400 : 500;
+    const status =
+      message.includes("obrigatória") || message.includes("Em tratativa por")
+        ? message.includes("Em tratativa por")
+          ? 409
+          : 400
+        : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

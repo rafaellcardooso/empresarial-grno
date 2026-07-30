@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import {
+  TratativaClosedError,
   TratativaConflictError,
   listActiveTratativas,
   startTratativa,
@@ -69,6 +70,9 @@ export async function POST(request: Request) {
         { error: error.message, tratativa: error.existing },
         { status: 409 },
       );
+    }
+    if (error instanceof TratativaClosedError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
     const message = error instanceof Error ? error.message : "Erro ao assumir tratativa.";
     return NextResponse.json({ error: message }, { status: 500 });

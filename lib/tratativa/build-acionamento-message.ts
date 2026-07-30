@@ -2,6 +2,7 @@ import type {
   AcionamentoContext,
   AcionamentoTechnicianInput,
   BsodAcionamentoContext,
+  SdhAcionamentoContext,
 } from "@/lib/models/acionamento";
 import { buildSirAcionamentoMessage } from "@/lib/tratativa/build-sir-acionamento-message";
 
@@ -79,6 +80,31 @@ export function buildBsodAcionamentoMessage(
   return lines.join("\n").trim();
 }
 
+/** Monta mensagem SDH para acionamento técnico via WhatsApp. */
+export function buildSdhAcionamentoMessage(
+  context: SdhAcionamentoContext,
+  technician: AcionamentoTechnicianInput,
+): string {
+  const lines = [
+    "Prezados, solicito atendimento técnico para o alarme SDH abaixo.",
+    "",
+    "TÉCNICO",
+    ...buildTechnicianBlock(technician),
+    "",
+    "ALARME SDH",
+    fieldLine("DDD", context.ddd),
+    fieldLine("MUNICÍPIO", context.municipio),
+    fieldLine("NE", context.ne),
+    fieldLine("PORTA", context.porta),
+    fieldLine("ALARME", context.alarme),
+    fieldLine("CIRCUITO", context.circuito),
+    fieldLine("SIR", context.sir),
+    fieldLine("IP", context.ip),
+    fieldLine("SINTOMA", technician.sintoma || context.sintoma),
+  ];
+  return lines.join("\n").trim();
+}
+
 /** Monta mensagem de acionamento conforme o tipo de registro. */
 export function buildAcionamentoMessage(
   context: AcionamentoContext,
@@ -86,6 +112,9 @@ export function buildAcionamentoMessage(
 ): string {
   if (context.recordKind === "BSOD") {
     return buildBsodAcionamentoMessage(context, technician);
+  }
+  if (context.recordKind === "SDH") {
+    return buildSdhAcionamentoMessage(context, technician);
   }
   return buildSirAcionamentoMessage(context, technician);
 }

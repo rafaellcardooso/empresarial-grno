@@ -1,14 +1,25 @@
 import type { RowDataPacket } from "mysql2";
 import { sirExecute, sirQuery } from "@/lib/db/sir";
 import type { AppUserRole } from "@/lib/models/app-user";
+import { SIR_TABLES } from "@/lib/models";
 import type {
   ActiveTratativaRecord,
+  TratativaHistoryEntry,
   TratativaPublic,
   TratativaRecordKind,
 } from "@/lib/models/tratativa";
+import { getPmeBsodByMac } from "@/lib/queries/bsod";
+import { isOpenSirRecord } from "@/lib/queries/sir";
 import { normalizeTratativaKey } from "@/lib/tratativa/keys";
 
 type ActiveTratativaRow = ActiveTratativaRecord & RowDataPacket;
+type TratativaHistoryRow = RowDataPacket & {
+  record_key: string;
+  event_type: string;
+  note: string | null;
+  user_name: string;
+  created_at: Date | string;
+};
 
 /** Conflito quando o registro já possui tratativa ativa de outro usuário. */
 export class TratativaConflictError extends Error {
@@ -45,6 +56,40 @@ export class TratativaRequiredError extends Error {
   }
 }
 
+/** Registro SIR encerrado ou inexistente para novas ações. */
+export class TratativaClosedError extends Error {
+  constructor(message = "Somente registros abertos podem receber tratativa.") {
+    super(message);
+    this.name = "TratativaClosedError";
+  }
+}
+
+/** Bloqueia novas ações quando o RAL/REC já está encerrado. */
+async function assertOpenSirTarget(
+  recordKind: TratativaRecordKind,
+  recordKey: string,
+): Promise<void> {
+  if (recordKind !== "RAL" && recordKind !== "REC") return;
+  if (!(await isOpenSirRecord(recordKind, recordKey))) {
+    throw new TratativaClosedError();
+  }
+}
+
+/** Restringe novas tratativas BSOD a modems atualmente offline. */
+async function assertStartableTarget(
+  recordKind: TratativaRecordKind,
+  recordKey: string,
+): Promise<void> {
+  if (recordKind === "BSOD") {
+    const row = await getPmeBsodByMac(recordKey);
+    if (String(row?.monitor_status) !== "0") {
+      throw new TratativaClosedError("Somente modems offline podem iniciar tratativa.");
+    }
+    return;
+  }
+  await assertOpenSirTarget(recordKind, recordKey);
+}
+
 /** Converte linha do banco para payload público. */
 function toTratativaPublic(row: ActiveTratativaRecord): TratativaPublic {
   return {
@@ -67,6 +112,75 @@ const ACTIVE_TRATATIVA_SELECT = `
   WHERE t.released_at IS NULL
 `;
 
+/** Conta tratativas ativas vinculadas a RALs e RECs ainda abertas. */
+export async function countActiveSirTratativas(): Promise<number> {
+  const rows = await sirQuery<Array<RowDataPacket & { total: number }>>(
+    `SELECT COUNT(*) AS total
+     FROM (
+       SELECT t.id
+       FROM app_tratativas t
+       INNER JOIN ${SIR_TABLES.rals} r
+         ON CONVERT(r.num_recup USING utf8mb4) COLLATE utf8mb4_unicode_ci =
+            t.record_key COLLATE utf8mb4_unicode_ci
+       WHERE t.record_kind = 'RAL' AND t.released_at IS NULL AND r.status = 'ATIVO'
+       UNION ALL
+       SELECT t.id
+       FROM app_tratativas t
+       INNER JOIN ${SIR_TABLES.recs} r
+         ON CONVERT(r.num_recup USING utf8mb4) COLLATE utf8mb4_unicode_ci =
+            t.record_key COLLATE utf8mb4_unicode_ci
+       WHERE t.record_kind = 'REC' AND t.released_at IS NULL AND r.status = 'ATIVO'
+     ) active_sir`,
+  );
+  return Number(rows[0]?.total ?? 0);
+}
+
+/** Conta tratativas ativas de RAL ou REC ainda aberta. */
+export async function countActiveSirTratativasByKind(
+  recordKind: Extract<TratativaRecordKind, "RAL" | "REC">,
+): Promise<number> {
+  const table = recordKind === "RAL" ? SIR_TABLES.rals : SIR_TABLES.recs;
+  const rows = await sirQuery<Array<RowDataPacket & { total: number }>>(
+    `SELECT COUNT(*) AS total
+     FROM app_tratativas t
+     INNER JOIN ${table} r
+       ON CONVERT(r.num_recup USING utf8mb4) COLLATE utf8mb4_unicode_ci =
+          t.record_key COLLATE utf8mb4_unicode_ci
+     WHERE t.record_kind = ? AND t.released_at IS NULL AND r.status = 'ATIVO'`,
+    [recordKind],
+  );
+  return Number(rows[0]?.total ?? 0);
+}
+
+/** Carrega eventos de auditoria agrupados por tratativa. */
+async function listTratativaHistories(
+  recordKind: TratativaRecordKind,
+  recordKeys: string[],
+): Promise<Record<string, TratativaHistoryEntry[]>> {
+  if (recordKeys.length === 0) return {};
+  const placeholders = recordKeys.map(() => "?").join(", ");
+  const rows = await sirQuery<TratativaHistoryRow[]>(
+    `SELECT e.record_key, e.event_type, e.note, e.created_at,
+            u.name AS user_name
+     FROM app_tratativa_events e
+     INNER JOIN app_users u ON u.id = e.user_id
+     WHERE e.record_kind = ? AND e.record_key IN (${placeholders})
+     ORDER BY e.created_at ASC, e.id ASC`,
+    [recordKind, ...recordKeys],
+  );
+  return rows.reduce<Record<string, TratativaHistoryEntry[]>>((histories, row) => {
+    const current = histories[row.record_key] ?? [];
+    current.push({
+      eventType: row.event_type,
+      note: row.note,
+      userName: row.user_name,
+      createdAt: new Date(row.created_at).toISOString(),
+    });
+    histories[row.record_key] = current;
+    return histories;
+  }, {});
+}
+
 /** Lista tratativas ativas para um conjunto de chaves. */
 export async function listActiveTratativas(
   recordKind: TratativaRecordKind,
@@ -84,7 +198,14 @@ export async function listActiveTratativas(
     [recordKind, ...normalized],
   );
 
-  return rows.map(toTratativaPublic);
+  const histories = await listTratativaHistories(
+    recordKind,
+    rows.map((row) => row.record_key),
+  );
+  return rows.map((row) => ({
+    ...toTratativaPublic(row),
+    history: histories[row.record_key] ?? [],
+  }));
 }
 
 /** Mapa record_key → tratativa ativa. */
@@ -114,17 +235,33 @@ export async function startTratativa(input: {
     if (existing[0].userId === input.userId) return existing[0];
     throw new TratativaConflictError(existing[0]);
   }
+  await assertStartableTarget(input.recordKind, key);
 
-  const result = await sirExecute(
-    `INSERT INTO app_tratativas (record_kind, record_key, user_id, note) VALUES (?, ?, ?, ?)`,
-    [input.recordKind, key, input.userId, note],
-  );
+  let insertId: number;
+  try {
+    const result = await sirExecute(
+      `INSERT INTO app_tratativas (record_kind, record_key, user_id, note) VALUES (?, ?, ?, ?)`,
+      [input.recordKind, key, input.userId, note],
+    );
+    insertId = result.insertId;
+  } catch (error) {
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code?: string }).code)
+        : "";
+    if (code === "ER_DUP_ENTRY") {
+      const raced = await listActiveTratativas(input.recordKind, [key]);
+      if (raced[0]?.userId === input.userId) return raced[0];
+      if (raced[0]) throw new TratativaConflictError(raced[0]);
+    }
+    throw error;
+  }
 
   await sirExecute(
     `INSERT INTO app_tratativa_events
        (tratativa_id, record_kind, record_key, event_type, user_id, note)
      VALUES (?, ?, ?, 'START', ?, ?)`,
-    [result.insertId, input.recordKind, key, input.userId, note],
+    [insertId, input.recordKind, key, input.userId, note],
   );
 
   const started = await listActiveTratativas(input.recordKind, [key]);
@@ -132,6 +269,45 @@ export async function startTratativa(input: {
     throw new Error("Falha ao registrar tratativa.");
   }
   return started[0];
+}
+
+/** Atualiza a observação da tratativa ativa e registra evento de auditoria. */
+export async function updateTratativaObservation(input: {
+  recordKind: TratativaRecordKind;
+  recordKey: string;
+  userId: number;
+  userRole: AppUserRole;
+  note: string;
+}): Promise<TratativaPublic> {
+  const key = normalizeTratativaKey(input.recordKind, input.recordKey);
+  const note = input.note.trim().slice(0, 500);
+  if (!note) throw new Error("Informe a observação.");
+
+  const rows = await sirQuery<ActiveTratativaRow[]>(
+    `${ACTIVE_TRATATIVA_SELECT}
+     AND t.record_kind = ? AND t.record_key = ?`,
+    [input.recordKind, key],
+  );
+  const active = rows[0];
+  if (!active) throw new TratativaRequiredError();
+  if (input.userRole !== "STAFF" && active.user_id !== input.userId) {
+    throw new TratativaForbiddenError();
+  }
+
+  await sirExecute(`UPDATE app_tratativas SET note = ? WHERE id = ? AND released_at IS NULL`, [
+    note,
+    active.id,
+  ]);
+  await sirExecute(
+    `INSERT INTO app_tratativa_events
+       (tratativa_id, record_kind, record_key, event_type, user_id, note)
+     VALUES (?, ?, ?, 'OBSERVACAO', ?, ?)`,
+    [active.id, input.recordKind, key, input.userId, note],
+  );
+
+  const updated = await listActiveTratativas(input.recordKind, [key]);
+  if (!updated[0]) throw new TratativaNotFoundError();
+  return updated[0];
 }
 
 /** Encerra tratativa ativa e grava evento RELEASE. */
@@ -197,6 +373,8 @@ export async function recordAcionamento(input: {
   if (!canAcionar) {
     throw new TratativaForbiddenError();
   }
+
+  await assertOpenSirTarget(input.recordKind, key);
 
   await sirExecute(
     `INSERT INTO app_tratativa_events

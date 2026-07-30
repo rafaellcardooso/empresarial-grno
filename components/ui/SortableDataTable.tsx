@@ -12,6 +12,8 @@ export type SortableColumn = {
   minWidth?: string;
   width?: string;
   nowrap?: boolean;
+  /** Colunas `wide` só aparecem em viewports largos. */
+  priority?: "core" | "wide";
 };
 
 type SortableDataTableProps = {
@@ -30,7 +32,7 @@ type SortState = {
   direction: "asc" | "desc";
 };
 
-/** Tabela com ordenação client-side por coluna. */
+/** Tabela com ordenação client-side e colunas prioritárias. */
 export function SortableDataTable({
   columns,
   rows,
@@ -67,7 +69,7 @@ export function SortableDataTable({
   return (
     <div className="table-responsive sortable-data-table-scroll">
       <table
-        className={`table table-hover table-striped align-middle mb-0 sortable-data-table${className ? ` ${className}` : ""}`}
+        className={`table table-hover table-striped align-middle mb-0 sortable-data-table sortable-data-table--priority${className ? ` ${className}` : ""}`}
       >
         {columns.some((column) => column.width) ? (
           <colgroup>
@@ -86,7 +88,7 @@ export function SortableDataTable({
               return (
                 <th
                   key={column.key}
-                  className={`sortable-data-table__th ${columnNowrapClass(column, nowrap)} ${alignClass(column.align)}`.trim()}
+                  className={`sortable-data-table__th ${priorityClass(column)} ${columnNowrapClass(column, nowrap)} ${alignClass(column.align)}`.trim()}
                   style={thStyle}
                 >
                   {sortable ? (
@@ -110,10 +112,11 @@ export function SortableDataTable({
         </thead>
         <tbody>
           {sortedRows.map((row, index) => (
-            <tr key={String(row.mac ?? row.id ?? index)}>
+            <tr key={String(row.mac ?? row.num_recup ?? row.id ?? index)}>
               {columns.map((column) => {
                 const value = row[column.key];
-                const cellClass = cellWrapClass(column, nowrap);
+                const cellClass =
+                  `${cellWrapClass(column, nowrap)} ${priorityClass(column)}`.trim();
                 const tdStyle = column.minWidth ? { minWidth: column.minWidth } : undefined;
                 return (
                   <td
@@ -131,6 +134,10 @@ export function SortableDataTable({
       </table>
     </div>
   );
+}
+
+function priorityClass(column: SortableColumn): string {
+  return column.priority === "wide" ? "sortable-data-table__col--wide" : "";
 }
 
 function alignClass(align?: "start" | "center" | "end"): string {

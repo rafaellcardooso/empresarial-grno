@@ -11,7 +11,7 @@ function formatRefreshTime(timestamp: number | null): string {
   return formatDateTimeParts(new Date(timestamp).toISOString())?.time ?? "—";
 }
 
-/** Atualiza rotas de monitoramento e exibe os horários do ciclo global. */
+/** Atualiza rotas de monitoramento e exibe o ciclo automático na barra superior. */
 export function MonitoringRefreshStatus() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -23,7 +23,7 @@ export function MonitoringRefreshStatus() {
   const [secondsRemaining, setSecondsRemaining] = useState(MONITORING_REFRESH_INTERVAL_MS / 1000);
 
   /** Reinicia o ciclo e solicita novos dados ao servidor. */
-  const handleRefresh = useCallback(() => {
+  const refreshMonitoringData = useCallback(() => {
     const now = Date.now();
     setLastUpdatedAt(now);
     setNextRefreshAt(now + MONITORING_REFRESH_INTERVAL_MS);
@@ -49,14 +49,14 @@ export function MonitoringRefreshStatus() {
     const timer = window.setInterval(() => {
       const remaining = Math.ceil((nextRefreshAt - Date.now()) / 1000);
       if (remaining <= 0) {
-        handleRefresh();
+        refreshMonitoringData();
         return;
       }
       setSecondsRemaining(remaining);
     }, 1_000);
 
     return () => window.clearInterval(timer);
-  }, [handleRefresh, isActive, nextRefreshAt]);
+  }, [isActive, nextRefreshAt, refreshMonitoringData]);
 
   const countdown = useMemo(() => {
     const minutes = Math.floor(secondsRemaining / 60);
@@ -66,26 +66,17 @@ export function MonitoringRefreshStatus() {
 
   if (!isActive) return null;
 
+  const statusTitle = `Atualizado às ${formatRefreshTime(lastUpdatedAt)} · Próxima atualização às ${formatRefreshTime(nextRefreshAt)}`;
+
   return (
-    <section
+    <span
       className="monitoring-refresh-status"
       aria-label="Atualização automática do monitoramento"
       aria-live="polite"
+      title={statusTitle}
     >
-      <div className="monitoring-refresh-status__times">
-        <span>
-          Atualizado às <strong>{formatRefreshTime(lastUpdatedAt)}</strong>
-        </span>
-        <span>
-          Próxima às <strong>{formatRefreshTime(nextRefreshAt)}</strong>
-        </span>
-        <span>
-          Atualização em <strong>{countdown}</strong>
-        </span>
-      </div>
-      <button type="button" className="btn btn-outline-secondary btn-sm" onClick={handleRefresh}>
-        Atualizar agora
-      </button>
-    </section>
+      <i className="bi bi-arrow-repeat monitoring-refresh-status__icon" aria-hidden="true" />
+      <strong>{countdown}</strong>
+    </span>
   );
 }

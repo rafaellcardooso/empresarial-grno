@@ -1,3 +1,5 @@
+import { operationalDddLabel } from "@/lib/config/locations";
+
 /** Vendor de filtro na página SDH. */
 export type SdhVendorFilter = "datacom" | "tellabs" | "outros";
 export type SdhStatusFilter = "pendente" | "em-tratativa";
@@ -12,18 +14,6 @@ export const SDH_VENDOR_LABELS: Record<SdhVendorFilter, string> = {
 
 /** Valor de query para DDD vazio. */
 export const SDH_DDD_EMPTY = "sem";
-
-export const SDH_DDD_UF: Record<string, string> = {
-  "68": "AC",
-  "69": "RO",
-  "91": "PA",
-  "92": "AM",
-  "95": "RR",
-  "96": "AP",
-  "97": "AM",
-  "98": "MA",
-  "99": "MA",
-};
 
 /** Classifica `gerencia` nos três grupos da UI. */
 export function classifySdhVendor(gerencia: string | null | undefined): SdhVendorFilter {
@@ -125,6 +115,5 @@ export function sdhStatusSql(status: SdhStatusFilter | undefined): {
 /** Formata KPI DDD como `91 - PA`. */
 export function sdhDddLabel(ddd: string): string {
   if (ddd === SDH_DDD_EMPTY) return "Sem DDD";
-  const uf = SDH_DDD_UF[ddd];
-  return uf ? `${ddd} - ${uf}` : ddd;
+  return operationalDddLabel(ddd);
 }

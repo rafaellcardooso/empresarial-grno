@@ -6,78 +6,58 @@ import {
   CardHeaderLink,
   ExportCsvLink,
 } from "@/components/ui/CardHeaderActions";
-import { FilterMetricCard } from "@/components/ui/FilterMetricCard";
 import { SirRecordsTable } from "@/components/sir/SirRecordsTable";
+import { SirTreatmentKpis } from "@/components/sir/SirTreatmentKpis";
 import { TablePagination } from "@/components/ui/TablePagination";
 import { RAL_TABLE_COLUMNS, REC_TABLE_COLUMNS } from "@/lib/config/sir-tables";
-import { sirRecScopeStatusKpiLabel, sirScopeStatusKpiLabel } from "@/lib/config/sir-status";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
-import { formatNumberPtBr } from "@/lib/format/number";
+import type { SirTreatmentFilter } from "@/lib/config/sir-filters";
+import type { TratativaPublic } from "@/lib/models/tratativa";
 
 type SirPanelProps = {
   rals: Record<string, unknown>[];
   recs: Record<string, unknown>[];
+  ralTratativasByKey: Record<string, TratativaPublic>;
+  recTratativasByKey: Record<string, TratativaPublic>;
   ralOpenCount: number;
-  ralClosedCount: number;
   recOpenCount: number;
-  recClosedCount: number;
   ralTotal: number;
   recTotal: number;
+  activeTreatmentCount: number;
+  activeTreatment?: SirTreatmentFilter;
   pageSize: number;
   ralExportHref: string;
   recExportHref: string;
 };
 
-/** Painel SIR com KPIs por escopo/status e tabelas RAL/REC ordenáveis. */
+/** Painel SIR com KPIs consolidados de tratativa e tabelas RAL/REC. */
 export function SirPanel({
   rals,
   recs,
+  ralTratativasByKey,
+  recTratativasByKey,
   ralOpenCount,
-  ralClosedCount,
   recOpenCount,
-  recClosedCount,
   ralTotal,
   recTotal,
+  activeTreatmentCount,
+  activeTreatment,
   pageSize,
   ralExportHref,
   recExportHref,
 }: SirPanelProps) {
+  const activeRecordCount = ralOpenCount + recOpenCount;
+
   return (
     <>
-      <div className="row g-3 mb-3">
-        <div className="col-6 col-md-3">
-          <FilterMetricCard
-            label={sirScopeStatusKpiLabel("ral", "ativo")}
-            value={formatNumberPtBr(ralOpenCount)}
-            href="/sir/rals"
-            variant="default"
-          />
-        </div>
-        <div className="col-6 col-md-3">
-          <FilterMetricCard
-            label={sirScopeStatusKpiLabel("ral", "encerrado")}
-            value={formatNumberPtBr(ralClosedCount)}
-            href="/sir/rals?status=encerrado"
-            variant="neutral"
-          />
-        </div>
-        <div className="col-6 col-md-3">
-          <FilterMetricCard
-            label={sirRecScopeStatusKpiLabel("ativo")}
-            value={formatNumberPtBr(recOpenCount)}
-            href="/sir/recs"
-            variant="default"
-          />
-        </div>
-        <div className="col-6 col-md-3">
-          <FilterMetricCard
-            label={sirRecScopeStatusKpiLabel("encerrado")}
-            value={formatNumberPtBr(recClosedCount)}
-            href="/sir/recs?status=encerrado"
-            variant="neutral"
-          />
-        </div>
-      </div>
+      <SirTreatmentKpis
+        total={activeRecordCount}
+        activeTreatmentCount={activeTreatmentCount}
+        activeFilter={activeTreatment}
+        totalHref="/sir"
+        pendingHref="/sir?tratativa=pendente"
+        activeHref="/sir?tratativa=em-tratativa"
+      />
 
       <div className="mb-3">
         <ContentCard
@@ -85,7 +65,9 @@ export function SirPanel({
           headerAside={
             <CardHeaderActions>
               {ralTotal > pageSize ? (
-                <CardHeaderLink href="/sir/rals">Ver todas</CardHeaderLink>
+                <CardHeaderLink href={sirDomainHref("/sir/rals", activeTreatment)}>
+                  Ver todas
+                </CardHeaderLink>
               ) : null}
               <ExportCsvLink href={ralExportHref} />
             </CardHeaderActions>
@@ -95,13 +77,14 @@ export function SirPanel({
             columns={RAL_TABLE_COLUMNS}
             rows={rals}
             recordLabel="RAL"
+            tratativasByKey={ralTratativasByKey}
             empty="Nenhuma RAL aberta."
           />
           <TablePagination
             currentPage={1}
             pageSize={pageSize}
             totalItems={ralTotal}
-            buildPageHref={(page) => (page <= 1 ? "/sir/rals" : `/sir/rals?page=${page}`)}
+            buildPageHref={(page) => sirDomainHref("/sir/rals", activeTreatment, page)}
           />
         </ContentCard>
       </div>
@@ -111,7 +94,9 @@ export function SirPanel({
         headerAside={
           <CardHeaderActions>
             {recTotal > pageSize ? (
-              <CardHeaderLink href="/sir/recs">Ver todos</CardHeaderLink>
+              <CardHeaderLink href={sirDomainHref("/sir/recs", activeTreatment)}>
+                Ver todos
+              </CardHeaderLink>
             ) : null}
             <ExportCsvLink href={recExportHref} />
           </CardHeaderActions>
@@ -121,15 +106,29 @@ export function SirPanel({
           columns={REC_TABLE_COLUMNS}
           rows={recs}
           recordLabel="REC"
+          tratativasByKey={recTratativasByKey}
           empty="Nenhum registro aberto."
         />
         <TablePagination
           currentPage={1}
           pageSize={pageSize}
           totalItems={recTotal}
-          buildPageHref={(page) => (page <= 1 ? "/sir/recs" : `/sir/recs?page=${page}`)}
+          buildPageHref={(page) => sirDomainHref("/sir/recs", activeTreatment, page)}
         />
       </ContentCard>
     </>
   );
+}
+
+/** Monta link do domínio preservando o filtro consolidado de tratativa. */
+function sirDomainHref(
+  basePath: "/sir/rals" | "/sir/recs",
+  treatment?: SirTreatmentFilter,
+  page = 1,
+): string {
+  const params = new URLSearchParams();
+  if (treatment) params.set("tratativa", treatment);
+  if (page > 1) params.set("page", String(page));
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
 }

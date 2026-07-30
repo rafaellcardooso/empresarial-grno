@@ -10,3 +10,11 @@ export async function loadTratativasForBsodRows(
   const map = await mapActiveTratativas("BSOD", keys);
   return enrichTratativasWorkflow(map);
 }
+
+/** Carrega mapa de tratativas ativas para registros RAL ou REC. */
+export async function loadTratativasForSirRows(
+  recordKind: "RAL" | "REC",
+  rows: { num_recup: string }[],
+): Promise<Record<string, TratativaPublic>> {
+  return mapActiveTratativas(recordKind, rows.map((row) => row.num_recup).filter(Boolean));
+}

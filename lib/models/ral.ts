@@ -10,6 +10,7 @@ export type RalRecord = {
   abertura: string | null;
   duracao: string | null;
   cf_executante: string | null;
+  ddd?: string | null;
   ultima_atualizacao: Date | string | null;
   status: SirRecordStatus;
   detalhes: string | null;

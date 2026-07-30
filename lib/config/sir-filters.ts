@@ -3,10 +3,14 @@ import type { RecTipoKey } from "@/lib/config/rec-types";
 import type { SirStatusFilter } from "@/lib/config/sir-status";
 import { normalizeTableSearch } from "@/lib/config/table-search";
 
+export type SirTreatmentFilter = "pendente" | "em-tratativa";
+
 export type SirCfFilterParams = {
   tipo?: RalTipoKey;
   cf?: string;
+  ddd?: string;
   status?: SirStatusFilter;
+  tratativa?: SirTreatmentFilter;
   q?: string;
   page?: number;
 };
@@ -14,7 +18,9 @@ export type SirCfFilterParams = {
 export type SirRecFilterParams = {
   tipo?: RecTipoKey;
   cf?: string;
+  ddd?: string;
   status?: SirStatusFilter;
+  tratativa?: SirTreatmentFilter;
   q?: string;
   page?: number;
 };
@@ -35,12 +41,19 @@ export function searchQueryFromParam(param?: string | null): string | undefined 
   return normalizeTableSearch(param);
 }
 
+/** Normaliza o filtro operacional de tratativa da URL. */
+export function sirTreatmentFromParam(param?: string | null): SirTreatmentFilter | undefined {
+  return param === "pendente" || param === "em-tratativa" ? param : undefined;
+}
+
 /** Monta URL de listagem REC preservando filtros ativos. */
 export function buildRecFilterHref(basePath: string, filters: SirRecFilterParams = {}): string {
   const params = new URLSearchParams();
   if (filters.status && filters.status !== "ativo") params.set("status", filters.status);
+  if (filters.tratativa) params.set("tratativa", filters.tratativa);
   if (filters.tipo) params.set("tipo", filters.tipo);
   if (filters.cf) params.set("cf", filters.cf);
+  if (filters.ddd) params.set("ddd", filters.ddd);
   if (filters.q) params.set("q", filters.q);
   if (filters.page && filters.page > 1) params.set("page", String(filters.page));
   const query = params.toString();
@@ -64,8 +77,10 @@ export function recCfFilterToggleHref(
 export function buildSirFilterHref(basePath: string, filters: SirCfFilterParams = {}): string {
   const params = new URLSearchParams();
   if (filters.status && filters.status !== "ativo") params.set("status", filters.status);
+  if (filters.tratativa) params.set("tratativa", filters.tratativa);
   if (filters.tipo) params.set("tipo", filters.tipo);
   if (filters.cf) params.set("cf", filters.cf);
+  if (filters.ddd) params.set("ddd", filters.ddd);
   if (filters.q) params.set("q", filters.q);
   if (filters.page && filters.page > 1) params.set("page", String(filters.page));
   const query = params.toString();
@@ -79,8 +94,10 @@ export function buildSirExportHref(
 ): string {
   const params = new URLSearchParams();
   if (filters.status && filters.status !== "ativo") params.set("status", filters.status);
+  if (filters.tratativa) params.set("tratativa", filters.tratativa);
   if (filters.tipo) params.set("tipo", filters.tipo);
   if (filters.cf) params.set("cf", filters.cf);
+  if (filters.ddd) params.set("ddd", filters.ddd);
   if (filters.q) params.set("q", filters.q);
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;
@@ -93,8 +110,10 @@ export function buildRecExportHref(
 ): string {
   const params = new URLSearchParams();
   if (filters.status && filters.status !== "ativo") params.set("status", filters.status);
+  if (filters.tratativa) params.set("tratativa", filters.tratativa);
   if (filters.tipo) params.set("tipo", filters.tipo);
   if (filters.cf) params.set("cf", filters.cf);
+  if (filters.ddd) params.set("ddd", filters.ddd);
   if (filters.q) params.set("q", filters.q);
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;

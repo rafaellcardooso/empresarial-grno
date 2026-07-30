@@ -1,7 +1,13 @@
 import type { RowDataPacket } from "mysql2";
 import { recTipoLikePrefix, recTipoPrefixFromParam } from "@/lib/config/rec-types";
 import { SIR_EXPORT_BATCH_SIZE, SIR_LIST_MAX_PAGE_SIZE } from "@/lib/config/sir-pagination";
+import {
+  enrichSirRecordLocation,
+  sirDddFromCf,
+  sirLocationCodesForDdd,
+} from "@/lib/config/sir-locations";
 import { sirRecordStatusFromFilter, type SirStatusFilter } from "@/lib/config/sir-status";
+import type { SirTreatmentFilter } from "@/lib/config/sir-filters";
 import { likeContainsPattern, normalizeTableSearch } from "@/lib/config/table-search";
 import { sirQuery } from "@/lib/db/sir";
 import { SIR_TABLES, type RalRecord, type RecRecord } from "@/lib/models";
@@ -22,11 +28,18 @@ export type RecTipoCount = {
   total: number;
 };
 
+export type SirDddCount = {
+  ddd: string;
+  total: number;
+};
+
 export type SirRalQueryOptions = {
   status?: SirStatusFilter;
   tipo?: string;
   cf?: string;
+  ddd?: string;
   q?: string;
+  tratativa?: SirTreatmentFilter;
   limit?: number;
   offset?: number;
   forExport?: boolean;
@@ -35,8 +48,10 @@ export type SirRalQueryOptions = {
 export type SirRecQueryOptions = {
   status?: SirStatusFilter;
   cf?: string;
+  ddd?: string;
   tipo?: string;
   q?: string;
+  tratativa?: SirTreatmentFilter;
   limit?: number;
   offset?: number;
   forExport?: boolean;
@@ -47,6 +62,40 @@ function buildStatusClause(status: SirStatusFilter = "ativo"): { sql: string; pa
   const recordStatus = sirRecordStatusFromFilter(status);
   if (!recordStatus) return { sql: "", params: [] };
   return { sql: " AND status = ?", params: [recordStatus] };
+}
+
+/** Monta filtro SQL pelo código geográfico contido no segundo segmento do CF. */
+function buildSirDddClause(ddd?: string): { sql: string; params: string[] } {
+  if (!ddd) return { sql: "", params: [] };
+  const codes = sirLocationCodesForDdd(ddd);
+  if (codes.length === 0) return { sql: " AND 1 = 0", params: [] };
+  const placeholders = codes.map(() => "?").join(", ");
+  return {
+    sql: ` AND TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(cf_executante, '/', 2), '/', -1))
+      IN (${placeholders})`,
+    params: codes,
+  };
+}
+
+/** Monta filtro correlacionado por presença de tratativa ativa. */
+function buildSirTreatmentClause(
+  table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs,
+  recordKind: "RAL" | "REC",
+  treatment?: SirTreatmentFilter,
+): { sql: string; params: string[] } {
+  if (!treatment) return { sql: "", params: [] };
+  const exists = `EXISTS (
+    SELECT 1
+    FROM app_tratativas t
+    WHERE t.record_kind = ?
+      AND t.released_at IS NULL
+      AND t.record_key COLLATE utf8mb4_unicode_ci =
+          CONVERT(${table}.num_recup USING utf8mb4) COLLATE utf8mb4_unicode_ci
+  )`;
+  return {
+    sql: ` AND ${treatment === "pendente" ? "NOT " : ""}${exists}`,
+    params: [recordKind],
+  };
 }
 
 /** Monta cláusula OR de busca textual em colunas RAL. */
@@ -87,8 +136,10 @@ function buildRecSearchClause(q?: string): { sql: string; params: unknown[] } {
 async function countByCf(
   table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs,
   status: SirStatusFilter = "ativo",
+  ddd?: string,
 ) {
   const { sql, params } = buildStatusClause(status);
+  const dddClause = buildSirDddClause(ddd);
   const recTipoSql =
     table === SIR_TABLES.recs
       ? " AND (num_recup LIKE 'REC-%' OR num_recup LIKE 'DSR-%' OR num_recup LIKE 'TCQ-%')"
@@ -97,10 +148,10 @@ async function countByCf(
     `SELECT cf_executante, COUNT(num_recup) AS total
      FROM ${table}
      WHERE cf_executante IS NOT NULL
-       AND TRIM(cf_executante) <> ''${recTipoSql}${sql}
+       AND TRIM(cf_executante) <> ''${recTipoSql}${sql}${dddClause.sql}
      GROUP BY cf_executante
      ORDER BY total DESC`,
-    params,
+    [...params, ...dddClause.params],
   );
 
   return rows.map((row) => ({
@@ -169,9 +220,16 @@ export async function countRals(options?: SirRalQueryOptions): Promise<number> {
     params.push(options.cf);
   }
 
+  const dddClause = buildSirDddClause(options?.ddd);
+  sql += dddClause.sql;
+  params.push(...dddClause.params);
+
   const searchClause = buildRalSearchClause(options?.q);
   sql += searchClause.sql;
   params.push(...searchClause.params);
+  const treatmentClause = buildSirTreatmentClause(SIR_TABLES.rals, "RAL", options?.tratativa);
+  sql += treatmentClause.sql;
+  params.push(...treatmentClause.params);
 
   const rows = await sirQuery<RowDataPacket[]>(sql, params);
   return Number(rows[0]?.total ?? 0);
@@ -181,6 +239,7 @@ export async function countRals(options?: SirRalQueryOptions): Promise<number> {
 export async function countActiveRals(options?: {
   tipo?: string;
   cf?: string;
+  ddd?: string;
   q?: string;
 }): Promise<number> {
   return countRals({ ...options, status: "ativo" });
@@ -206,9 +265,16 @@ export async function countRecs(options?: SirRecQueryOptions): Promise<number> {
     params.push(options.cf);
   }
 
+  const dddClause = buildSirDddClause(options?.ddd);
+  sql += dddClause.sql;
+  params.push(...dddClause.params);
+
   const searchClause = buildRecSearchClause(options?.q);
   sql += searchClause.sql;
   params.push(...searchClause.params);
+  const treatmentClause = buildSirTreatmentClause(SIR_TABLES.recs, "REC", options?.tratativa);
+  sql += treatmentClause.sql;
+  params.push(...treatmentClause.params);
 
   const rows = await sirQuery<RowDataPacket[]>(sql, params);
   return Number(rows[0]?.total ?? 0);
@@ -217,6 +283,7 @@ export async function countRecs(options?: SirRecQueryOptions): Promise<number> {
 /** Conta RECs ativas com filtros opcionais por CF e tipo (REC/DSR/TCQ). */
 export async function countActiveRecs(options?: {
   cf?: string;
+  ddd?: string;
   tipo?: string;
   q?: string;
 }): Promise<number> {
@@ -242,22 +309,31 @@ export async function listRals(options?: SirRalQueryOptions): Promise<RalRecord[
     params.push(options.cf);
   }
 
+  const dddClause = buildSirDddClause(options?.ddd);
+  sql += dddClause.sql;
+  params.push(...dddClause.params);
+
   const searchClause = buildRalSearchClause(options?.q);
   sql += searchClause.sql;
   params.push(...searchClause.params);
+  const treatmentClause = buildSirTreatmentClause(SIR_TABLES.rals, "RAL", options?.tratativa);
+  sql += treatmentClause.sql;
+  params.push(...treatmentClause.params);
 
   sql += SIR_ORDER_BY_ABERTURA_DESC;
   sql = appendListLimitClause(sql, options);
 
   const rows = await sirQuery<(RalRecord & RowDataPacket)[]>(sql, params);
-  return serializeRows(rows);
+  return serializeRows(rows).map(enrichSirRecordLocation);
 }
 
 /** Lista RALs com status ativo, ordenadas por abertura decrescente. */
 export async function listActiveRals(options?: {
   tipo?: string;
   cf?: string;
+  ddd?: string;
   q?: string;
+  tratativa?: SirTreatmentFilter;
   limit?: number;
   offset?: number;
 }): Promise<RalRecord[]> {
@@ -284,22 +360,31 @@ export async function listRecs(options?: SirRecQueryOptions): Promise<RecRecord[
     params.push(options.cf);
   }
 
+  const dddClause = buildSirDddClause(options?.ddd);
+  sql += dddClause.sql;
+  params.push(...dddClause.params);
+
   const searchClause = buildRecSearchClause(options?.q);
   sql += searchClause.sql;
   params.push(...searchClause.params);
+  const treatmentClause = buildSirTreatmentClause(SIR_TABLES.recs, "REC", options?.tratativa);
+  sql += treatmentClause.sql;
+  params.push(...treatmentClause.params);
 
   sql += SIR_ORDER_BY_ABERTURA_DESC;
   sql = appendListLimitClause(sql, options);
 
   const rows = await sirQuery<(RecRecord & RowDataPacket)[]>(sql, params);
-  return serializeRows(rows);
+  return serializeRows(rows).map(enrichSirRecordLocation);
 }
 
 /** Lista RECs com status ativo, ordenadas por abertura decrescente. */
 export async function listActiveRecs(options?: {
   cf?: string;
+  ddd?: string;
   tipo?: string;
   q?: string;
+  tratativa?: SirTreatmentFilter;
   limit?: number;
   offset?: number;
 }): Promise<RecRecord[]> {
@@ -374,32 +459,47 @@ export async function getRecDetalhes(numRecup: string): Promise<string | null> {
   return value == null || value === "" ? null : String(value);
 }
 
-/** Busca RAL ativa por número (LIKE parcial). */
+/** Busca RAL pelo número exato. */
 export async function getRalByNum(numRecup: string): Promise<RalRecord | null> {
   const rows = await sirQuery<(RalRecord & RowDataPacket)[]>(
-    `SELECT * FROM ${SIR_TABLES.rals} WHERE num_recup LIKE ? LIMIT 1`,
-    [`%${numRecup}%`],
+    `SELECT * FROM ${SIR_TABLES.rals} WHERE num_recup = ? LIMIT 1`,
+    [numRecup.trim()],
   );
   return serializeRow(rows[0] ?? null);
 }
 
-/** Busca REC ativa por número (LIKE parcial). */
+/** Busca REC pelo número exato. */
 export async function getRecByNum(numRecup: string): Promise<RecRecord | null> {
   const rows = await sirQuery<(RecRecord & RowDataPacket)[]>(
-    `SELECT * FROM ${SIR_TABLES.recs} WHERE num_recup LIKE ? LIMIT 1`,
-    [`%${numRecup}%`],
+    `SELECT * FROM ${SIR_TABLES.recs} WHERE num_recup = ? LIMIT 1`,
+    [numRecup.trim()],
   );
   return serializeRow(rows[0] ?? null);
+}
+
+/** Confirma se o registro SIR está aberto para novas ações de tratativa. */
+export async function isOpenSirRecord(
+  recordKind: "RAL" | "REC",
+  recordKey: string,
+): Promise<boolean> {
+  const row = recordKind === "RAL" ? await getRalByNum(recordKey) : await getRecByNum(recordKey);
+  return (
+    String(row?.status ?? "")
+      .trim()
+      .toUpperCase() === "ATIVO"
+  );
 }
 
 /** Retorna contagem de RECs agrupadas por prefixo (REC/DSR/TCQ). */
 export async function countRecsByTipo(
   status: SirStatusFilter = "ativo",
   cf?: string,
+  ddd?: string,
 ): Promise<RecTipoCount[]> {
   const { sql, params } = buildStatusClause(status);
   const cfSql = cf ? " AND cf_executante = ?" : "";
   const cfParams = cf ? [cf] : [];
+  const dddClause = buildSirDddClause(ddd);
   const rows = await sirQuery<RowDataPacket[]>(
     `SELECT
        CASE
@@ -409,10 +509,10 @@ export async function countRecsByTipo(
        END AS rec_tipo,
        COUNT(num_recup) AS total
      FROM ${SIR_TABLES.recs}
-     WHERE 1=1${sql}${cfSql}
+     WHERE 1=1${sql}${cfSql}${dddClause.sql}
      GROUP BY rec_tipo
      ORDER BY total DESC`,
-    [...params, ...cfParams],
+    [...params, ...cfParams, ...dddClause.params],
   );
 
   return rows.map((row) => ({
@@ -425,17 +525,19 @@ export async function countRecsByTipo(
 export async function countRalsByTipo(
   status: SirStatusFilter = "ativo",
   cf?: string,
+  ddd?: string,
 ): Promise<RalTipoCount[]> {
   const { sql, params } = buildStatusClause(status);
   const cfSql = cf ? " AND cf_executante = ?" : "";
   const cfParams = cf ? [cf] : [];
+  const dddClause = buildSirDddClause(ddd);
   const rows = await sirQuery<RowDataPacket[]>(
     `SELECT tipo_ral, COUNT(num_recup) AS total
      FROM ${SIR_TABLES.rals}
-     WHERE 1=1${sql}${cfSql}
+     WHERE 1=1${sql}${cfSql}${dddClause.sql}
      GROUP BY tipo_ral
      ORDER BY total DESC`,
-    [...params, ...cfParams],
+    [...params, ...cfParams, ...dddClause.params],
   );
 
   return rows.map((row) => ({
@@ -445,13 +547,89 @@ export async function countRalsByTipo(
 }
 
 /** Retorna contagem de RALs agrupadas por CF executante. */
-export async function countRalsByCf(status: SirStatusFilter = "ativo") {
-  return countByCf(SIR_TABLES.rals, status);
+export async function countRalsByCf(status: SirStatusFilter = "ativo", ddd?: string) {
+  return countByCf(SIR_TABLES.rals, status, ddd);
 }
 
 /** Retorna contagem de RECs agrupadas por CF executante. */
-export async function countRecsByCf(status: SirStatusFilter = "ativo") {
-  return countByCf(SIR_TABLES.recs, status);
+export async function countRecsByCf(status: SirStatusFilter = "ativo", ddd?: string) {
+  return countByCf(SIR_TABLES.recs, status, ddd);
+}
+
+/** Agrupa contagens de CF por DDD operacional. */
+function dddCountsFromCf(rows: CfCount[]): SirDddCount[] {
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    const ddd = sirDddFromCf(row.cf_executante);
+    if (!ddd) continue;
+    totals.set(ddd, (totals.get(ddd) ?? 0) + row.total);
+  }
+  return [...totals.entries()]
+    .map(([ddd, total]) => ({ ddd, total }))
+    .sort((a, b) => Number(a.ddd) - Number(b.ddd));
+}
+
+/** Retorna contagem de RALs agrupadas por DDD operacional. */
+export async function countRalsByDdd(
+  options: Pick<SirRalQueryOptions, "status" | "tipo" | "cf" | "q"> = {},
+): Promise<SirDddCount[]> {
+  const statusClause = buildStatusClause(options.status ?? "ativo");
+  const params = [...statusClause.params];
+  let sql = `SELECT cf_executante, COUNT(num_recup) AS total
+    FROM ${SIR_TABLES.rals}
+    WHERE cf_executante IS NOT NULL AND TRIM(cf_executante) <> ''${statusClause.sql}`;
+
+  if (options.tipo) {
+    sql += " AND tipo_ral = ?";
+    params.push(options.tipo);
+  }
+  if (options.cf) {
+    sql += " AND cf_executante = ?";
+    params.push(options.cf);
+  }
+  const searchClause = buildRalSearchClause(options.q);
+  sql += `${searchClause.sql} GROUP BY cf_executante`;
+  params.push(...searchClause.params);
+
+  const rows = await sirQuery<RowDataPacket[]>(sql, params);
+  return dddCountsFromCf(
+    rows.map((row) => ({
+      cf_executante: String(row.cf_executante),
+      total: Number(row.total),
+    })),
+  );
+}
+
+/** Retorna contagem de RECs agrupadas por DDD operacional. */
+export async function countRecsByDdd(
+  options: Pick<SirRecQueryOptions, "status" | "tipo" | "cf" | "q"> = {},
+): Promise<SirDddCount[]> {
+  const statusClause = buildStatusClause(options.status ?? "ativo");
+  const params = [...statusClause.params];
+  let sql = `SELECT cf_executante, COUNT(num_recup) AS total
+    FROM ${SIR_TABLES.recs}
+    WHERE cf_executante IS NOT NULL AND TRIM(cf_executante) <> ''${statusClause.sql}`;
+
+  const tipoPrefix = recTipoPrefixFromParam(options.tipo);
+  if (tipoPrefix) {
+    sql += " AND num_recup LIKE ?";
+    params.push(recTipoLikePrefix(tipoPrefix));
+  }
+  if (options.cf) {
+    sql += " AND cf_executante = ?";
+    params.push(options.cf);
+  }
+  const searchClause = buildRecSearchClause(options.q);
+  sql += `${searchClause.sql} GROUP BY cf_executante`;
+  params.push(...searchClause.params);
+
+  const rows = await sirQuery<RowDataPacket[]>(sql, params);
+  return dddCountsFromCf(
+    rows.map((row) => ({
+      cf_executante: String(row.cf_executante),
+      total: Number(row.total),
+    })),
+  );
 }
 
 /** Testa conectividade com o banco SIR. */

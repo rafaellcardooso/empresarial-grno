@@ -1,3 +1,5 @@
+import type { TratativaHistoryEntry } from "@/lib/models/tratativa";
+
 /** Registro espelhando a tabela `sdh_alarms`. */
 export type SdhAlarmRecord = {
   id: number;
@@ -25,6 +27,7 @@ export type SdhAlarmRecord = {
 /** Alarme SDH enriquecido com login do último usuário que atualizou a tratativa. */
 export type SdhAlarmListItem = SdhAlarmRecord & {
   tratativa_user_login: string | null;
+  tratativa_history?: TratativaHistoryEntry[];
 };
 
 /** Evento cronológico de atualização ou encerramento da tratativa SDH. */
@@ -33,7 +36,7 @@ export type SdhTratativaEvent = {
   alarm_id: number;
   user_id: number;
   user_login: string;
-  event_type: "UPDATE" | "CLOSE";
+  event_type: "UPDATE" | "CLOSE" | "ACIONAMENTO" | "START" | "OBSERVACAO";
   observacao: string;
   created_at: string;
 };

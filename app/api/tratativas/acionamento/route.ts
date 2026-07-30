@@ -3,12 +3,14 @@ import { getSession } from "@/lib/auth/session";
 import type { AcionamentoTechnicianInput } from "@/lib/models/acionamento";
 import { getAcionamentoContext } from "@/lib/queries/acionamento-context";
 import {
+  TratativaClosedError,
   TratativaForbiddenError,
   TratativaRequiredError,
   recordAcionamento,
 } from "@/lib/queries/tratativas";
+import { recordSdhAcionamento } from "@/lib/queries/sdh";
 import { buildAcionamentoMessage } from "@/lib/tratativa/build-acionamento-message";
-import { normalizeTratativaKey, parseTratativaRecordKind } from "@/lib/tratativa/keys";
+import { normalizeTratativaKey, parseAcionamentoRecordKind } from "@/lib/tratativa/keys";
 import { getAcionamentoTechnicianValidationError } from "@/lib/tratativa/validate-acionamento-technician";
 
 type AcionamentoBody = {
@@ -25,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => null)) as AcionamentoBody | null;
-  const recordKind = parseTratativaRecordKind(body?.recordKind);
+  const recordKind = parseAcionamentoRecordKind(body?.recordKind);
   const recordKey = body?.recordKey?.trim();
   const technician = normalizeTechnicianInput(body?.technician);
 
@@ -38,7 +40,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
-  const normalizedKey = normalizeTratativaKey(recordKind, recordKey);
+  const normalizedKey =
+    recordKind === "SDH" ? recordKey : normalizeTratativaKey(recordKind, recordKey);
   const context = await getAcionamentoContext(recordKind, normalizedKey);
   if (!context) {
     return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
@@ -47,22 +50,37 @@ export async function POST(request: Request) {
   const message = buildAcionamentoMessage(context, technician);
 
   try {
-    await recordAcionamento({
-      recordKind,
-      recordKey: normalizedKey,
-      userId: session.userId,
-      userRole: session.role,
-      messageText: message,
-    });
+    if (recordKind === "SDH") {
+      await recordSdhAcionamento({
+        alarmId: Number(normalizedKey),
+        userId: session.userId,
+        userRole: session.role,
+        messageText: message,
+      });
+    } else {
+      await recordAcionamento({
+        recordKind,
+        recordKey: normalizedKey,
+        userId: session.userId,
+        userRole: session.role,
+        messageText: message,
+      });
+    }
   } catch (error) {
-    if (error instanceof TratativaRequiredError) {
+    if (error instanceof TratativaRequiredError || error instanceof TratativaClosedError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
     if (error instanceof TratativaForbiddenError) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
     const detail = error instanceof Error ? error.message : "Erro ao registrar acionamento.";
-    if (detail.includes("message_text")) {
+    if (detail.startsWith("Marque o alarme SDH")) {
+      return NextResponse.json({ error: detail }, { status: 409 });
+    }
+    if (detail.startsWith("Sem permissão")) {
+      return NextResponse.json({ error: detail }, { status: 403 });
+    }
+    if (detail.includes("message_text") || detail.includes("event_type")) {
       return NextResponse.json(
         { error: "Schema desatualizado. Rode npm run db:migrate no servidor." },
         { status: 503 },

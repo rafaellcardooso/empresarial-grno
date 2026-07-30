@@ -10,6 +10,7 @@ export const UI_COPY = {
   tableSearchRec: "Buscar por número, cliente, CF ou designação…",
   tableSearchBsod: "Buscar por MAC, contrato, node ou CMTS…",
   sirViewDetails: "Ver detalhes",
+  tratativaTreat: "Tratar",
   tratativaAssume: "Assumir",
   tratativaRelease: "Liberar",
   tratativaSince: "Desde",

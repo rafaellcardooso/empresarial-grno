@@ -15,7 +15,9 @@ type TratativaBsodWorkflowProps = {
   onBusyChange: (busy: boolean) => void;
   onError: (message: string | null) => void;
   onWorkflowChange: (next: TratativaPublic | null) => void;
-  onAcionar: () => void;
+  onAcionar?: () => void;
+  /** Oculta o botão WhatsApp quando o formulário já está no painel. */
+  hideAcionar?: boolean;
 };
 
 /** Ações BSOD pós-assunção: acionar, validação e conclusão. */
@@ -28,6 +30,7 @@ export function TratativaBsodWorkflow({
   onError,
   onWorkflowChange,
   onAcionar,
+  hideAcionar = false,
 }: TratativaBsodWorkflowProps) {
   const [validacaoOpen, setValidacaoOpen] = useState(false);
   const status: TratativaWorkflowStatus = tratativa.workflowStatus ?? "em_tratativa";
@@ -84,7 +87,7 @@ export function TratativaBsodWorkflow({
 
   return (
     <>
-      {status === "em_tratativa" ? (
+      {status === "em_tratativa" && !hideAcionar && onAcionar ? (
         <button
           type="button"
           className={acionarClass}

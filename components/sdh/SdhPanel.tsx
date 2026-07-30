@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ContentCard } from "@/components/ui/ContentCard";
 import { CardHeaderActions, ExportCsvLink } from "@/components/ui/CardHeaderActions";
@@ -10,7 +10,6 @@ import { TablePagination } from "@/components/ui/TablePagination";
 import { TableSearchField } from "@/components/ui/TableSearchField";
 import { SdhFilterToolbar } from "@/components/sdh/SdhFilterToolbar";
 import { SdhRecordsTable } from "@/components/sdh/SdhRecordsTable";
-import { SdhStatusModal } from "@/components/sdh/SdhStatusModal";
 import {
   SDH_VENDOR_LABELS,
   buildSdhFilterHref,
@@ -41,7 +40,7 @@ type SdhPanelProps = {
   exportHref: string;
 };
 
-/** Painel SDH com filtros, KPIs de DDD, tabela e modal de STATUS. */
+/** Painel SDH com filtros, KPIs de DDD e tabela prioritária. */
 export function SdhPanel({
   rows,
   total,
@@ -57,14 +56,6 @@ export function SdhPanel({
   exportHref,
 }: SdhPanelProps) {
   const router = useRouter();
-  const [selected, setSelected] = useState<SdhAlarmListItem | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleStatusClick = useCallback((alarm: SdhAlarmListItem) => {
-    setSelected(alarm);
-    setModalOpen(true);
-  }, []);
 
   const handleSearchCommit = useCallback(
     (q: string | undefined) => {
@@ -79,38 +70,6 @@ export function SdhPanel({
       );
     },
     [activeDdd, activeStatus, activeVendor, router],
-  );
-
-  const handleClose = useCallback(() => {
-    if (submitting) return;
-    setModalOpen(false);
-    setSelected(null);
-  }, [submitting]);
-
-  const patchStatus = useCallback(
-    async (payload: { emTratativa: boolean; observacao?: string }) => {
-      if (!selected) return;
-      setSubmitting(true);
-      try {
-        const response = await fetch(`/api/sdh/${selected.id}/status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const body = (await response.json()) as { error?: string };
-        if (!response.ok) {
-          throw new Error(body.error ?? "Falha ao atualizar status.");
-        }
-        setModalOpen(false);
-        setSelected(null);
-        router.refresh();
-      } catch (error) {
-        window.alert(error instanceof Error ? error.message : "Falha ao atualizar status.");
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [router, selected],
   );
 
   const vendorLabel = activeVendor ? SDH_VENDOR_LABELS[activeVendor] : "Todos";
@@ -207,7 +166,7 @@ export function SdhPanel({
           placeholder="Buscar por DDD, município, NE, porta, alarme, circuito ou login"
           onCommit={handleSearchCommit}
         />
-        <SdhRecordsTable rows={rows} onStatusClick={handleStatusClick} />
+        <SdhRecordsTable rows={rows} />
         <TablePagination
           currentPage={currentPage}
           pageSize={pageSize}
@@ -223,15 +182,6 @@ export function SdhPanel({
           }
         />
       </ContentCard>
-
-      <SdhStatusModal
-        open={modalOpen}
-        alarm={selected}
-        submitting={submitting}
-        onClose={handleClose}
-        onSave={(payload) => void patchStatus(payload)}
-        onClear={(observacao) => void patchStatus({ emTratativa: false, observacao })}
-      />
     </>
   );
 }

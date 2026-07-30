@@ -11,6 +11,9 @@ export type AcionamentoTechnicianInput = {
   sintoma?: string;
 };
 
+/** Domínios que permitem montar acionamento WhatsApp. */
+export type AcionamentoRecordKind = "BSOD" | "RAL" | "REC" | "SDH";
+
 /** Contexto BSOD para montar mensagem de acionamento WhatsApp. */
 export type BsodAcionamentoContext = {
   recordKind: "BSOD";
@@ -45,4 +48,20 @@ export type SirAcionamentoContext = {
   sintoma?: string;
 };
 
-export type AcionamentoContext = BsodAcionamentoContext | SirAcionamentoContext;
+/** Contexto SDH para montar mensagem de acionamento WhatsApp. */
+export type SdhAcionamentoContext = {
+  recordKind: "SDH";
+  recordKey: string;
+  ddd?: string;
+  municipio?: string;
+  ne?: string;
+  porta?: string;
+  alarme?: string;
+  circuito?: string;
+  sir?: string;
+  ip?: string;
+  sintoma?: string;
+};
+
+export type AcionamentoContext =
+  BsodAcionamentoContext | SirAcionamentoContext | SdhAcionamentoContext;

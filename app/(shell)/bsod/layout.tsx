@@ -1,15 +1,8 @@
-import { PageHeader } from "@/components/ui/PageHeader";
-
 type LayoutProps = {
   children: React.ReactNode;
 };
 
-/** Shell BSOD: cabeçalho; filtros e tabela em page.tsx. */
+/** Mantém o agrupamento das rotas BSOD sem duplicar o cabeçalho das páginas. */
 export default function Layout({ children }: LayoutProps) {
-  return (
-    <>
-      <PageHeader title="BSOD" />
-      {children}
-    </>
-  );
+  return children;
 }

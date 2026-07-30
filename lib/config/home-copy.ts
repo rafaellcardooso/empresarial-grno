@@ -2,7 +2,7 @@
 export const HOME_COPY = {
   title: "Início",
   lead: "Monitoramento operacional da rede empresarial GRNO.",
-  welcome: "Bem-vindo ao Empresarial",
+  welcome: "Bem-vindo",
   sectionsTitle: "Áreas de monitoramento",
   sir: {
     title: "SIR",

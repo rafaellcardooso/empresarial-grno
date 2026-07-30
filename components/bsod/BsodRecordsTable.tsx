@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BsodDetalhesPanel } from "@/components/bsod/BsodDetalhesPanel";
 import { BsodHealthBadge } from "@/components/bsod/bsod-table-cells";
-import { TratativaCell } from "@/components/tratativa/TratativaCell";
-import {
-  TratativaBsodActionsCell,
-  TratativaBsodStatusCell,
-} from "@/components/tratativa/TratativaBsodCell";
-import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
+import { TratativaPanel } from "@/components/tratativa/TratativaPanel";
+import { TratativaBsodStatusCell } from "@/components/tratativa/TratativaBsodCell";
+import { TratativaTreatButton } from "@/components/tratativa/TratativaTreatButton";
+import { formatDateTimeDisplay } from "@/components/ui/DateTimeStacked";
 import { SortableDataTable } from "@/components/ui/SortableDataTable";
 import {
   BSOD_ALARM_TABLE_COLUMNS,
@@ -27,14 +26,16 @@ type BsodRecordsTableProps = {
   variant?: "alarms" | "inventory" | "normalized";
 };
 
-/** Tabela BSOD compacta com painel lateral para métricas e endereço. */
+/** Tabela BSOD prioritária com painel unificado de tratativa. */
 export function BsodRecordsTable({
   rows,
   tratativasByKey = {},
   empty = "Nenhum PME para o filtro selecionado.",
   variant = "inventory",
 }: BsodRecordsTableProps) {
+  const router = useRouter();
   const [selectedRow, setSelectedRow] = useState<PmeBsodRow | null>(null);
+  const [treatKey, setTreatKey] = useState<string | null>(null);
   const [tratativas, setTratativas] = useState(tratativasByKey);
   const columns =
     variant === "alarms"
@@ -47,27 +48,21 @@ export function BsodRecordsTable({
     setTratativas(tratativasByKey);
   }, [tratativasByKey]);
 
-  const handleTratativaChange = useCallback((recordKey: string, next: TratativaPublic | null) => {
-    const normalized = normalizeTratativaKey("BSOD", recordKey);
-    setTratativas((current) => {
-      const updated = { ...current };
-      if (next) {
-        updated[normalized] = next;
-      } else {
-        delete updated[normalized];
-      }
-      return updated;
-    });
-  }, []);
+  const handlePanelChanged = useCallback(() => {
+    router.refresh();
+  }, [router]);
 
   useEffect(() => {
-    if (!selectedRow) return;
+    if (!selectedRow && !treatKey) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setSelectedRow(null);
+      if (event.key === "Escape") {
+        setSelectedRow(null);
+        setTreatKey(null);
+      }
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [selectedRow]);
+  }, [selectedRow, treatKey]);
 
   return (
     <>
@@ -87,7 +82,7 @@ export function BsodRecordsTable({
             : ["cmts", "node", "mac"]
         }
         renderCell={(key, value, row) =>
-          renderBsodCell(key, value, row, setSelectedRow, tratativas, handleTratativaChange)
+          renderBsodCell(key, value, row, setSelectedRow, tratativas, setTreatKey)
         }
       />
 
@@ -95,6 +90,13 @@ export function BsodRecordsTable({
         open={selectedRow != null}
         row={selectedRow}
         onClose={() => setSelectedRow(null)}
+      />
+      <TratativaPanel
+        open={treatKey != null}
+        domain="BSOD"
+        recordKey={treatKey}
+        onClose={() => setTreatKey(null)}
+        onChanged={handlePanelChanged}
       />
     </>
   );
@@ -106,39 +108,26 @@ function renderBsodCell(
   row: Record<string, unknown>,
   onOpen: (row: PmeBsodRow) => void,
   tratativas: Record<string, TratativaPublic>,
-  onTratativaChange: (recordKey: string, next: TratativaPublic | null) => void,
+  onTreat: (recordKey: string) => void,
 ) {
   const mac = String(row.mac ?? "");
   const normalized = normalizeTratativaKey("BSOD", mac);
   const tratativa = tratativas[normalized] ?? null;
+  const monitorStatus = row.monitor_status;
+  const isOffline = monitorStatus === 0 || monitorStatus === "0";
 
   if (key === "tratativa_status") {
     return <TratativaBsodStatusCell tratativa={tratativa} />;
   }
-  if (key === "tratativa_actions") {
-    return (
-      <TratativaBsodActionsCell
-        recordKey={mac}
-        tratativa={tratativa}
-        onChange={(next) => onTratativaChange(mac, next)}
-      />
-    );
-  }
-  if (key === "tratativa") {
-    return (
-      <TratativaCell
-        recordKind="BSOD"
-        recordKey={mac}
-        tratativa={tratativa}
-        onChange={(next) => onTratativaChange(mac, next)}
-      />
-    );
+  if (key === "tratativa_actions" || key === "tratativa") {
+    if (!tratativa && !isOffline) return "—";
+    return <TratativaTreatButton onClick={() => onTreat(mac)} />;
   }
   if (key === "monitor_label") {
     return <BsodHealthBadge label={String(value)} status={row.monitor_status as number | null} />;
   }
   if (key === "monitor_time") {
-    return <DateTimeStacked value={value as string | null} />;
+    return formatDateTimeDisplay(value as string | null);
   }
   if (key === "detalhes") {
     return (

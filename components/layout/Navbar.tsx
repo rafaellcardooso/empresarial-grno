@@ -1,7 +1,9 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MonitoringRefreshStatus } from "@/components/layout/MonitoringRefreshStatus";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GrnoLogo } from "@/components/layout/GrnoLogo";
 import { NavbarUserMenu } from "@/components/layout/NavbarUserMenu";
@@ -68,6 +70,9 @@ export function Navbar() {
         </div>
 
         <div className="d-flex align-items-center ms-auto gap-3 shrink-0">
+          <Suspense fallback={null}>
+            <MonitoringRefreshStatus />
+          </Suspense>
           <NotificationBell />
           <div data-tour="user-menu">
             <NavbarUserMenu />

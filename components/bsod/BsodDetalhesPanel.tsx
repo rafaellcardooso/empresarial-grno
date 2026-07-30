@@ -61,9 +61,11 @@ function BsodDetalhesBody({ row }: { row: PmeBsodRow }) {
       <BsodDetailItem label="Status">
         <BsodHealthBadge label={row.monitor_label} status={row.monitor_status} />
       </BsodDetailItem>
-      <BsodDetailItem label="Operação">{row.ope || "—"}</BsodDetailItem>
+      <BsodDetailItem label="Operação">{row.ope_label || row.ope || "—"}</BsodDetailItem>
       <BsodDetailItem label="CMTS">{row.cmts || "—"}</BsodDetailItem>
       <BsodDetailItem label="Node">{row.node || "—"}</BsodDetailItem>
+      <BsodDetailItem label="MAC">{row.mac || "—"}</BsodDetailItem>
+      <BsodDetailItem label="ID cable">{row.id_cable || "—"}</BsodDetailItem>
       <BsodDetailItem label="Contrato">{row.contrato || "—"}</BsodDetailItem>
       <BsodDetailItem label="Endereço">{row.address || "—"}</BsodDetailItem>
       <BsodDetailItem label="Profile">{row.profile || "—"}</BsodDetailItem>

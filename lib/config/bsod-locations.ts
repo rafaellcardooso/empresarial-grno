@@ -1,3 +1,5 @@
+import { getOperationalDddUf, operationalDddLabel } from "@/lib/config/locations";
+
 /** Localização operacional BSOD derivada de `ope` até o inventário expor DDD/município. */
 export type BsodLocation = {
   ope: string;
@@ -6,10 +8,16 @@ export type BsodLocation = {
   uf: string;
 };
 
+type BsodLocationSource = Omit<BsodLocation, "uf">;
+
 /** Mapa extensível: novas cidades entram adicionando operações. */
-export const BSOD_LOCATIONS: BsodLocation[] = [
-  { ope: "sls", city: "SÃO LUÍS", ddd: "98", uf: "MA" },
-];
+const BSOD_LOCATION_SOURCES: BsodLocationSource[] = [{ ope: "sls", city: "SÃO LUÍS", ddd: "98" }];
+
+/** Localizações BSOD enriquecidas com UF do catálogo compartilhado. */
+export const BSOD_LOCATIONS: BsodLocation[] = BSOD_LOCATION_SOURCES.map((location) => ({
+  ...location,
+  uf: getOperationalDddUf(location.ddd) ?? "",
+}));
 
 /** Índice OPE → localização (case-insensitive). */
 const LOCATION_BY_OPE = new Map(
@@ -40,8 +48,7 @@ export function bsodOperationLabel(ope: string | null | undefined): string {
 
 /** Formata KPI/filtro DDD como `98 - MA`. */
 export function bsodDddLabel(ddd: string): string {
-  const location = BSOD_LOCATIONS.find((item) => item.ddd === ddd);
-  return location ? `${ddd} - ${location.uf}` : ddd;
+  return operationalDddLabel(ddd);
 }
 
 /** Lista DDDs conhecidos para chips/KPIs. */
