@@ -1,6 +1,6 @@
 # Documentação — Empresarial GRNO
 
-> Última revisão: **2026-07-27**
+> Última revisão: **2026-07-29**
 
 Toda a documentação do projeto fica nesta pasta. Escolha o caminho conforme o ambiente.
 

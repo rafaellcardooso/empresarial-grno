@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { Navbar } from "@/components/layout/Navbar";
+import { MonitoringRefreshStatus } from "@/components/layout/MonitoringRefreshStatus";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SidebarLayoutProvider } from "@/components/layout/SidebarLayoutProvider";
 import { UI_COPY } from "@/lib/config/ui-copy";
@@ -16,7 +18,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             id="mainContent"
             className="col-md-9 ms-sm-auto col-lg-10 px-0 main-content d-flex flex-column"
           >
-            <div className="container py-4 px-4">{children}</div>
+            <div className="container py-4 px-4">
+              <Suspense fallback={null}>
+                <MonitoringRefreshStatus />
+              </Suspense>
+              {children}
+            </div>
             <footer className="mt-auto py-3 border-top text-center text-body-secondary small">
               {UI_COPY.footer}
             </footer>
