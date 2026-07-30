@@ -9,17 +9,19 @@ alwaysApply: false
 ## MySQL `sir` (RAL/REC)
 
 - Pool: `lib/db/sir.ts` · queries: `lib/queries/sir.ts` · **models**: `lib/models/`.
-- Tabelas: `rals`, `recs` — ver `migrations/sir/001_initial_schema.sql`.
-- Populadas por `workers/sir-ingest`; Next **somente leitura**.
-- Filtro padrão UI/API: `status = 'ATIVO'` (`SIR_RECORD_STATUS.active`).
+- Tabelas: `rals`, `recs`, `sdh_alarms` — ver `migrations/sir/`.
+- `rals`/`recs`: populadas por `workers/sir-ingest`; Next **somente leitura**.
+- `sdh_alarms`: populada por `workers/tmip`; Next lê e escreve só colunas de tratativa SDH.
+- Filtro padrão UI/API SIR: `status = 'ATIVO'` (`SIR_RECORD_STATUS.active`).
 
 ### Models
 
-| Model             | Tabela | Notas                    |
-| ----------------- | ------ | ------------------------ |
-| `RalRecord`       | `rals` | coluna `detalhes`        |
-| `RecRecord`       | `recs` | coluna `detalhes_title`  |
-| `SirRecordStatus` | ambas  | `'ATIVO' \| 'ENCERRADO'` |
+| Model             | Tabela       | Notas                    |
+| ----------------- | ------------ | ------------------------ |
+| `RalRecord`       | `rals`       | coluna `detalhes`        |
+| `RecRecord`       | `recs`       | coluna `detalhes_title`  |
+| `SdhAlarmRecord`  | `sdh_alarms` | ingest TMIP + tratativa  |
+| `SirRecordStatus` | rals/recs    | `'ATIVO' \| 'ENCERRADO'` |
 
 Import: `import { RalRecord, RecRecord, SIR_TABLES } from '@/lib/models'`.
 

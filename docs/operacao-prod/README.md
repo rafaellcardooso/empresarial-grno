@@ -34,11 +34,12 @@ Deploy rotineiro sem delta manual: [2026-07-26-deploy-producao.md §9](../2026-0
 
 ## Índice
 
-| Data       | Entrada                                                                | Lab      | Prod     | Escopo     |
-| ---------- | ---------------------------------------------------------------------- | -------- | -------- | ---------- |
-| 2026-07-26 | [Tratativas — migrations 006–008](2026-07-26-tratativas-migrations.md) | aplicado | pendente | lab + prod |
-| 2026-07-26 | [GRB / Critel — env + build Next](2026-07-26-grb-critel-env.md)        | aplicado | pendente | lab + prod |
-| 2026-07-26 | [Bots Telegram SIR + dashboard PNG](2026-07-26-telegram-sir-bots.md)   | aplicado | pendente | lab + prod |
+| Data       | Entrada                                                                         | Lab      | Prod     | Escopo     |
+| ---------- | ------------------------------------------------------------------------------- | -------- | -------- | ---------- |
+| 2026-07-29 | [TMIP / SDH — migrations 009–011 + timer ingest](2026-07-29-tmip-sdh-ingest.md) | pendente | pendente | lab + prod |
+| 2026-07-26 | [Tratativas — migrations 006–008](2026-07-26-tratativas-migrations.md)          | aplicado | pendente | lab + prod |
+| 2026-07-26 | [GRB / Critel — env + build Next](2026-07-26-grb-critel-env.md)                 | aplicado | pendente | lab + prod |
+| 2026-07-26 | [Bots Telegram SIR + dashboard PNG](2026-07-26-telegram-sir-bots.md)            | aplicado | pendente | lab + prod |
 
 ---
 

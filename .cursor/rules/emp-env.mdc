@@ -7,10 +7,11 @@ alwaysApply: true
 
 ## Pares espelhados (obrigatório)
 
-| Template (commitado)              | Local (gitignored)        | Projeto           |
-| --------------------------------- | ------------------------- | ----------------- |
-| `.env.example`                    | `.env.local`              | Next.js (raiz)    |
-| `workers/sir-ingest/.env.example` | `workers/sir-ingest/.env` | Worker Playwright |
+| Template (commitado)              | Local (gitignored)        | Projeto                |
+| --------------------------------- | ------------------------- | ---------------------- |
+| `.env.example`                    | `.env.local`              | Next.js (raiz)         |
+| `workers/sir-ingest/.env.example` | `workers/sir-ingest/.env` | Worker Playwright      |
+| `workers/tmip/.env.example`       | `workers/tmip/.env`       | Worker TMIP/SDH (SFTP) |
 
 **Não usar** `conexao-db.json` — credenciais MySQL do worker vêm de `SIR_DB_*` (mesmas chaves do Next).
 
@@ -20,7 +21,7 @@ alwaysApply: true
 
 1. Atualizar o `.env.example` (placeholder — nunca segredo real).
 2. Atualizar o `.env` / `.env.local` do desenvolvedor **na mesma posição, bloco e comentários**.
-3. Se for `SIR_DB_*`, replicar **igual** na raiz e no worker.
+3. Se for `SIR_DB_*`, replicar **igual** na raiz, no `sir-ingest` e no `tmip`.
 4. Rodar `npm run env:check` na raiz.
 
 ## Chaves SIR compartilhadas
@@ -35,7 +36,7 @@ SIR_DB_PASSWORD
 SIR_DB_NAME
 ```
 
-Valores devem ser idênticos em `.env.local` e `workers/sir-ingest/.env`.
+Valores devem ser idênticos em `.env.local`, `workers/sir-ingest/.env` e `workers/tmip/.env`.
 
 ## Placeholders no example
 

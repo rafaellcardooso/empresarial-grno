@@ -17,6 +17,11 @@ const PAIRS = [
     example: path.join(repoRoot, "workers/sir-ingest/.env.example"),
     local: path.join(repoRoot, "workers/sir-ingest/.env"),
   },
+  {
+    name: "TMIP ingest worker",
+    example: path.join(repoRoot, "workers/tmip/.env.example"),
+    local: path.join(repoRoot, "workers/tmip/.env"),
+  },
 ];
 
 /** Extrai estrutura de linhas (comentários, chaves, blank) de um arquivo .env. */
@@ -136,35 +141,42 @@ function diffStructure(examplePath, localPath) {
   return issues;
 }
 
-/** Verifica paridade de SIR_DB_* entre .env.local e worker .env. */
+/** Verifica paridade de SIR_DB_* entre .env.local e workers que escrevem no MySQL SIR. */
 function checkSirDbAlignment() {
   const nextEnv = parseEnvMap(path.join(repoRoot, ".env.local"));
-  const workerEnv = parseEnvMap(path.join(repoRoot, "workers/sir-ingest/.env"));
+  const workerEnvs = [
+    { name: "sir-ingest", map: parseEnvMap(path.join(repoRoot, "workers/sir-ingest/.env")) },
+    { name: "tmip", map: parseEnvMap(path.join(repoRoot, "workers/tmip/.env")) },
+  ].filter((item) => item.map.size > 0);
 
-  if (!nextEnv.size || !workerEnv.size) {
+  if (!nextEnv.size || workerEnvs.length === 0) {
     console.warn("[env:check] SIR_DB cross-check skipped — missing .env.local or worker .env");
     return false;
   }
 
-  console.log("[env:check] SIR_DB (Next ↔ worker)");
+  console.log("[env:check] SIR_DB (Next ↔ workers)");
   let failed = false;
 
-  for (const key of SIR_DB_KEYS) {
-    const nextVal = nextEnv.get(key);
-    const workerVal = workerEnv.get(key);
-    if (nextVal === undefined || workerVal === undefined) {
-      failed = true;
-      console.error(`  missing ${key} in Next and/or worker env`);
-      continue;
-    }
-    if (nextVal !== workerVal) {
-      failed = true;
-      console.error(`  mismatch ${key}: Next="${nextVal}" worker="${workerVal}"`);
+  for (const worker of workerEnvs) {
+    for (const key of SIR_DB_KEYS) {
+      const nextVal = nextEnv.get(key);
+      const workerVal = worker.map.get(key);
+      if (nextVal === undefined || workerVal === undefined) {
+        failed = true;
+        console.error(`  missing ${key} in Next and/or ${worker.name} env`);
+        continue;
+      }
+      if (nextVal !== workerVal) {
+        failed = true;
+        console.error(`  mismatch ${key}: Next="${nextVal}" ${worker.name}="${workerVal}"`);
+      }
     }
   }
 
   if (!failed) {
-    console.log("  ok (SIR_DB_* identical)");
+    console.log(
+      `  ok (SIR_DB_* identical across Next and ${workerEnvs.map((w) => w.name).join(", ")})`,
+    );
   }
   return failed;
 }

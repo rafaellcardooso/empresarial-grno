@@ -1,0 +1,35 @@
+---
+description: Exigir paginação em telas e APIs com listagens de dados
+alwaysApply: true
+---
+
+# Paginação obrigatória
+
+Toda tela nova ou alterada que exiba tabela/listagem potencialmente não limitada deve ter paginação.
+
+## Padrão
+
+- Paginar no servidor/banco; não carregar todos os registros para recortar no cliente.
+- Manter a página na URL com `page`; usar `limit` somente em APIs quando necessário.
+- Aplicar `LIMIT` e `OFFSET` na query e executar uma query `COUNT(*)` com os mesmos filtros.
+- Preservar filtros, busca e ordenação ao trocar de página.
+- Resetar para a página 1 quando um filtro ou busca mudar.
+- Usar `TablePagination` nas tabelas do Next, seguindo os módulos SIR/BSOD existentes.
+- Route Handlers devem validar limites e retornar total, página e quantidade por página.
+- Exportações CSV devem continuar exportando todo o escopo filtrado, sem o limite visual.
+
+## Tamanho
+
+- Usar 50 registros por página como padrão.
+- Definir constantes de paginação no `lib/config/<dominio>-pagination.ts`.
+- Limitar `limit` de API a no máximo 200 registros.
+
+## Exceções
+
+Paginação não é necessária para:
+
+- KPIs, cards e listas fixas de configuração.
+- Seletores com conjunto pequeno e conhecido.
+- Listagens garantidamente limitadas a até 50 itens pela regra de negócio.
+
+Quando uma exceção for usada, documentar no código por que o conjunto é limitado.

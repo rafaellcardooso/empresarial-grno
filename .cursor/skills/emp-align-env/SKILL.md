@@ -13,8 +13,9 @@ Rule: `.cursor/rules/emp-env.mdc`
 | --------------------------------- | ------------------------- |
 | `.env.example`                    | `.env.local`              |
 | `workers/sir-ingest/.env.example` | `workers/sir-ingest/.env` |
+| `workers/tmip/.env.example`       | `workers/tmip/.env`       |
 
-MySQL SIR: **`SIR_DB_*` iguais** na raiz e no worker. Não usar `conexao-db.json`.
+MySQL SIR: **`SIR_DB_*` iguais** na raiz e nos workers (`sir-ingest`, `tmip`). Não usar `conexao-db.json`.
 
 ## Setup inicial
 
@@ -25,19 +26,22 @@ cp .env.example .env.local
 cd workers/sir-ingest
 cp .env.example .env
 # copiar SIR_DB_* do .env.local se necessário
+cd ../tmip
+cp .env.example .env
+# copiar SIR_DB_* do .env.local; preencher SFTP_*
 cd ../.. && npm run env:check
 ```
 
 ## Ao alterar código
 
 1. Nova variável → atualizar **example + local** (mesma ordem, bloco e comentários).
-2. `SIR_DB_*` → replicar em `.env.local` **e** `workers/sir-ingest/.env`.
+2. `SIR_DB_*` → replicar em `.env.local`, `workers/sir-ingest/.env` e `workers/tmip/.env`.
 3. Validar: `npm run env:check`
 
 ## Cross-check
 
 - `PORT=3003` ↔ `EMPRESARIAL_API_URL=http://127.0.0.1:3003/api`
-- `SIR_DB_*` idêntico entre Next e worker
+- `SIR_DB_*` idêntico entre Next e workers (`sir-ingest`, `tmip`)
 
 ## Saúde
 

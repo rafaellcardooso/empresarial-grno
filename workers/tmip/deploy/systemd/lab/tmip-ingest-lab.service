@@ -1,0 +1,15 @@
+[Unit]
+Description=TMIP ingest lab — SDH CSV (SFTP → MySQL)
+After=network.target mariadb.service
+
+[Service]
+Type=oneshot
+User=rcard
+Group=rcard
+WorkingDirectory=/usr/local/empresarial/workers/tmip
+Environment=PATH=/usr/local/empresarial/workers/tmip/venv/bin:/usr/bin:/usr/local/bin
+EnvironmentFile=/usr/local/empresarial/workers/tmip/.env
+ExecStart=/usr/local/empresarial/workers/tmip/venv/bin/python ingest_sdh.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tmip-ingest-lab

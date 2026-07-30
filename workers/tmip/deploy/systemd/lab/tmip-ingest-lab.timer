@@ -1,0 +1,11 @@
+[Unit]
+Description=TMIP ingest SDH lab a cada 10 minutos
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Unit=tmip-ingest-lab.service
+
+[Install]
+WantedBy=timers.target

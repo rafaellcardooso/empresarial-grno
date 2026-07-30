@@ -31,6 +31,7 @@ Rodar `npm` na home (`~`) ou como `root` em `/root` **falha** — não há `pack
 | `sir-ingest-rec`          | `AlertasRecRede.js`       | Grava `recs` (filtro SIR: **REC/DSR/TCQ**) |
 | `sir-telegram-ops`        | `main-ops-bot.py`         | Bot operacional (`/sir`, `/rotinas`)       |
 | `sir-telegram-datacenter` | `notify-datacenter.py`    | Push RAL/REC CF datacenter                 |
+| `tmip-ingest.timer`       | `ingest_sdh.py` (oneshot) | SFTP → `sdh_alarms` a cada 10 min          |
 
 Arquivos:
 
@@ -39,6 +40,7 @@ Arquivos:
 - `workers/sir-ingest/deploy/systemd/sir-ingest-rec.service`
 - `workers/sir-ingest/deploy/systemd/sir-telegram-ops.service`
 - `workers/sir-ingest/deploy/systemd/sir-telegram-datacenter.service`
+- `workers/tmip/deploy/systemd/tmip-ingest.service` + `tmip-ingest.timer`
 
 Instalação e enable: checklist de [produção §6](../docs/2026-07-26-deploy-producao.md#6-systemd-uma-vez).
 
@@ -63,8 +65,9 @@ Units com sufixo `-lab`, **`User=rcard`**, paths em `/usr/local/empresarial`.
 | `sir-ingest-rec-lab`          | `AlertasRecRede.js`    | Usuário `rcard`                   |
 | `sir-telegram-ops-lab`        | `main-ops-bot.py`      | Depende de `empresarial-next-lab` |
 | `sir-telegram-datacenter-lab` | `notify-datacenter.py` | Depende de Next + ingest lab      |
+| `tmip-ingest-lab.timer`       | `ingest_sdh.py`        | SFTP → `sdh_alarms` a cada 10 min |
 
-Arquivos em `deploy/systemd/lab/` e `workers/sir-ingest/deploy/systemd/lab/`.
+Arquivos em `deploy/systemd/lab/`, `workers/sir-ingest/deploy/systemd/lab/` e `workers/tmip/deploy/systemd/lab/`.
 
 Setup completo (env, banco, enable): **[docs/2026-07-27-lab.md](../docs/2026-07-27-lab.md)**.
 
