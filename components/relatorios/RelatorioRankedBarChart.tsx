@@ -29,7 +29,12 @@ export function RelatorioRankedBarChart({
   const maxValue = Math.max(...items.map((item) => item.value), 1);
 
   return (
-    <div className="relatorio-ranked-bar-chart">
+    <div
+      className="relatorio-ranked-bar-chart"
+      role="region"
+      aria-label="Ranking completo"
+      tabIndex={0}
+    >
       {items.map((item, index) => {
         const width = Math.max(4, Math.round((item.value / maxValue) * 100));
         const tone = item.tone ?? "default";

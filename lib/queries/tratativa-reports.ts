@@ -30,8 +30,6 @@ type AcionamentoRow = RowDataPacket & {
   message_text: string | null;
 };
 
-const RANKING_LIMIT = 8;
-
 /** Monta cláusula SQL opcional por record_kind. */
 function kindClause(
   alias: string,
@@ -78,7 +76,7 @@ export async function getTratativaReport(
     ).then((rows) => rows[0]),
     loadDailySeries(from, toExclusive, kindEvents),
     includeOperators
-      ? loadTopOperators(from, toExclusive, kindEvents)
+      ? loadOperators(from, toExclusive, kindEvents)
       : Promise.resolve([] as TratativaReportOperatorRow[]),
     loadAcionamentoRows(from, toExclusive, kindEvents),
   ]);
@@ -193,7 +191,7 @@ function buildEventDistribution(summary: TratativaReportSummary): TratativaRepor
   return slices.filter((item) => item.total > 0);
 }
 
-async function loadTopOperators(
+async function loadOperators(
   from: Date,
   toExclusive: Date,
   kindEvents: { sql: string; params: unknown[] },
@@ -210,8 +208,7 @@ async function loadTopOperators(
        ${kindEvents.sql}
      GROUP BY e.user_id, u.name, u.corporate_id
      HAVING acionamentos > 0 OR concluidas > 0
-     ORDER BY acionamentos DESC, concluidas DESC, u.name ASC
-     LIMIT 8`,
+     ORDER BY acionamentos DESC, concluidas DESC, u.name ASC`,
     [from, toExclusive, ...kindEvents.params],
   );
 
@@ -264,8 +261,7 @@ function buildAcionamentoRankings(rows: AcionamentoRow[]): {
 
   const bySymptom = [...symptomCounts.entries()]
     .map(([key, total]) => ({ key, label: key, total }))
-    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, "pt-BR"))
-    .slice(0, RANKING_LIMIT);
+    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, "pt-BR"));
 
   const topClients = [...clientCounts.entries()]
     .map(([key, value]) => ({
@@ -274,8 +270,7 @@ function buildAcionamentoRankings(rows: AcionamentoRow[]): {
       total: value.total,
       hint: key.startsWith("mac:") ? "Identificado por MAC" : undefined,
     }))
-    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, "pt-BR"))
-    .slice(0, RANKING_LIMIT);
+    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, "pt-BR"));
 
   return { bySymptom, topClients };
 }

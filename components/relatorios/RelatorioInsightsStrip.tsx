@@ -1,10 +1,16 @@
-import type { TratativaInsightHighlight } from "@/lib/relatorios/tratativa-insights";
-
-type RelatorioInsightsStripProps = {
-  items: TratativaInsightHighlight[];
+type RelatorioInsightStripItem = {
+  id: string;
+  icon: string;
+  label: string;
+  value: string;
+  tone: "default" | "success" | "warning" | "danger";
 };
 
-const TONE_CLASS: Record<TratativaInsightHighlight["tone"], string> = {
+type RelatorioInsightsStripProps = {
+  items: RelatorioInsightStripItem[];
+};
+
+const TONE_CLASS: Record<RelatorioInsightStripItem["tone"], string> = {
   default: "relatorio-insights-strip__item--default",
   success: "relatorio-insights-strip__item--success",
   warning: "relatorio-insights-strip__item--warning",

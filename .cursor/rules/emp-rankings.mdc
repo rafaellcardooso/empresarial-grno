@@ -1,0 +1,22 @@
+---
+description: Exibir rankings completos com rolagem, sem cortes arbitrários
+alwaysApply: true
+---
+
+# Rankings completos
+
+Rankings, distribuições e listas analíticas não devem ser truncados em Top N.
+
+## Obrigatório
+
+- Não usar `TOP`, `LIMIT`, `.slice()` ou constantes como `RANKING_LIMIT` para esconder categorias.
+- Consultas agregadas devem retornar todos os grupos que correspondem aos filtros.
+- Ordenar os resultados por valor decrescente e critério estável de desempate.
+- Limitar somente a altura visual do componente.
+- Quando o conteúdo ultrapassar a altura disponível, usar rolagem vertical.
+- Manter o total e a posição de todos os itens acessíveis ao usuário.
+
+## Exceção
+
+Só truncar um ranking quando o usuário solicitar explicitamente um Top N.
+Nesse caso, o título deve informar o limite aplicado.

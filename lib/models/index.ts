@@ -20,3 +20,16 @@ export {
   type TratativaPublic,
   type TratativaRecordKind,
 } from "@/lib/models/tratativa";
+export {
+  type SdhAlarmListItem,
+  type SdhAlarmRecord,
+  type SdhDddCount,
+  type SdhStatusCounts,
+  type SdhTratativaEvent,
+  type SdhVendorCounts,
+} from "@/lib/models/sdh";
+export {
+  type SdhReportData,
+  type SdhReportFilters,
+  type SdhReportSummary,
+} from "@/lib/models/sdh-report";

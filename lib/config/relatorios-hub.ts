@@ -35,10 +35,12 @@ export const RELATORIO_HUB_ITEMS: RelatorioHubItem[] = [
     available: false,
   },
   {
-    id: "tmip",
-    title: "TMIP",
-    description: "Painéis de monitoramento TMIP com histórico de alarmes e disponibilidade.",
+    id: "sdh",
+    href: "/relatorios/sdh",
+    title: "SDH",
+    description:
+      "Backlog ativo de alarmes SDH, idade, DDD/gerência e atividade de tratativa no período.",
     icon: "bi-broadcast",
-    available: false,
+    available: true,
   },
 ];
