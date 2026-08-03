@@ -20,7 +20,8 @@ Na raiz: `npm run env:check`.
 ## Comportamento
 
 - Filtra alarmes >6h conforme regras do script.
-- Aborta se o arquivo remoto estiver velho (`SFTP_MAX_AGE_HOURS`) ou o CSV estiver vazio/malformado/com IDs duplicados — **sem** fechar o backlog em massa.
+- Aborta se o arquivo remoto estiver velho (`SFTP_MAX_AGE_HOURS`) ou o CSV estiver vazio/malformado — **sem** fechar o backlog em massa.
+- IDs duplicados no CSV: mantém a **última** ocorrência no arquivo.
 - Timer systemd a cada 10 min (`tmip-ingest.timer` / `tmip-ingest-lab.timer`).
 
 ## Estrutura

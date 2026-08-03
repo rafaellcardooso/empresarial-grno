@@ -41,6 +41,7 @@ Units em `workers/tmip/deploy/systemd/lab/` (`tmip-ingest-lab.timer`).
 - Timer ativo: `systemctl list-timers 'tmip-ingest*'`
 - UI autenticada: `/sdh` (não use `curl` anônimo em `/api/sdh` — exige sessão)
 - CSV vazio/desatualizado: processo sai com erro **sem** fechar o backlog (comportamento esperado)
+- IDs duplicados no CSV: mantém a última ocorrência no arquivo (loga aviso; não aborta)
 
 ## Update
 

@@ -25,8 +25,9 @@ EXPECTED_COLUMNS = [
 def load_sdh_csv(path: Path) -> pd.DataFrame:
     """Carrega o CSV TMIP e normaliza colunas para upsert em `sdh_alarms`.
 
-    Aborta se o arquivo estiver vazio, sem cabeçalho válido, sem linhas
-    utilizáveis ou com IDs duplicados — evita fechar o backlog indevidamente.
+    Aborta se o arquivo estiver vazio, sem cabeçalho válido ou sem linhas
+    utilizáveis — evita fechar o backlog indevidamente. IDs duplicados
+    mantêm a última ocorrência no arquivo.
     """
     lines: list[str] = []
     with path.open("r", encoding="utf-8", errors="replace") as handle:
@@ -56,9 +57,16 @@ def load_sdh_csv(path: Path) -> pd.DataFrame:
     if df.empty:
         raise RuntimeError("CSV TMIP sem linhas utilizáveis — sincronização abortada")
 
-    duplicates = df["id"][df["id"].duplicated()].unique().tolist()
-    if duplicates:
-        sample = ", ".join(duplicates[:5])
-        raise RuntimeError(f"CSV TMIP com IDs duplicados ({sample}) — sincronização abortada")
+    dup_mask = df["id"].duplicated(keep=False)
+    if dup_mask.any():
+        dup_ids = df.loc[dup_mask, "id"].unique().tolist()
+        before = len(df)
+        df = df.drop_duplicates(subset=["id"], keep="last")
+        sample = ", ".join(dup_ids[:5])
+        print(
+            f"[SDH] CSV com {len(dup_ids)} IDs duplicados "
+            f"({sample}) — mantida última ocorrência; "
+            f"linhas {before} → {len(df)}"
+        )
 
     return df
