@@ -1,15 +1,18 @@
 import type { RowDataPacket } from "mysql2";
 import { unstable_cache } from "next/cache";
 import { hfcQuery } from "@/lib/db/hfc";
+import { listMergedPmeRows } from "@/lib/queries/bsod-rows";
 import {
   appendWhereCondition,
   BSOD_PME_FROM,
-  buildBsodWhere,
+  buildBsodInventoryWhere,
+  bsodHasHealthFilter,
   type BsodFacetCount,
   type BsodFilters,
   type BsodHealthCounts,
   type BsodVlanCounts,
   type BsodWhereOptions,
+  type PmeBsodRow,
 } from "@/lib/queries/bsod-sql";
 
 const BSOD_CACHE_SEC = 30;
@@ -18,24 +21,39 @@ const BSOD_CACHE_SEC = 30;
 export async function countBsodHealth(
   filters: Omit<BsodFilters, "health" | "limit" | "offset"> = {},
 ): Promise<BsodHealthCounts> {
-  const { sql: whereSql, params } = buildBsodWhere(filters, { omit: ["health", "q"] });
-  const [row] = await hfcQuery<RowDataPacket[]>(
-    `SELECT
-       COUNT(*) AS total,
-       COALESCE(SUM(CASE WHEN mon.status = 1 THEN 1 ELSE 0 END), 0) AS online,
-       COALESCE(SUM(CASE WHEN mon.status = 0 THEN 1 ELSE 0 END), 0) AS offline,
-       COALESCE(SUM(CASE WHEN mon.status IS NULL THEN 1 ELSE 0 END), 0) AS sem_leitura
-     ${BSOD_PME_FROM}
-     ${whereSql}`,
-    params,
-  );
+  const rows = await listMergedPmeRows(filters, { omit: ["health", "q"] });
+
+  let online = 0;
+  let offline = 0;
+  let semLeitura = 0;
+
+  for (const row of rows) {
+    if (row.monitor_status === 1) online += 1;
+    else if (row.monitor_status === 0) offline += 1;
+    else semLeitura += 1;
+  }
 
   return {
-    total: Number(row?.total ?? 0),
-    online: Number(row?.online ?? 0),
-    offline: Number(row?.offline ?? 0),
-    sem_leitura: Number(row?.sem_leitura ?? 0),
+    total: rows.length,
+    online,
+    offline,
+    sem_leitura: semLeitura,
   };
+}
+
+/** Agrupa contagens de facet a partir de linhas já mescladas. */
+function facetCountsFromRows(rows: PmeBsodRow[], field: "cmts" | "node"): BsodFacetCount[] {
+  const totals = new Map<string, number>();
+
+  for (const row of rows) {
+    const raw = String(row[field] ?? "").trim();
+    if (!raw) continue;
+    totals.set(raw, (totals.get(raw) ?? 0) + 1);
+  }
+
+  return [...totals.entries()]
+    .map(([value, total]) => ({ value, total }))
+    .sort((a, b) => a.value.localeCompare(b.value));
 }
 
 /** Lista CMTS distintos com contagem, respeitando filtros exceto CMTS/node. */
@@ -43,20 +61,26 @@ export async function listBsodCmts(
   filters: Omit<BsodFilters, "cmts" | "node" | "limit" | "offset"> = {},
 ): Promise<BsodFacetCount[]> {
   const options: BsodWhereOptions = { omit: ["cmts", "node", "q"] };
-  const { sql: whereSql, params } = buildBsodWhere(filters, options);
-  const rows = await hfcQuery<RowDataPacket[]>(
-    `SELECT i.cmts AS value, COUNT(*) AS total
-     ${BSOD_PME_FROM}
-     ${appendWhereCondition(whereSql, "i.cmts IS NOT NULL AND TRIM(i.cmts) <> ''")}
-     GROUP BY i.cmts
-     ORDER BY i.cmts ASC`,
-    params,
-  );
 
-  return rows.map((row) => ({
-    value: String(row.value),
-    total: Number(row.total),
-  }));
+  if (!bsodHasHealthFilter(filters, options)) {
+    const { sql: whereSql, params } = buildBsodInventoryWhere(filters, options);
+    const rows = await hfcQuery<RowDataPacket[]>(
+      `SELECT i.cmts AS value, COUNT(*) AS total
+       ${BSOD_PME_FROM}
+       ${appendWhereCondition(whereSql, "i.cmts IS NOT NULL AND TRIM(i.cmts) <> ''")}
+       GROUP BY i.cmts
+       ORDER BY i.cmts ASC`,
+      params,
+    );
+
+    return rows.map((row) => ({
+      value: String(row.value),
+      total: Number(row.total),
+    }));
+  }
+
+  const rows = await listMergedPmeRows(filters, options);
+  return facetCountsFromRows(rows, "cmts");
 }
 
 /** Lista nodes distintos com contagem, opcionalmente restritos ao CMTS ativo. */
@@ -64,20 +88,26 @@ export async function listBsodNodes(
   filters: Omit<BsodFilters, "node" | "limit" | "offset"> = {},
 ): Promise<BsodFacetCount[]> {
   const options: BsodWhereOptions = { omit: ["node", "q"] };
-  const { sql: whereSql, params } = buildBsodWhere(filters, options);
-  const rows = await hfcQuery<RowDataPacket[]>(
-    `SELECT i.node AS value, COUNT(*) AS total
-     ${BSOD_PME_FROM}
-     ${appendWhereCondition(whereSql, "i.node IS NOT NULL AND TRIM(i.node) <> ''")}
-     GROUP BY i.node
-     ORDER BY i.node ASC`,
-    params,
-  );
 
-  return rows.map((row) => ({
-    value: String(row.value),
-    total: Number(row.total),
-  }));
+  if (!bsodHasHealthFilter(filters, options)) {
+    const { sql: whereSql, params } = buildBsodInventoryWhere(filters, options);
+    const rows = await hfcQuery<RowDataPacket[]>(
+      `SELECT i.node AS value, COUNT(*) AS total
+       ${BSOD_PME_FROM}
+       ${appendWhereCondition(whereSql, "i.node IS NOT NULL AND TRIM(i.node) <> ''")}
+       GROUP BY i.node
+       ORDER BY i.node ASC`,
+      params,
+    );
+
+    return rows.map((row) => ({
+      value: String(row.value),
+      total: Number(row.total),
+    }));
+  }
+
+  const rows = await listMergedPmeRows(filters, options);
+  return facetCountsFromRows(rows, "node");
 }
 
 /** Chave estável para cache de agregados BSOD. */
@@ -99,22 +129,35 @@ export function getCachedBsodHealthCounts(
 export async function countBsodVlan(
   filters: Omit<BsodFilters, "vlan" | "limit" | "offset"> = {},
 ): Promise<BsodVlanCounts> {
-  const { sql: whereSql, params } = buildBsodWhere(filters, { omit: ["vlan", "q"] });
-  const [row] = await hfcQuery<RowDataPacket[]>(
-    `SELECT
-       COUNT(*) AS total,
-       COALESCE(SUM(CASE WHEN i.bsod_vlan > 0 THEN 1 ELSE 0 END), 0) AS com_vlan
-     ${BSOD_PME_FROM}
-     ${whereSql}`,
-    params,
-  );
+  if (!bsodHasHealthFilter(filters)) {
+    const { sql: whereSql, params } = buildBsodInventoryWhere(filters, { omit: ["vlan", "q"] });
+    const [row] = await hfcQuery<RowDataPacket[]>(
+      `SELECT
+         COUNT(*) AS total,
+         COALESCE(SUM(CASE WHEN i.bsod_vlan > 0 THEN 1 ELSE 0 END), 0) AS com_vlan
+       ${BSOD_PME_FROM}
+       ${whereSql}`,
+      params,
+    );
 
-  const total = Number(row?.total ?? 0);
-  const comVlan = Number(row?.com_vlan ?? 0);
+    const total = Number(row?.total ?? 0);
+    const comVlan = Number(row?.com_vlan ?? 0);
+    return {
+      total,
+      com_vlan: comVlan,
+      sem_vlan: total - comVlan,
+    };
+  }
+
+  const rows = await listMergedPmeRows(filters, { omit: ["vlan", "q"] });
+  let comVlan = 0;
+  for (const row of rows) {
+    if ((row.bsod_vlan ?? 0) > 0) comVlan += 1;
+  }
   return {
-    total,
+    total: rows.length,
     com_vlan: comVlan,
-    sem_vlan: total - comVlan,
+    sem_vlan: rows.length - comVlan,
   };
 }
 
