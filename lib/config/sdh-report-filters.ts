@@ -94,5 +94,5 @@ export const SDH_REPORT_VENDOR_OPTIONS: Array<{ value: "" | SdhVendorFilter; lab
   { value: "", label: "Todas as gerências" },
   { value: "datacom", label: "Datacom" },
   { value: "tellabs", label: "Tellabs" },
-  { value: "outros", label: "Outros" },
+  { value: "alcatel", label: "Alcatel" },
 ];

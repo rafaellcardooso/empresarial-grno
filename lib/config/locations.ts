@@ -29,6 +29,18 @@ export function listOperationalDdds(): string[] {
   return Object.keys(OPERATIONAL_DDD_UF).sort((a, b) => Number(a) - Number(b));
 }
 
+/** Lista UFs do escopo operacional (valores únicos; `AM/RR` vira AM e RR). */
+export function listOperationalUfs(): string[] {
+  const ufs = new Set<string>();
+  for (const value of Object.values(OPERATIONAL_DDD_UF)) {
+    for (const part of value.split("/")) {
+      const uf = part.trim().toUpperCase();
+      if (uf) ufs.add(uf);
+    }
+  }
+  return [...ufs].sort();
+}
+
 /** Valida agrupamento DDD recebido por URL. */
 export function operationalDddFromParam(raw: string | null | undefined): string | undefined {
   const normalized = raw?.trim();

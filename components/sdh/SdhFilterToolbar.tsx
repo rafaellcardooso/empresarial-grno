@@ -19,7 +19,7 @@ type SdhFilterToolbarProps = {
   activeQ?: string;
 };
 
-/** Barra de filtros por gerência (Datacom / Tellabs / Outros) e botão atualizar. */
+/** Barra de filtros por gerência (Datacom / Tellabs / Alcatel). */
 export function SdhFilterToolbar({
   counts,
   activeVendor,

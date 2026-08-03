@@ -225,7 +225,7 @@ async function loadByDdd(filters: SdhReportFilters): Promise<SdhReportRankRow[]>
   }));
 }
 
-/** Ranking por grupo de gerência (Datacom/Tellabs/Outros). */
+/** Ranking por grupo de gerência (Datacom/Tellabs/Alcatel). */
 async function loadByVendor(filters: SdhReportFilters): Promise<SdhReportRankRow[]> {
   const scope = scopeSql(filters);
   const rows = await sirQuery<RankRow[]>(
@@ -233,7 +233,7 @@ async function loadByVendor(filters: SdhReportFilters): Promise<SdhReportRankRow
        CASE
          WHEN LOWER(TRIM(COALESCE(a.gerencia, ''))) = 'datacom' THEN 'datacom'
          WHEN LOWER(COALESCE(a.gerencia, '')) LIKE '%tellabs%' THEN 'tellabs'
-         ELSE 'outros'
+         ELSE 'alcatel'
        END AS rank_key,
        COUNT(*) AS total
      FROM sdh_alarms a

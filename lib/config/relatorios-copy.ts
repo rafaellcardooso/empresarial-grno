@@ -65,7 +65,7 @@ export const RELATORIOS_COPY = {
   sdhDddTitle: "Por DDD",
   sdhDddLead: "Concentração do backlog ativo por código de área.",
   sdhVendorTitle: "Por gerência",
-  sdhVendorLead: "Datacom, Tellabs e demais gerências.",
+  sdhVendorLead: "Datacom, Tellabs e Alcatel.",
   sdhMunicipioTitle: "Por município",
   sdhMunicipioLead: "Municípios com mais alarmes ativos.",
   sdhAlarmeTitle: "Por tipo de alarme",

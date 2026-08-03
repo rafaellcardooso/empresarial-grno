@@ -1,5 +1,7 @@
 import type { RowDataPacket } from "mysql2";
 import {
+  sdhAlcatelPredicate,
+  sdhCommonScopePredicate,
   sdhDddSql,
   sdhStatusSql,
   sdhVendorSql,
@@ -31,8 +33,7 @@ type CountRow = RowDataPacket & { total: number };
 type VendorAggRow = RowDataPacket & {
   datacom: number;
   tellabs: number;
-  outros: number;
-  total: number;
+  alcatel: number;
 };
 type DddAggRow = RowDataPacket & { ddd_key: string; total: number };
 type StatusAggRow = RowDataPacket & {
@@ -189,29 +190,29 @@ export async function countInactiveSdhTreatments(
   return Number(rows[0]?.total ?? 0);
 }
 
-/** Retorna contagens globais por vendor entre todos os alarmes ativos. */
+/** Retorna contagens por vendor exibido (Datacom / Tellabs / Alcatel). */
 export async function countSdhByVendor(): Promise<SdhVendorCounts> {
+  const common = sdhCommonScopePredicate();
+  const alcatel = sdhAlcatelPredicate();
   const rows = await sirQuery<VendorAggRow[]>(
     `SELECT
        SUM(CASE WHEN LOWER(TRIM(COALESCE(gerencia, ''))) = 'datacom' THEN 1 ELSE 0 END) AS datacom,
        SUM(CASE WHEN LOWER(COALESCE(gerencia, '')) LIKE '%tellabs%' THEN 1 ELSE 0 END) AS tellabs,
-       SUM(
-         CASE
-           WHEN LOWER(TRIM(COALESCE(gerencia, ''))) <> 'datacom'
-            AND LOWER(COALESCE(gerencia, '')) NOT LIKE '%tellabs%'
-           THEN 1 ELSE 0
-         END
-       ) AS outros,
-       COUNT(*) AS total
+       SUM(CASE WHEN (${alcatel.sql}) THEN 1 ELSE 0 END) AS alcatel
      FROM sdh_alarms
-     WHERE is_active = 1`,
+     WHERE is_active = 1
+       AND (${common.sql})`,
+    [...common.params, ...alcatel.params],
   );
   const row = rows[0];
+  const datacom = Number(row?.datacom ?? 0);
+  const tellabs = Number(row?.tellabs ?? 0);
+  const alcatelCount = Number(row?.alcatel ?? 0);
   return {
-    datacom: Number(row?.datacom ?? 0),
-    tellabs: Number(row?.tellabs ?? 0),
-    outros: Number(row?.outros ?? 0),
-    total: Number(row?.total ?? 0),
+    datacom,
+    tellabs,
+    alcatel: alcatelCount,
+    total: datacom + tellabs + alcatelCount,
   };
 }
 

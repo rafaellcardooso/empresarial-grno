@@ -47,11 +47,11 @@ export type SdhDddCount = {
   count: number;
 };
 
-/** Contagens por vendor (datacom / tellabs / outros). */
+/** Contagens por vendor (datacom / tellabs / alcatel). */
 export type SdhVendorCounts = {
   datacom: number;
   tellabs: number;
-  outros: number;
+  alcatel: number;
   total: number;
 };
 
