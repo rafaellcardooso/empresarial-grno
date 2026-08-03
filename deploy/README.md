@@ -29,6 +29,7 @@ Units `*-lab` em `deploy/systemd/lab/` e `workers/*/deploy/systemd/lab/`.
 
 ```bash
 cd /usr/local/empresarial
+npm run deploy:next              # build + restart da unit Next ativa
 sudo journalctl -u empresarial-next -f
 sudo systemctl list-timers 'tmip-ingest*'
 ```

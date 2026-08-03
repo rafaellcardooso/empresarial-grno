@@ -12,9 +12,17 @@ git pull origin main
 npm ci
 npm run env:check          # se .env.example mudou — alinhar .env.local e workers
 npm run db:migrate         # se migrations/sir/ mudou — ver database-migrations.md
-npm run build
-sudo systemctl restart empresarial-next
+npm run deploy:next        # build + sudo systemctl restart (detecta unit ativa)
+# equivalente: npm run build && sudo systemctl restart empresarial-next
 # depois: restart seletivo dos workers (tabela abaixo)
+```
+
+Atalho só do Next (sem `git pull` / `npm ci`):
+
+```bash
+npm run deploy:next
+# lab explícito:
+npm run deploy:next -- empresarial-next-lab
 ```
 
 Manter **devDependencies** no `npm ci` do host: `next build` depende delas.

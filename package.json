@@ -20,6 +20,7 @@
     "db:bootstrap": "node scripts/db/bootstrap-sir.mjs | sudo mariadb",
     "db:bootstrap:sql": "node scripts/db/bootstrap-sir.mjs",
     "env:check": "node scripts/check-env-sync.mjs",
+    "deploy:next": "node scripts/deploy-next.mjs",
     "prepare": "husky"
   },
   "lint-staged": {
