@@ -1,7 +1,5 @@
 import type { RowDataPacket } from "mysql2";
 import {
-  sdhAlcatelPredicate,
-  sdhCommonScopePredicate,
   sdhDddSql,
   sdhStatusSql,
   sdhVendorSql,
@@ -30,11 +28,6 @@ export type SdhListFilters = {
 };
 
 type CountRow = RowDataPacket & { total: number };
-type VendorAggRow = RowDataPacket & {
-  datacom: number;
-  tellabs: number;
-  alcatel: number;
-};
 type DddAggRow = RowDataPacket & { ddd_key: string; total: number };
 type StatusAggRow = RowDataPacket & {
   total: number;
@@ -190,50 +183,46 @@ export async function countInactiveSdhTreatments(
   return Number(rows[0]?.total ?? 0);
 }
 
-/** Retorna contagens por vendor exibido (Datacom / Tellabs / Alcatel). */
-export async function countSdhByVendor(): Promise<SdhVendorCounts> {
-  const common = sdhCommonScopePredicate();
-  const alcatel = sdhAlcatelPredicate();
-  const rows = await sirQuery<VendorAggRow[]>(
-    `SELECT
-       SUM(CASE WHEN LOWER(TRIM(COALESCE(gerencia, ''))) = 'datacom' THEN 1 ELSE 0 END) AS datacom,
-       SUM(CASE WHEN LOWER(COALESCE(gerencia, '')) LIKE '%tellabs%' THEN 1 ELSE 0 END) AS tellabs,
-       SUM(CASE WHEN (${alcatel.sql}) THEN 1 ELSE 0 END) AS alcatel
-     FROM sdh_alarms
-     WHERE is_active = 1
-       AND (${common.sql})`,
-    [...common.params, ...alcatel.params],
-  );
-  const row = rows[0];
-  const datacom = Number(row?.datacom ?? 0);
-  const tellabs = Number(row?.tellabs ?? 0);
-  const alcatelCount = Number(row?.alcatel ?? 0);
+/** Conta alarmes ativos por vendor com os mesmos filtros da listagem (exceto vendor). */
+export async function countSdhByVendor(
+  filters: Pick<SdhListFilters, "ddd" | "q"> = {},
+): Promise<SdhVendorCounts> {
+  const [datacom, tellabs, alcatel] = await Promise.all([
+    countActiveSdhAlarms({ ...filters, vendor: "datacom" }),
+    countActiveSdhAlarms({ ...filters, vendor: "tellabs" }),
+    countActiveSdhAlarms({ ...filters, vendor: "alcatel" }),
+  ]);
   return {
     datacom,
     tellabs,
-    alcatel: alcatelCount,
-    total: datacom + tellabs + alcatelCount,
+    alcatel,
+    total: datacom + tellabs + alcatel,
   };
 }
 
-/** Contagens por DDD entre alarmes ativos (opcionalmente filtrados por vendor). */
-export async function countSdhByDdd(vendor?: SdhVendorFilter): Promise<SdhDddCount[]> {
-  const vendorSql = sdhVendorSql(vendor);
+/** Contagens por DDD entre alarmes ativos no mesmo escopo de vendor/busca. */
+export async function countSdhByDdd(
+  filters: Pick<SdhListFilters, "vendor" | "q"> = {},
+): Promise<SdhDddCount[]> {
+  const vendorSql = sdhVendorSql(filters.vendor);
+  const search = sdhSearchSql(filters.q);
   const rows = await sirQuery<DddAggRow[]>(
     `SELECT
        CASE
-         WHEN ddd IS NULL OR TRIM(ddd) = '' THEN 'sem'
-         ELSE TRIM(ddd)
+         WHEN a.ddd IS NULL OR TRIM(a.ddd) = '' THEN 'sem'
+         ELSE TRIM(a.ddd)
        END AS ddd_key,
        COUNT(*) AS total
-     FROM sdh_alarms
-     WHERE is_active = 1
+     FROM sdh_alarms a
+     LEFT JOIN app_users u ON u.id = a.tratativa_user_id
+     WHERE a.is_active = 1
      ${vendorSql.clause}
+     ${search.clause}
      GROUP BY ddd_key
      ORDER BY
        CASE WHEN ddd_key = 'sem' THEN 1 ELSE 0 END,
        CAST(ddd_key AS UNSIGNED) ASC`,
-    vendorSql.params,
+    [...vendorSql.params, ...search.params],
   );
   return rows.map((row) => ({
     ddd: String(row.ddd_key),

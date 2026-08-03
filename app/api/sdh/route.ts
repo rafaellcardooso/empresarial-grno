@@ -39,8 +39,8 @@ export async function GET(request: NextRequest) {
     const [data, total, vendorCounts, dddCounts, statusCounts] = await Promise.all([
       listActiveSdhAlarms(filters),
       countActiveSdhAlarms(filters),
-      countSdhByVendor(),
-      countSdhByDdd(vendor),
+      countSdhByVendor({ ddd, q }),
+      countSdhByDdd({ vendor, q }),
       countSdhByStatus({ vendor, ddd, q }),
     ]);
 
