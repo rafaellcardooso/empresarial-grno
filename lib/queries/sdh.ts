@@ -183,14 +183,12 @@ export async function countInactiveSdhTreatments(
   return Number(rows[0]?.total ?? 0);
 }
 
-/** Conta alarmes ativos por vendor com os mesmos filtros da listagem (exceto vendor). */
-export async function countSdhByVendor(
-  filters: Pick<SdhListFilters, "ddd" | "q"> = {},
-): Promise<SdhVendorCounts> {
+/** Conta alarmes ativos por vendor no escopo exibido (ignora DDD/status/busca). */
+export async function countSdhByVendor(): Promise<SdhVendorCounts> {
   const [datacom, tellabs, alcatel] = await Promise.all([
-    countActiveSdhAlarms({ ...filters, vendor: "datacom" }),
-    countActiveSdhAlarms({ ...filters, vendor: "tellabs" }),
-    countActiveSdhAlarms({ ...filters, vendor: "alcatel" }),
+    countActiveSdhAlarms({ vendor: "datacom" }),
+    countActiveSdhAlarms({ vendor: "tellabs" }),
+    countActiveSdhAlarms({ vendor: "alcatel" }),
   ]);
   return {
     datacom,
@@ -200,12 +198,11 @@ export async function countSdhByVendor(
   };
 }
 
-/** Contagens por DDD entre alarmes ativos no mesmo escopo de vendor/busca. */
+/** Contagens por DDD no escopo da gerência selecionada (ignora status/busca). */
 export async function countSdhByDdd(
-  filters: Pick<SdhListFilters, "vendor" | "q"> = {},
+  filters: Pick<SdhListFilters, "vendor"> = {},
 ): Promise<SdhDddCount[]> {
   const vendorSql = sdhVendorSql(filters.vendor);
-  const search = sdhSearchSql(filters.q);
   const rows = await sirQuery<DddAggRow[]>(
     `SELECT
        CASE
@@ -214,15 +211,13 @@ export async function countSdhByDdd(
        END AS ddd_key,
        COUNT(*) AS total
      FROM sdh_alarms a
-     LEFT JOIN app_users u ON u.id = a.tratativa_user_id
      WHERE a.is_active = 1
      ${vendorSql.clause}
-     ${search.clause}
      GROUP BY ddd_key
      ORDER BY
        CASE WHEN ddd_key = 'sem' THEN 1 ELSE 0 END,
        CAST(ddd_key AS UNSIGNED) ASC`,
-    [...vendorSql.params, ...search.params],
+    vendorSql.params,
   );
   return rows.map((row) => ({
     ddd: String(row.ddd_key),

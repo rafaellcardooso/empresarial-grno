@@ -62,8 +62,8 @@ export default async function Page({ searchParams }: PageProps) {
     await Promise.all([
       listActiveSdhAlarms(filters),
       countActiveSdhAlarms(filters),
-      countSdhByVendor({ ddd, q }),
-      countSdhByDdd({ vendor, q }),
+      countSdhByVendor(),
+      countSdhByDdd({ vendor }),
       countSdhByStatus({ vendor, ddd, q }),
       listInactiveSdhTreatments(normalizedFilters),
       countInactiveSdhTreatments({ vendor, ddd }),
