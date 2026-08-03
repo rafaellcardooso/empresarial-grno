@@ -63,14 +63,14 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
   }
 }
 
-/** Opções do cookie de sessão. */
-function getSessionCookieOptions(maxAgeSeconds: number) {
+/** Opções do cookie de sessão (sem `maxAge` = cookie de sessão do navegador). */
+function getSessionCookieOptions(maxAgeSeconds?: number) {
   return {
     httpOnly: true,
     secure: isSecureCookie(),
     sameSite: "lax" as const,
     path: "/",
-    maxAge: maxAgeSeconds,
+    ...(maxAgeSeconds != null ? { maxAge: maxAgeSeconds } : {}),
   };
 }
 
@@ -80,9 +80,9 @@ export async function setSessionCookie(
   payload: SessionPayload,
   rememberMe = false,
 ) {
-  const days = sessionDays(rememberMe);
   const token = await createSessionToken(payload, rememberMe);
-  response.cookies.set(SESSION_COOKIE_NAME, token, getSessionCookieOptions(days * 24 * 60 * 60));
+  const maxAgeSeconds = rememberMe ? sessionDays(true) * 24 * 60 * 60 : undefined;
+  response.cookies.set(SESSION_COOKIE_NAME, token, getSessionCookieOptions(maxAgeSeconds));
 }
 
 /** Remove cookie de sessão. */

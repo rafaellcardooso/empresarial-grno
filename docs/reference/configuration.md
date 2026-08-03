@@ -16,7 +16,7 @@ Validação: `npm run env:check` (paridade example ↔ local; `SIR_DB_*` iguais 
 | App                 | `PORT`, `APP_PUBLIC_URL`                                                                                            | Next                |
 | GRB                 | `GRB_BASE_URL`, `GRB_TELNET_USERNAME`, `GRB_TELNET_PASSWORD`, opcional `GRB_TELNET_ARG0`                            | Proxy telnet        |
 | Critel              | `CRITEL_BASE_URL`                                                                                                   | Gráficos            |
-| Auth                | `AUTH_SECRET`, `AUTH_SESSION_DAYS`, `APP_TOUR_VERSION`, opcional `AUTH_COOKIE_SECURE`                               | Sessão              |
+| Auth                | `AUTH_SECRET`, `AUTH_SESSION_DAYS`, `AUTH_SESSION_REMEMBER_DAYS`, `APP_TOUR_VERSION`, opcional `AUTH_COOKIE_SECURE` | Sessão              |
 | SMTP                | `SMTP_*` (se configurado)                                                                                           | E-mail (reset etc.) |
 | SIR portal (worker) | `SISTEMA_URL`, `SISTEMA_USUARIO`, `SISTEMA_SENHA`, …                                                                | Playwright          |
 | Telegram (worker)   | `TELEGRAM_*`, `EMPRESARIAL_API_URL`                                                                                 | Bots                |
