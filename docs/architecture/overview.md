@@ -25,6 +25,7 @@ flowchart TB
   subgraph writers [Writers]
     sirIngest[sir-ingest Playwright]
     tmip[tmip SFTP CSV]
+    bsodWorker[bsod Xpertrak SNMP LDAP]
   end
 
   subgraph data [Dados]
@@ -37,12 +38,12 @@ flowchart TB
   browser --> ui --> bff
   telegram --> bff
   bff -->|leitura| sirDb
-  bff -->|leitura| hfcDb
-  bff -->|escrita app SIR| sirDb
+    bff -->|escrita app SIR| sirDb
   sirIngest --> sirWeb
   sirIngest -->|upsert rals/recs| sirDb
   tmip --> tmipSftp
   tmip -->|upsert sdh_alarms| sirDb
+  bsodWorker -->|upsert bsod_*| sirDb
 ```
 
 ## Fronteiras (resumo)
@@ -67,11 +68,11 @@ Regras duras:
 
 ## Domínios de monitoramento
 
-| Domínio   | Fonte                 | Tabela / leitura                       | Tratativa                        |
-| --------- | --------------------- | -------------------------------------- | -------------------------------- |
-| RAL / REC | Scrape SIR            | `rals`, `recs`                         | `app_tratativas` + eventos       |
-| BSOD      | Inventário + SNMP HFC | `tbl_inventory_pme`, `tbl_monitor_pme` | `app_tratativas` (workflow FCA)  |
-| SDH       | CSV TMIP >6h          | `sdh_alarms`                           | Colunas + `sdh_tratativa_events` |
+| Domínio   | Fonte                       | Tabela / leitura                 | Tratativa                        |
+| --------- | --------------------------- | -------------------------------- | -------------------------------- |
+| RAL / REC | Scrape SIR                  | `rals`, `recs`                   | `app_tratativas` + eventos       |
+| BSOD      | Worker `workers/bsod` + SIR | `bsod_inventory`, `bsod_monitor` | `app_tratativas` (workflow FCA)  |
+| SDH       | CSV TMIP >6h                | `sdh_alarms`                     | Colunas + `sdh_tratativa_events` |
 
 ## Tratativa unificada
 

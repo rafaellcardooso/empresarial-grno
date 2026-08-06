@@ -21,7 +21,7 @@ export const HOME_COPY = {
     description: "Preferências de interface e parâmetros do sistema.",
   },
   statusSir: "SIR",
-  statusHfc: "HFC-SLS",
+  statusHfc: "BSOD (SIR)",
   statusConnected: "Conectado",
   statusUnavailable: "Indisponível",
 } as const;

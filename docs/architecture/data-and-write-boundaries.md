@@ -1,6 +1,6 @@
 # Fronteiras de dados e escrita
 
-> Última revisão: **2026-07-30** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-06** · Índice: [../README.md](../README.md)
 
 Quem lê e quem escreve em cada banco. Esta é a fonte de verdade arquitetural; regras Cursor e READMEs devem espelhá-la.
 
@@ -8,17 +8,20 @@ Quem lê e quem escreve em cada banco. Esta é a fonte de verdade arquitetural; 
 
 | Writer               | Tabelas / escopo                                                                                                                                         | Não escreve                            |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `workers/sir-ingest` | `rals`, `recs` (UPSERT + encerramento)                                                                                                                   | app__, sdh__                           |
-| `workers/tmip`       | `sdh_alarms` (UPSERT / desativação)                                                                                                                      | rals, recs, app_*                      |
+| `workers/sir-ingest` | `rals`, `recs` (UPSERT + encerramento)                                                                                                                   | app__, sdh__, bsod_*                   |
+| `workers/tmip`       | `sdh_alarms` (UPSERT / desativação)                                                                                                                      | rals, recs, app__, bsod__              |
+| `workers/bsod`       | `bsod_cables`, `bsod_inventory`, `bsod_monitor`                                                                                                          | rals, recs, sdh__, app__               |
 | Next.js BFF          | `app_users`, preferências, notificações, `app_tratativas`, `app_tratativa_events`, colunas/eventos de tratativa em `sdh_alarms` / `sdh_tratativa_events` | `rals`, `recs` como fonte de incidente |
 | `npm run db:migrate` | DDL em `migrations/sir/`                                                                                                                                 | dados operacionais                     |
 
 ## MySQL HFC (`hfc-sls`)
 
-| Componente    | Acesso                                                          |
-| ------------- | --------------------------------------------------------------- |
-| Next.js       | **Somente leitura** (`tbl_inventory_pme`, `tbl_monitor_pme`, …) |
-| Este monorepo | **Nunca escreve** — enrich BSOD continua no projeto hfc-sls     |
+| Componente    | Acesso                                     |
+| ------------- | ------------------------------------------ |
+| Next.js       | Sem leitura BSOD (domínio migrou para SIR) |
+| Este monorepo | **Nunca escreve** no MySQL hfc-sls         |
+
+Legado: tabelas `tbl_inventory_pme` / `tbl_monitor_pme` no HFC podem existir até desligamento do enrich; a UI empresarial não as usa mais.
 
 ## HTTP externos
 
@@ -26,6 +29,9 @@ Quem lê e quem escreve em cada banco. Esta é a fonte de verdade arquitetural; 
 | ------------ | ------------------ | ---------------------------------------------------- |
 | Portal SIR   | Worker → SIR       | Playwright; credenciais `SISTEMA_*`                  |
 | SFTP TMIP    | Worker → SFTP      | CSV >6h; credenciais `SFTP_*`                        |
+| Xpertrak     | Worker BSOD → API  | Por cidade (`xpertrak.sls` / `.mns` / `.blm`)        |
+| CMTS SNMP    | Worker BSOD → CMTS | VLAN L2VPN BSoD                                      |
+| LDAP         | Worker BSOD → LDAP | Contrato/profile por cidade                          |
 | GRB / Critel | Next → HTTP legado | Proxy; Basic Auth GRB                                |
 | Telegram API | Bots → Telegram    | Tokens no `.env` do worker; bots leem só Next `/api` |
 

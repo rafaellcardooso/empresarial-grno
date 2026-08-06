@@ -11,7 +11,11 @@ export type BsodLocation = {
 type BsodLocationSource = Omit<BsodLocation, "uf">;
 
 /** Mapa extensível: novas cidades entram adicionando operações. */
-const BSOD_LOCATION_SOURCES: BsodLocationSource[] = [{ ope: "sls", city: "SÃO LUÍS", ddd: "98" }];
+const BSOD_LOCATION_SOURCES: BsodLocationSource[] = [
+  { ope: "sls", city: "SÃO LUÍS", ddd: "98" },
+  { ope: "mns", city: "MANAUS", ddd: "92" },
+  { ope: "blm", city: "BELÉM", ddd: "91" },
+];
 
 /** Localizações BSOD enriquecidas com UF do catálogo compartilhado. */
 export const BSOD_LOCATIONS: BsodLocation[] = BSOD_LOCATION_SOURCES.map((location) => ({
@@ -78,6 +82,6 @@ export function bsodOpesForDdd(ddd: string | null | undefined): string[] {
 /** Parseia DDD da URL; inválido retorna undefined. */
 export function parseBsodDddParam(raw: string | null | undefined): string | undefined {
   const value = raw?.trim();
-  if (!value) return undefined;
-  return OPES_BY_DDD.has(value) ? value : undefined;
+  if (!value || !/^\d{2}$/.test(value)) return undefined;
+  return listBsodDddOptions().some((item) => item.ddd === value) ? value : undefined;
 }

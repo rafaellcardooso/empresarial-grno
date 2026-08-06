@@ -1,0 +1,1 @@
+"""Worker BSOD — libs internas."""

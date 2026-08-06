@@ -1,0 +1,10 @@
+{
+  "ope": "blm",
+  "ddd": "91",
+  "city": "BELÉM",
+  "enabled": false,
+  "env_prefix": "BSOD_BLM",
+  "ldap_base_dn": "dc=virtua_blm_docsis",
+  "xpertrak_url_default": "http://xpertrak.blm.virtua.com.br/pathtrak/api",
+  "cmts": {}
+}

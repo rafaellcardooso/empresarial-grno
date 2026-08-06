@@ -1,0 +1,19 @@
+{
+  "ope": "sls",
+  "ddd": "98",
+  "city": "SÃO LUÍS",
+  "enabled": true,
+  "env_prefix": "BSOD_SLS",
+  "ldap_base_dn": "dc=virtua_sls_docsis",
+  "xpertrak_url_default": "http://xpertrak.sls.virtua.com.br/pathtrak/api",
+  "cmts": {
+    "SLSDTCCMT01": { "ip": "187.123.93.2", "vendor": "CISCO", "pme_cidr": "10.80.0.0/23" },
+    "SLSDTCCMT04": { "ip": "187.123.93.6", "vendor": "CISCO", "pme_cidr": "10.84.0.0/24" },
+    "SLSDTCCMT07": { "ip": "187.123.93.18", "vendor": "CISCO", "pme_cidr": "10.87.0.0/23" },
+    "SLSDTCCMT08": { "ip": "187.123.93.22", "vendor": "CISCO", "pme_cidr": "10.88.0.0/23" },
+    "SLSDTCCMT09": { "ip": "187.123.93.26", "vendor": "CISCO", "pme_cidr": "10.89.0.0/24" },
+    "SLSDTCCMT10": { "ip": "187.123.93.30", "vendor": "CISCO", "pme_cidr": "10.80.10.0/24" },
+    "SLSDTCCMT11": { "ip": "187.123.93.34", "vendor": "CISCO", "pme_cidr": "10.80.11.0/24" },
+    "SLSDTCCMT12": { "ip": "187.123.93.38", "vendor": "CISCO", "pme_cidr": "10.80.12.0/24" }
+  }
+}

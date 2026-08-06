@@ -34,7 +34,7 @@ export const UI_COPY = {
   acionamentoPreviewEmpty:
     "Preencha a janela e os dados do técnico (nome, cidade, login, RG) para visualizar a mensagem.",
   acionamentoMissingAddress:
-    "Endereço ausente — rode o enrich PME no hfc-sls ou aguarde import Xpertrak.",
+    "Endereço ausente — aguarde o ciclo do worker BSOD (Xpertrak) ou rode o ingest.",
   acionamentoCopy: "Copiar e registrar",
   acionamentoCopied: "Copiado — cole no WhatsApp.",
   acionamentoRegisteredCopyFailed:

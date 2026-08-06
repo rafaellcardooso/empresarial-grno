@@ -1,6 +1,6 @@
 import { BSOD_LIST_MAX_PAGE_SIZE, BSOD_LIST_PAGE_SIZE } from "@/lib/config/bsod-pagination";
 import type { RowDataPacket } from "mysql2";
-import { hfcQuery } from "@/lib/db/hfc";
+import { sirQuery } from "@/lib/db/sir";
 import { getLatestMonitorByMac } from "@/lib/queries/bsod-monitor";
 import { countMergedPmeRows, listMergedPmeRows } from "@/lib/queries/bsod-rows";
 import {
@@ -40,7 +40,7 @@ export {
 export async function countPmeBsod(filters: BsodFilters = {}): Promise<number> {
   if (!bsodHasHealthFilter(filters)) {
     const { sql: whereSql, params } = buildBsodInventoryWhere(filters);
-    const [row] = await hfcQuery<RowDataPacket[]>(
+    const [row] = await sirQuery<RowDataPacket[]>(
       `SELECT COUNT(*) AS total ${BSOD_PME_FROM} ${whereSql}`,
       params,
     );
@@ -78,7 +78,7 @@ export async function getPmeBsodByMac(mac: string): Promise<PmeBsodRow | null> {
   if (!normalized) return null;
 
   const [inventoryRows, monitorByMac] = await Promise.all([
-    hfcQuery<RowDataPacket[]>(
+    sirQuery<RowDataPacket[]>(
       `${BSOD_INVENTORY_SELECT}
        ${BSOD_PME_FROM}
        WHERE UPPER(i.mac) = ?
@@ -96,15 +96,29 @@ export async function getPmeBsodByMac(mac: string): Promise<PmeBsodRow | null> {
   return serializeRows([mapPmeRow(mergeInventoryWithMonitor(row, reading))])[0];
 }
 
-/** Testa conectividade com o banco hfc-sls. */
-export async function pingHfcDb(): Promise<{ ok: boolean; detail: string }> {
+/** Testa conectividade SIR para o domínio BSOD (tabelas bsod_*). */
+export async function pingBsodDb(): Promise<{ ok: boolean; detail: string }> {
   try {
-    await hfcQuery(`SELECT 1 AS ok`);
-    return { ok: true, detail: "Conexão bem-sucedida." };
+    await sirQuery(`SELECT 1 AS ok FROM bsod_inventory LIMIT 1`);
+    return { ok: true, detail: "Conexão SIR/BSOD bem-sucedida." };
   } catch (err) {
-    return {
-      ok: false,
-      detail: err instanceof Error ? err.message : String(err),
-    };
+    // Tabela vazia ou inexistente ainda pode falhar SELECT FROM; tenta ping simples.
+    try {
+      await sirQuery(`SELECT 1 AS ok`);
+      return {
+        ok: true,
+        detail: "Conexão SIR OK (bsod_inventory ainda vazia ou pendente migrate).",
+      };
+    } catch (inner) {
+      return {
+        ok: false,
+        detail: inner instanceof Error ? inner.message : String(inner),
+      };
+    }
   }
+}
+
+/** @deprecated Use pingBsodDb — mantido para imports legados. */
+export async function pingHfcDb(): Promise<{ ok: boolean; detail: string }> {
+  return pingBsodDb();
 }

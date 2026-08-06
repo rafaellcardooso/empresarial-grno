@@ -1,5 +1,5 @@
 import type { RowDataPacket } from "mysql2";
-import { hfcQuery } from "@/lib/db/hfc";
+import { sirQuery } from "@/lib/db/sir";
 import { getLatestMonitorByMac } from "@/lib/queries/bsod-monitor";
 import {
   BSOD_INVENTORY_SELECT,
@@ -14,14 +14,14 @@ import {
   type PmeBsodRow,
 } from "@/lib/queries/bsod-sql";
 
-/** Lista inventário PME filtrado e une com a última leitura SNMP em memória. */
+/** Lista inventário PME filtrado e une com a última leitura RF em memória. */
 export async function listMergedPmeRows(
   filters: BsodFilters = {},
   options?: BsodWhereOptions,
 ): Promise<PmeBsodRow[]> {
   const { sql: whereSql, params } = buildBsodInventoryWhere(filters, options);
   const [inventoryRows, monitorByMac] = await Promise.all([
-    hfcQuery<RowDataPacket[]>(
+    sirQuery<RowDataPacket[]>(
       `${BSOD_INVENTORY_SELECT}
        ${BSOD_PME_FROM}
        ${whereSql}`,
@@ -50,7 +50,7 @@ export async function countMergedPmeRows(
 ): Promise<number> {
   if (!bsodHasHealthFilter(filters, options)) {
     const { sql: whereSql, params } = buildBsodInventoryWhere(filters, options);
-    const [row] = await hfcQuery<RowDataPacket[]>(
+    const [row] = await sirQuery<RowDataPacket[]>(
       `SELECT COUNT(*) AS total ${BSOD_PME_FROM} ${whereSql}`,
       params,
     );

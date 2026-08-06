@@ -1,7 +1,7 @@
 import { HomeNavCard } from "@/components/home/HomeNavCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { HOME_COPY } from "@/lib/config/home-copy";
-import { pingHfcDb } from "@/lib/queries/bsod";
+import { pingBsodDb } from "@/lib/queries/bsod";
 import { pingSirDb } from "@/lib/queries/sir";
 
 export const revalidate = 60;
@@ -9,7 +9,7 @@ export const metadata = { title: "Início" };
 
 /** Página inicial com boas-vindas e atalhos para monitoramento. */
 export default async function Page() {
-  const [sirPing, hfcPing] = await Promise.all([pingSirDb(), pingHfcDb()]);
+  const [sirPing, hfcPing] = await Promise.all([pingSirDb(), pingBsodDb()]);
 
   return (
     <>

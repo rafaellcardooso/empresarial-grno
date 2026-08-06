@@ -1,6 +1,6 @@
 import type { RowDataPacket } from "mysql2";
 import { unstable_cache } from "next/cache";
-import { hfcQuery } from "@/lib/db/hfc";
+import { sirQuery } from "@/lib/db/sir";
 import { listMergedPmeRows } from "@/lib/queries/bsod-rows";
 import {
   appendWhereCondition,
@@ -64,7 +64,7 @@ export async function listBsodCmts(
 
   if (!bsodHasHealthFilter(filters, options)) {
     const { sql: whereSql, params } = buildBsodInventoryWhere(filters, options);
-    const rows = await hfcQuery<RowDataPacket[]>(
+    const rows = await sirQuery<RowDataPacket[]>(
       `SELECT i.cmts AS value, COUNT(*) AS total
        ${BSOD_PME_FROM}
        ${appendWhereCondition(whereSql, "i.cmts IS NOT NULL AND TRIM(i.cmts) <> ''")}
@@ -91,7 +91,7 @@ export async function listBsodNodes(
 
   if (!bsodHasHealthFilter(filters, options)) {
     const { sql: whereSql, params } = buildBsodInventoryWhere(filters, options);
-    const rows = await hfcQuery<RowDataPacket[]>(
+    const rows = await sirQuery<RowDataPacket[]>(
       `SELECT i.node AS value, COUNT(*) AS total
        ${BSOD_PME_FROM}
        ${appendWhereCondition(whereSql, "i.node IS NOT NULL AND TRIM(i.node) <> ''")}
@@ -131,7 +131,7 @@ export async function countBsodVlan(
 ): Promise<BsodVlanCounts> {
   if (!bsodHasHealthFilter(filters)) {
     const { sql: whereSql, params } = buildBsodInventoryWhere(filters, { omit: ["vlan", "q"] });
-    const [row] = await hfcQuery<RowDataPacket[]>(
+    const [row] = await sirQuery<RowDataPacket[]>(
       `SELECT
          COUNT(*) AS total,
          COALESCE(SUM(CASE WHEN i.bsod_vlan > 0 THEN 1 ELSE 0 END), 0) AS com_vlan

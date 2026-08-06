@@ -1,0 +1,6 @@
+# BSOD worker
+__pycache__/
+venv/
+.env
+*.pyc
+log/

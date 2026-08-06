@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer BSOD ingest lab (6h)
+
+[Timer]
+OnBootSec=20min
+OnUnitActiveSec=6h
+Persistent=true
+Unit=bsod-ingest-lab.service
+
+[Install]
+WantedBy=timers.target

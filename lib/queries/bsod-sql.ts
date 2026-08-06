@@ -69,8 +69,8 @@ export type BsodVlanCounts = {
   sem_vlan: number;
 };
 
-/** FROM só de inventário — monitor é anexado em memória com cache de processo. */
-export const BSOD_PME_FROM = `FROM tbl_inventory_pme i`;
+/** FROM só de inventário SIR — monitor é anexado em memória com cache de processo. */
+export const BSOD_PME_FROM = `FROM bsod_inventory i`;
 
 /** Colunas de inventário PME (monitor anexado em memória). */
 export const BSOD_INVENTORY_SELECT = `

@@ -1,0 +1,15 @@
+[Unit]
+Description=BSOD ingest lab — Xpertrak/SNMP/LDAP → SIR
+After=network.target mariadb.service
+
+[Service]
+Type=oneshot
+User=datacenter
+Group=datacenter
+WorkingDirectory=/usr/local/empresarial/workers/bsod
+Environment=PATH=/usr/local/empresarial/workers/bsod/venv/bin:/usr/bin:/usr/local/bin
+EnvironmentFile=/usr/local/empresarial/workers/bsod/.env
+ExecStart=/usr/local/empresarial/workers/bsod/venv/bin/python run_bsod_cycle.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bsod-ingest-lab

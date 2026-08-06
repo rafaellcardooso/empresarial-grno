@@ -24,7 +24,7 @@ Schema versionado em `migrations/sir/`. Fronteiras: [../architecture/data-and-wr
 
 ## HFC (somente leitura)
 
-`tbl_inventory_pme`, `tbl_monitor_pme` — BSOD.
+`bsod_cables`, `bsod_inventory`, `bsod_monitor` (SIR) — BSOD. Legado HFC: `tbl_inventory_pme` / `tbl_monitor_pme`.
 
 ## Normalizados
 

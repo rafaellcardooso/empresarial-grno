@@ -1,5 +1,5 @@
 import type { RowDataPacket } from "mysql2";
-import { hfcQuery } from "@/lib/db/hfc";
+import { sirQuery } from "@/lib/db/sir";
 
 const BSOD_MONITOR_TTL_MS = 60_000;
 
@@ -22,24 +22,24 @@ type BsodMonitorGlobal = typeof globalThis & {
 };
 
 /**
- * Última leitura SNMP por MAC do inventário PME.
- * Escopo em inventário + janela de 30 dias evita full scan de ~650k linhas.
+ * Última leitura RF por MAC do inventário BSOD (SIR).
+ * Escopo em inventário + janela de 30 dias evita full scan do histórico.
  */
 export const LATEST_MONITOR_FOR_INVENTORY_SQL = `
-  SELECT m.mac, m.status, m.tx, m.rx, m.mer, m.\`time\`
-  FROM tbl_monitor_pme m
+  SELECT m.mac, m.status, m.tx, m.rx, m.mer, m.sampled_at AS \`time\`
+  FROM bsod_monitor m
   INNER JOIN (
-    SELECT mac, MAX(\`time\`) AS max_time
-    FROM tbl_monitor_pme
-    WHERE mac IN (SELECT mac FROM tbl_inventory_pme)
-      AND \`time\` >= (NOW() - INTERVAL 30 DAY)
+    SELECT mac, MAX(sampled_at) AS max_time
+    FROM bsod_monitor
+    WHERE mac IN (SELECT mac FROM bsod_inventory)
+      AND sampled_at >= (NOW() - INTERVAL 30 DAY)
     GROUP BY mac
-  ) latest ON m.mac = latest.mac AND m.\`time\` = latest.max_time
+  ) latest ON m.mac = latest.mac AND m.sampled_at = latest.max_time
 `;
 
-/** Carrega mapa MAC → última leitura a partir do hfc-sls. */
+/** Carrega mapa MAC → última leitura a partir do SIR. */
 async function fetchLatestMonitorByMac(): Promise<Map<string, LatestMonitorReading>> {
-  const rows = await hfcQuery<RowDataPacket[]>(LATEST_MONITOR_FOR_INVENTORY_SQL);
+  const rows = await sirQuery<RowDataPacket[]>(LATEST_MONITOR_FOR_INVENTORY_SQL);
   const byMac = new Map<string, LatestMonitorReading>();
 
   for (const row of rows) {
@@ -61,8 +61,7 @@ async function fetchLatestMonitorByMac(): Promise<Map<string, LatestMonitorReadi
 }
 
 /**
- * Retorna última leitura por MAC com cache de processo (30s) e dedupe de in-flight.
- * Evita N full scans quando listagem, contagens e facets disparam em paralelo.
+ * Retorna última leitura por MAC com cache de processo e dedupe de in-flight.
  */
 export function getLatestMonitorByMac(): Promise<Map<string, LatestMonitorReading>> {
   const g = globalThis as BsodMonitorGlobal;
