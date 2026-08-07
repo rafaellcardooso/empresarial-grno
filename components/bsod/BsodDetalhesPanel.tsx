@@ -77,6 +77,7 @@ function BsodDetalhesBody({
   const [cliente, setCliente] = useState(row.cliente ?? "");
   const [cadastroResponsavel, setCadastroResponsavel] = useState(row.cadastro_responsavel ?? "");
   const [designacao, setDesignacao] = useState(row.designacao ?? "");
+  const [crmCvlan, setCrmCvlan] = useState(row.crm_cvlan ?? "");
   const [address, setAddress] = useState(row.address ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,10 +88,19 @@ function BsodDetalhesBody({
     setCliente(row.cliente ?? "");
     setCadastroResponsavel(row.cadastro_responsavel ?? "");
     setDesignacao(row.designacao ?? "");
+    setCrmCvlan(row.crm_cvlan ?? "");
     setAddress(row.address ?? "");
-  }, [row.id, row.mac, row.cliente, row.cadastro_responsavel, row.designacao, row.address]);
+  }, [
+    row.id,
+    row.mac,
+    row.cliente,
+    row.cadastro_responsavel,
+    row.designacao,
+    row.crm_cvlan,
+    row.address,
+  ]);
 
-  /** Envia os quatro campos manuais para a API de inventário. */
+  /** Envia os campos manuais (inclui CVLAN CRM) para a API de inventário. */
   async function handleSave(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -104,6 +114,7 @@ function BsodDetalhesBody({
           cadastro_responsavel: cadastroResponsavel,
           designacao,
           address,
+          crm_cvlan: crmCvlan,
         }),
       });
       const data = (await response.json()) as { error?: string; row?: PmeBsodRow };
@@ -180,6 +191,21 @@ function BsodDetalhesBody({
               disabled={saving}
             />
           </div>
+          <div className="mb-2">
+            <label className="form-label" htmlFor="bsod-edit-crm-cvlan">
+              CVLAN CRM
+            </label>
+            <input
+              id="bsod-edit-crm-cvlan"
+              className="form-control form-control-sm"
+              value={crmCvlan}
+              maxLength={32}
+              inputMode="numeric"
+              placeholder="Ex.: 610"
+              onChange={(event) => setCrmCvlan(event.target.value)}
+              disabled={saving}
+            />
+          </div>
           <div className="mb-3">
             <label className="form-label" htmlFor="bsod-edit-address">
               Endereço
@@ -209,6 +235,7 @@ function BsodDetalhesBody({
                 setCliente(row.cliente ?? "");
                 setCadastroResponsavel(row.cadastro_responsavel ?? "");
                 setDesignacao(row.designacao ?? "");
+                setCrmCvlan(row.crm_cvlan ?? "");
                 setAddress(row.address ?? "");
               }}
             >

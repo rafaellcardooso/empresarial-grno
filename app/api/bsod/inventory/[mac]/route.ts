@@ -11,6 +11,7 @@ type ManualBody = {
   cadastro_responsavel?: unknown;
   designacao?: unknown;
   address?: unknown;
+  crm_cvlan?: unknown;
 };
 
 function asOptionalString(value: unknown): string | null {
@@ -19,7 +20,7 @@ function asOptionalString(value: unknown): string | null {
   return value;
 }
 
-/** Atualiza cliente, cadastro responsável, designação e endereço manuais do inventário. */
+/** Atualiza campos manuais do inventário BSOD (cliente, endereço, CVLAN CRM). */
 export async function PATCH(request: Request, context: RouteContext) {
   const session = await getSession();
   if (!session || session.status !== "ACTIVE") {
@@ -38,13 +39,20 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const cliente = asOptionalString(body.cliente);
-  const cadastro_responsavel = asOptionalString(body.cadastro_responsavel);
+  const cadastroResponsavel = asOptionalString(body.cadastro_responsavel);
   const designacao = asOptionalString(body.designacao);
   const address = asOptionalString(body.address);
+  const crmCvlan = asOptionalString(body.crm_cvlan);
 
-  if (cliente == null || cadastro_responsavel == null || designacao == null || address == null) {
+  if (
+    cliente == null ||
+    cadastroResponsavel == null ||
+    designacao == null ||
+    address == null ||
+    crmCvlan == null
+  ) {
     return NextResponse.json(
-      { error: "Informe cliente, cadastro_responsavel, designacao e address." },
+      { error: "Informe cliente, cadastro_responsavel, designacao, address e crm_cvlan." },
       { status: 400 },
     );
   }
@@ -53,9 +61,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     const row = await updatePmeInventoryManualFields({
       mac,
       cliente,
-      cadastro_responsavel,
+      cadastroResponsavel,
       designacao,
       address,
+      crmCvlan,
     });
     if (!row) {
       return NextResponse.json({ error: "Inventário não encontrado." }, { status: 404 });

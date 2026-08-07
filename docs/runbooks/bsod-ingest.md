@@ -68,7 +68,7 @@ Intervalo: **30 min** (`OnUnitActiveSec=30min`).
    2. se falhar: VLAN SNMP ↔ `cvlan` **única** e ≠ `0`
    3. se falhar: mantém override manual (`manual_override=1`) ou endereço Xpertrak
 
-Campos manuais na UI (`PATCH /api/bsod/inventory/[mac]`): cliente, cadastro responsável, designação, endereço.
+Campos manuais na UI (`PATCH /api/bsod/inventory/[mac]`): cliente, cadastro responsável, designação, endereço, **CVLAN CRM**.
 
 ## Env CRM (produção)
 

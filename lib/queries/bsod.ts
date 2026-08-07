@@ -104,27 +104,30 @@ function clipManualField(value: unknown): string {
     .slice(0, MANUAL_FIELD_MAX);
 }
 
-/** Persiste preenchimento manual de cliente/endereço e marca override. */
+/** Persiste preenchimento manual de cliente/endereço/CVLAN e marca override. */
 export async function updatePmeInventoryManualFields(input: {
   mac: string;
   cliente: string;
-  cadastro_responsavel: string;
+  cadastroResponsavel: string;
   designacao: string;
   address: string;
+  crmCvlan: string;
 }): Promise<PmeBsodRow | null> {
   const mac = input.mac.trim();
   if (!mac) return null;
 
   const cliente = clipManualField(input.cliente);
-  const cadastro_responsavel = clipManualField(input.cadastro_responsavel);
+  const cadastroResponsavel = clipManualField(input.cadastroResponsavel);
   const designacao = clipManualField(input.designacao);
   const address = clipManualField(input.address);
+  const crmCvlan = normalizeManualCvlan(input.crmCvlan);
 
   const result = await sirExecute(
     `UPDATE bsod_inventory
-     SET cliente = ?, cadastro_responsavel = ?, designacao = ?, address = ?, manual_override = 1
+     SET cliente = ?, cadastro_responsavel = ?, designacao = ?, address = ?,
+         crm_cvlan = ?, manual_override = 1
      WHERE UPPER(mac) = UPPER(?)`,
-    [cliente, cadastro_responsavel, designacao, address, mac],
+    [cliente, cadastroResponsavel, designacao, address, crmCvlan, mac],
   );
 
   if (Number(result.affectedRows) < 1) {
@@ -132,6 +135,15 @@ export async function updatePmeInventoryManualFields(input: {
   }
 
   return getPmeBsodByMac(mac);
+}
+
+/** Normaliza CVLAN digitada (somente dígitos; vazia se inválida). */
+function normalizeManualCvlan(value: unknown): string {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  const numeric = Number(text.replace(",", "."));
+  if (!Number.isFinite(numeric) || numeric <= 0) return "";
+  return String(Math.trunc(numeric)).slice(0, 32);
 }
 
 /** Testa conectividade SIR para o domínio BSOD (tabelas bsod_*). */
