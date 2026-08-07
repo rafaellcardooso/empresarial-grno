@@ -329,25 +329,26 @@ def list_crm_by_contrato(ope: str) -> dict[str, dict[str, Any]]:
 
 
 def list_crm_by_cvlan(ope: str) -> dict[str, dict[str, Any]]:
-    """Mapa cvlan numérica → linha CRM (legado; preferir list_crm_by_contrato)."""
+    """Mapa cvlan → CRM só quando a cvlan é única no ope e diferente de 0."""
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT protocolo, cvlan, uf, svlan, cadastro_responsavel, cliente, tipo_logradouro,
-                       logradouro, numero, complemento, bairro, cep, cidade
+                SELECT protocolo, contrato_netsms, cvlan, uf, svlan, cadastro_responsavel, cliente,
+                       designacao, tipo_logradouro, logradouro, numero, complemento, bairro, cep, cidade
                 FROM bsod_crm_clients
                 WHERE ope = %s AND cvlan <> ''
                 """,
                 ((ope or "").strip().lower(),),
             )
-            out: dict[str, dict[str, Any]] = {}
+            buckets: dict[str, list[dict[str, Any]]] = {}
             for row in cursor.fetchall():
                 key = normalize_vlan(row.get("cvlan"))
-                if key:
-                    out[key] = row
-            return out
+                if not key or key == "0":
+                    continue
+                buckets.setdefault(key, []).append(row)
+            return {key: rows[0] for key, rows in buckets.items() if len(rows) == 1}
     finally:
         conn.close()
 

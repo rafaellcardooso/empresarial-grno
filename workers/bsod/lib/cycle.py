@@ -114,35 +114,68 @@ def _sync_crm(city: dict[str, Any]) -> dict[str, Any]:
 
 
 def _crm_match_stats(
-    inventory_rows: list[dict[str, Any]], crm_by_contrato: dict[str, Any]
+    inventory_rows: list[dict[str, Any]],
+    crm_by_contrato: dict[str, Any],
+    crm_by_cvlan: dict[str, Any],
 ) -> dict[str, int]:
-    """Conta inventário cujo contrato LDAP existe no CRM (contrato_netsms)."""
-    matched = 0
+    """Conta inventário casado no CRM por contrato e, em fallback, por VLAN."""
+    matched_contrato = 0
+    matched_vlan = 0
     miss = 0
     for row in inventory_rows:
-        key = normalize_contrato(row.get("contrato"))
-        if not key:
+        contrato_key = normalize_contrato(row.get("contrato"))
+        vlan_key = normalize_vlan(row.get("vlan"))
+        if contrato_key and contrato_key in crm_by_contrato:
+            matched_contrato += 1
             continue
-        if key in crm_by_contrato:
-            matched += 1
-        else:
+        if vlan_key and vlan_key in crm_by_cvlan:
+            matched_vlan += 1
+            continue
+        if contrato_key or vlan_key:
             miss += 1
     return {
-        "crm_matched": matched,
+        "crm_matched": matched_contrato + matched_vlan,
+        "crm_matched_contrato": matched_contrato,
+        "crm_matched_vlan": matched_vlan,
         "crm_miss": miss,
         "crm_catalog": len(crm_by_contrato),
+        "crm_catalog_vlan": len(crm_by_cvlan),
     }
+
+
+def _crm_row_for_inventory(
+    *,
+    contrato: str,
+    vlan: Any,
+    crm_by_contrato: dict[str, Any],
+    crm_by_cvlan: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Resolve linha CRM: contrato LDAP primeiro; senão cvlan única SNMP."""
+    crm = crm_by_contrato.get(normalize_contrato(contrato))
+    if crm:
+        return crm
+    vlan_key = normalize_vlan(vlan)
+    if vlan_key and vlan_key != "0":
+        return crm_by_cvlan.get(vlan_key)
+    return None
 
 
 def _resolve_client_fields(
     *,
     contrato: str,
+    vlan: Any,
     crm_by_contrato: dict[str, Any],
+    crm_by_cvlan: dict[str, Any],
     cable_address: str,
     existing: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """Resolve cliente/endereço: CRM → override manual → Xpertrak (só endereço)."""
-    crm = crm_by_contrato.get(normalize_contrato(contrato))
+    """Resolve cliente/endereço: CRM (contrato→VLAN) → override manual → Xpertrak."""
+    crm = _crm_row_for_inventory(
+        contrato=contrato,
+        vlan=vlan,
+        crm_by_contrato=crm_by_contrato,
+        crm_by_cvlan=crm_by_cvlan,
+    )
     xpertrak = (cable_address or "")[:255]
     if crm:
         return {
@@ -170,7 +203,7 @@ def _resolve_client_fields(
 
 
 def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
-    """SNMP + LDAP → bsod_inventory (PME por IP + BSoD) + CRM por contrato."""
+    """SNMP + LDAP → bsod_inventory (PME por IP + BSoD) + CRM por contrato/VLAN."""
     ope = city["ope"]
     ddd = city["ddd"]
     networks = build_pme_networks(city.get("cmts") or {})
@@ -178,6 +211,7 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
     flat = snmp_bsod.flatten_bsod_maps(maps)
     vlan_by_mac = {mac: vlan for mac, (_cmts, _orig, vlan) in flat.items()}
     crm_by_contrato = db.list_crm_by_contrato(ope)
+    crm_by_cvlan = db.list_crm_by_cvlan(ope)
     existing_by_mac = db.list_inventory_client_fields(ope)
 
     cables = db.list_cables_for_ope(ope)
@@ -212,7 +246,9 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
     ) -> dict[str, Any]:
         client = _resolve_client_fields(
             contrato=contrato,
+            vlan=vlan_text or vlan,
             crm_by_contrato=crm_by_contrato,
+            crm_by_cvlan=crm_by_cvlan,
             cable_address=(cable.get("address") if cable else "") or "",
             existing=existing_by_mac.get(mac_norm),
         )
@@ -291,7 +327,7 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
 
     upserted = db.upsert_inventory(inventory_rows)
     deleted = db.cleanup_inventory_orphans(ope, keep_macs)
-    crm_stats = _crm_match_stats(inventory_rows, crm_by_contrato)
+    crm_stats = _crm_match_stats(inventory_rows, crm_by_contrato, crm_by_cvlan)
     return {
         "pme_ip": pme_ip_count,
         "bsod": bsod_count,
