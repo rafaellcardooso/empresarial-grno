@@ -13,7 +13,7 @@ import urllib3
 from bs4 import BeautifulSoup
 
 from lib.config import get_nocclaro_config
-from lib.nocclaro_parse import dedupe_by_protocolo, parse_planilha
+from lib.nocclaro_parse import dedupe_by_protocolo, exclude_cancelled_crm_rows, parse_planilha
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger(__name__)
@@ -161,11 +161,14 @@ def fetch_clients_for_uf(uf: str) -> list[dict[str, str]]:
     for row in rows:
         if not row.get("uf"):
             row["uf"] = uf_key
-    deduped = dedupe_by_protocolo(rows)
+    active, skipped_cancelled = exclude_cancelled_crm_rows(rows)
+    deduped = dedupe_by_protocolo(active)
     logger.info(
-        "CRM nocclaro UF=%s raw=%d deduped=%d content_type=%s bytes=%d",
+        "CRM nocclaro UF=%s raw=%d cancelled=%d active=%d deduped=%d content_type=%s bytes=%d",
         uf_key,
         len(rows),
+        skipped_cancelled,
+        len(active),
         len(deduped),
         content_type,
         len(payload),

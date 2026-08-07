@@ -31,6 +31,7 @@ CRM_FIELD_KEYS = (
     "cidade",
     "produto",
     "designacao",
+    "status",
     "contato_cliente_nome_1",
     "contato_cliente_telefone_1",
     "contato_cliente_nome_2",
@@ -69,6 +70,8 @@ _HEADER_ALIASES = {
     "cidade": "cidade",
     "produto": "produto",
     "designacao": "designacao",
+    "status": "status",
+    "situacao": "status",
     "contato_cliente_nome_1": "contato_cliente_nome_1",
     "contato_nome_1": "contato_cliente_nome_1",
     "contato_cliente_telefone_1": "contato_cliente_telefone_1",
@@ -226,6 +229,29 @@ def parse_planilha(payload: bytes, content_type: str = "") -> list[dict[str, str
         return _parse_html_table(payload)
     except Exception:
         return _parse_csv(payload)
+
+
+def is_crm_cancelled(row: dict[str, str]) -> bool:
+    """Indica se a linha CRM tem STATUS cancelado (não entra no catálogo)."""
+    status = as_str(row.get("status"), max_len=64)
+    if not status:
+        return False
+    nfkd = unicodedata.normalize("NFKD", status)
+    ascii_text = "".join(ch for ch in nfkd if not unicodedata.combining(ch))
+    compact = re.sub(r"[^a-z0-9]+", "", ascii_text.lower())
+    return compact == "cancelado" or compact.endswith("cancelado")
+
+
+def exclude_cancelled_crm_rows(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], int]:
+    """Remove linhas STATUS=CANCELADO; retorna (ativas, quantidade_excluida)."""
+    active: list[dict[str, str]] = []
+    skipped = 0
+    for row in rows:
+        if is_crm_cancelled(row):
+            skipped += 1
+            continue
+        active.append(row)
+    return active, skipped
 
 
 def dedupe_by_protocolo(rows: list[dict[str, str]]) -> list[dict[str, str]]:
