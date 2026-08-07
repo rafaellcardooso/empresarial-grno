@@ -23,15 +23,19 @@ Cidades em `config/cities/*.json`. `enabled: true` só em SLS por padrão; MNS/B
 
 ## Comportamento
 
-1. Lista nodes Xpertrak → `qoe/modems` → upsert `bsod_cables` + amostras `bsod_monitor` (PME por IP ou MAC já no inventário).
-2. SNMP L2VPN + LDAP → upsert `bsod_inventory` + cleanup de órfãos.
-3. Timer systemd a cada 6h (`bsod-ingest.timer` / lab `bsod-ingest-lab.timer`).
+1. Sync CRM nocclaro (UF do JSON) → `bsod_crm_clients` (falha não aborta o ciclo).
+2. Lista nodes Xpertrak → `qoe/modems` → upsert `bsod_cables` + amostras `bsod_monitor` (PME por IP ou MAC já no inventário).
+3. SNMP L2VPN + LDAP → upsert `bsod_inventory` + match stats `cvlan`↔`vlan` + cleanup de órfãos.
+4. Timer systemd a cada 6h (`bsod-ingest.timer` / lab `bsod-ingest-lab.timer`).
+
+CRM só sync: `venv/bin/python run_bsod_crm_sync.py --ope sls` (ou `--dry-run`).
 
 ## Estrutura
 
 ```
 run_bsod_cycle.py
-config/cities/{sls,mns,blm}.json
+run_bsod_crm_sync.py
+config/cities/{sls,mns,blm}.json   # inclui uf (MA/AM/PA)
 lib/
 requirements.txt
 .env.example

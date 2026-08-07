@@ -27,6 +27,68 @@ def normalize_mac(raw: str | None) -> str:
     return ""
 
 
+def normalize_vlan(raw: Any) -> str:
+    """Normaliza VLAN/CVLAN numérica (ex.: 0123 → 123); vazio se não for número."""
+    text = str(raw or "").strip()
+    if not text or text in {"-", "None", "null", "NULL"}:
+        return ""
+    try:
+        return str(int(float(text.replace(",", "."))))
+    except ValueError:
+        return ""
+
+
+def normalize_contrato(raw: Any) -> str:
+    """Normaliza contrato LDAP / contrato_netsms CRM para join estável.
+
+    Exemplos CRM SLS: ``096/8823895``, ``096/008823895`` → ``8823895``.
+    Prefixo = código da cidade (096 SLS, 051 Imperatriz, 713 Caxias).
+    """
+    text = str(raw or "").strip()
+    if not text or text in {"-", "None", "null", "NULL"}:
+        return ""
+    # Remove código da cidade à esquerda (096/, 051/, 713/).
+    text = re.sub(r"^\d{2,3}/", "", text.strip())
+    compact = re.sub(r"[\s\-./]+", "", text)
+    if not compact:
+        return ""
+    if compact.isdigit():
+        return str(int(compact))
+    return compact.lower()
+
+
+def format_crm_address(crm: dict[str, Any] | None, max_len: int = 255) -> str:
+    """Monta endereço a partir dos campos do portal CRM (nocclaro)."""
+    if not crm:
+        return ""
+    tipo = as_str(crm.get("tipo_logradouro"), max_len=64)
+    logradouro = as_str(crm.get("logradouro"), max_len=255)
+    numero = as_str(crm.get("numero"), max_len=64)
+    complemento = as_str(crm.get("complemento"), max_len=255)
+    bairro = as_str(crm.get("bairro"), max_len=255)
+    cep = as_str(crm.get("cep"), max_len=32)
+    cidade = as_str(crm.get("cidade"), max_len=255)
+    uf = as_str(crm.get("uf"), max_len=8).upper()
+
+    street = " ".join(p for p in (tipo, logradouro) if p).strip()
+    if numero:
+        street = f"{street}, {numero}" if street else numero
+    if complemento:
+        street = f"{street}, {complemento}" if street else complemento
+
+    city_part = "/".join(p for p in (cidade, uf) if p)
+    tail_bits = [p for p in (bairro, city_part) if p]
+    if cep:
+        tail_bits.append(f"CEP {cep}")
+    tail = " - ".join(tail_bits)
+
+    if street and tail:
+        text = f"{street} - {tail}"
+    else:
+        text = street or tail
+    return text[:max_len]
+
+
 def as_str(value: Any, max_len: int = 100) -> str:
     """Normaliza valor para string curta."""
     if value is None:

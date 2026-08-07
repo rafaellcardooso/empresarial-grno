@@ -6,10 +6,10 @@ Coleta multi-cidade para `/bsod`. Worker: [`workers/bsod`](../../workers/bsod/RE
 
 ## Pré-requisitos
 
-1. `npm run db:migrate` (inclui `015_bsod_inventory_monitor.sql`).
-2. `workers/bsod/.env` com `SIR_DB_*` e credenciais da cidade.
+1. `npm run db:migrate` (inclui `015_bsod_inventory_monitor.sql` e `016_bsod_crm_clients.sql`).
+2. `workers/bsod/.env` com `SIR_DB_*`, credenciais da cidade e `BSOD_NOCCLARO_USER` / `BSOD_NOCCLARO_PASS`.
 3. `snmpwalk` no PATH do host (`/usr/bin/snmpwalk`).
-4. Rede até Xpertrak, CMTS (SNMP) e LDAP.
+4. Rede até Xpertrak, CMTS (SNMP), LDAP e `bsod.nocclaro.com.br`.
 
 ## Deploy
 

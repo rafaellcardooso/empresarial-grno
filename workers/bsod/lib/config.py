@@ -43,6 +43,17 @@ def get_sir_db_config() -> dict[str, Any]:
     }
 
 
+def get_nocclaro_config() -> dict[str, str]:
+    """Retorna URL e credenciais do portal CRM BSOD (nocclaro)."""
+    return {
+        "base_url": (
+            os.environ.get("BSOD_NOCCLARO_BASE_URL") or "https://bsod.nocclaro.com.br"
+        ).rstrip("/"),
+        "user": (os.environ.get("BSOD_NOCCLARO_USER") or "").strip(),
+        "password": (os.environ.get("BSOD_NOCCLARO_PASS") or "").strip(),
+    }
+
+
 def load_city_config(ope: str) -> dict[str, Any]:
     """Carrega JSON de cidade e resolve secrets via env_prefix."""
     key = (ope or "").strip().lower()
@@ -53,6 +64,7 @@ def load_city_config(ope: str) -> dict[str, Any]:
     prefix = str(data.get("env_prefix") or f"BSOD_{key.upper()}")
     data["ope"] = key
     data["ddd"] = str(data.get("ddd") or "")
+    data["uf"] = str(data.get("uf") or "").strip().upper()
     data["enabled"] = bool(data.get("enabled"))
     data["xpertrak_url"] = env_or(
         prefix,

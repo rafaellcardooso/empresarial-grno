@@ -57,12 +57,40 @@ def _parse_hex_string_payload(line: str) -> bytes | None:
     return bytes(int(p, 16) for p in pairs)
 
 
-def snmp_walk_lines(host: str, oid: str, community: str, timeout: int = 8) -> list[str]:
+def _snmp_timeout_sec() -> int:
+    """Timeout por tentativa do snmpwalk (-t), segundos."""
+    try:
+        return max(1, int(os.getenv("SNMP_TIMEOUT", "2")))
+    except ValueError:
+        return 2
+
+
+def _snmp_retries() -> int:
+    """Retentativas do snmpwalk (-r)."""
+    try:
+        return max(0, int(os.getenv("SNMP_RETRIES", "0")))
+    except ValueError:
+        return 0
+
+
+def _snmp_parallel() -> int:
+    """Workers paralelos na coleta por CMTS."""
+    try:
+        return max(1, int(os.getenv("BSOD_SNMP_PARALLEL", "8")))
+    except ValueError:
+        return 8
+
+
+def snmp_walk_lines(host: str, oid: str, community: str, timeout: int | None = None) -> list[str]:
     """Executa snmpwalk -v2c e devolve linhas stdout."""
     cmd_path = _snmpwalk_path()
     if not cmd_path:
         logger.error("snmpwalk não encontrado")
         return []
+    t_sec = _snmp_timeout_sec() if timeout is None else max(1, int(timeout))
+    retries = _snmp_retries()
+    # Worst case: (retries+1) * timeout + folga do subprocess.
+    proc_deadline = t_sec * (retries + 1) + 5
     try:
         result = subprocess.run(
             [
@@ -71,17 +99,20 @@ def snmp_walk_lines(host: str, oid: str, community: str, timeout: int = 8) -> li
                 "-c",
                 community,
                 "-t",
-                str(timeout),
+                str(t_sec),
                 "-r",
-                os.getenv("SNMP_RETRIES", "2"),
+                str(retries),
                 host,
                 oid,
             ],
             capture_output=True,
             text=True,
-            timeout=timeout + 30,
+            timeout=proc_deadline,
             check=False,
         )
+    except subprocess.TimeoutExpired:
+        logger.warning("snmpwalk timeout host=%s oid=%s deadline=%ss", host, oid, proc_deadline)
+        return []
     except Exception as exc:
         logger.warning("snmpwalk falhou host=%s oid=%s: %s", host, oid, exc)
         return []
@@ -143,9 +174,11 @@ def collect_bsod_vlan_map_for_cmts(
 
 
 def collect_all_bsod_vlan_maps(city: dict[str, Any]) -> dict[str, dict[str, int]]:
-    """Coleta mapas MAC→VLAN de todos os CMTS da cidade."""
+    """Coleta mapas MAC→VLAN de todos os CMTS da cidade (em paralelo)."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     community = city.get("snmp_community") or "public"
-    maps: dict[str, dict[str, int]] = {}
+    jobs: list[tuple[str, str, str]] = []
     for cmts_name, meta in (city.get("cmts") or {}).items():
         if not isinstance(meta, dict):
             continue
@@ -153,13 +186,35 @@ def collect_all_bsod_vlan_maps(city: dict[str, Any]) -> dict[str, dict[str, int]
         if not ip:
             continue
         vendor = (meta.get("vendor") or "CISCO").strip().upper()
+        jobs.append((cmts_name.upper(), ip, vendor))
+
+    if not jobs:
+        return {}
+
+    maps: dict[str, dict[str, int]] = {}
+    workers = min(_snmp_parallel(), len(jobs))
+    logger.info(
+        "[%s] SNMP BSoD cmts=%d parallel=%d timeout=%ss retries=%s",
+        city.get("ope"),
+        len(jobs),
+        workers,
+        _snmp_timeout_sec(),
+        _snmp_retries(),
+    )
+
+    def work(item: tuple[str, str, str]) -> tuple[str, dict[str, int]]:
+        name, ip, vendor = item
         try:
-            maps[cmts_name.upper()] = collect_bsod_vlan_map_for_cmts(
-                cmts_name, ip, vendor, community
-            )
+            return name, collect_bsod_vlan_map_for_cmts(name, ip, vendor, community)
         except Exception as exc:
-            logger.exception("[%s] falha coleta BSoD: %s", cmts_name, exc)
-            maps[cmts_name.upper()] = {}
+            logger.exception("[%s] falha coleta BSoD: %s", name, exc)
+            return name, {}
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(work, job): job[0] for job in jobs}
+        for future in as_completed(futures):
+            name, mac_map = future.result()
+            maps[name] = mac_map
     return maps
 
 

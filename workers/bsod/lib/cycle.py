@@ -6,16 +6,20 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
-from lib import db, snmp_bsod, xpertrak
+from lib import db, nocclaro, snmp_bsod, xpertrak
 from lib.ldap_modem import lookup_modem_ldap
+from lib.profiles import resolve_produto
 from lib.util import (
     build_pme_networks,
     first_modem_channel,
+    format_crm_address,
     ip_in_pme_range,
     map_modem_to_cable,
     metric_float,
     modem_online_status,
+    normalize_contrato,
     normalize_mac,
+    normalize_vlan,
 )
 
 logger = logging.getLogger(__name__)
@@ -92,14 +96,89 @@ def _sweep_xpertrak(city: dict[str, Any]) -> dict[str, int]:
     return {"nodes": len(nodes), "cables": cables_total, "monitor": monitor_total}
 
 
+def _sync_crm(city: dict[str, Any]) -> dict[str, Any]:
+    """Baixa planilha CRM (nocclaro) por UF e grava bsod_crm_clients."""
+    ope = city["ope"]
+    uf = (city.get("uf") or "").strip().upper()
+    if not uf:
+        logger.info("[%s] CRM sync pulado — uf ausente no JSON da cidade", ope)
+        return {"synced": 0, "status": "skipped_no_uf"}
+    try:
+        rows = nocclaro.fetch_clients_for_uf(uf)
+        synced = db.replace_crm_clients(ope, rows)
+        logger.info("[%s] CRM sync OK uf=%s synced=%d", ope, uf, synced)
+        return {"synced": synced, "status": "ok", "uf": uf}
+    except Exception as exc:
+        logger.warning("[%s] CRM sync falhou uf=%s: %s", ope, uf, exc)
+        return {"synced": 0, "status": "error", "uf": uf, "error": str(exc)}
+
+
+def _crm_match_stats(
+    inventory_rows: list[dict[str, Any]], crm_by_contrato: dict[str, Any]
+) -> dict[str, int]:
+    """Conta inventário cujo contrato LDAP existe no CRM (contrato_netsms)."""
+    matched = 0
+    miss = 0
+    for row in inventory_rows:
+        key = normalize_contrato(row.get("contrato"))
+        if not key:
+            continue
+        if key in crm_by_contrato:
+            matched += 1
+        else:
+            miss += 1
+    return {
+        "crm_matched": matched,
+        "crm_miss": miss,
+        "crm_catalog": len(crm_by_contrato),
+    }
+
+
+def _resolve_client_fields(
+    *,
+    contrato: str,
+    crm_by_contrato: dict[str, Any],
+    cable_address: str,
+    existing: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Resolve cliente/endereço: CRM → override manual → Xpertrak (só endereço)."""
+    crm = crm_by_contrato.get(normalize_contrato(contrato))
+    xpertrak = (cable_address or "")[:255]
+    if crm:
+        return {
+            "cliente": (crm.get("cliente") or "")[:255],
+            "cadastro_responsavel": (crm.get("cadastro_responsavel") or "")[:255],
+            "designacao": (crm.get("designacao") or "")[:255],
+            "address": format_crm_address(crm) or xpertrak,
+            "manual_override": 0,
+        }
+    if existing and int(existing.get("manual_override") or 0) == 1:
+        return {
+            "cliente": (existing.get("cliente") or "")[:255],
+            "cadastro_responsavel": (existing.get("cadastro_responsavel") or "")[:255],
+            "designacao": (existing.get("designacao") or "")[:255],
+            "address": (existing.get("address") or "")[:255],
+            "manual_override": 1,
+        }
+    return {
+        "cliente": "",
+        "cadastro_responsavel": "",
+        "designacao": "",
+        "address": xpertrak,
+        "manual_override": 0,
+    }
+
+
 def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
-    """SNMP + LDAP → bsod_inventory (PME por IP + BSoD)."""
+    """SNMP + LDAP → bsod_inventory (PME por IP + BSoD) + CRM por contrato."""
     ope = city["ope"]
     ddd = city["ddd"]
     networks = build_pme_networks(city.get("cmts") or {})
     maps = snmp_bsod.collect_all_bsod_vlan_maps(city)
     flat = snmp_bsod.flatten_bsod_maps(maps)
     vlan_by_mac = {mac: vlan for mac, (_cmts, _orig, vlan) in flat.items()}
+    crm_by_contrato = db.list_crm_by_contrato(ope)
+    existing_by_mac = db.list_inventory_client_fields(ope)
 
     cables = db.list_cables_for_ope(ope)
     ldap_cache: dict[str, dict[str, Any]] = {}
@@ -118,6 +197,44 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
         ldap_cache[key] = result
         return result
 
+    def build_row(
+        *,
+        mac_norm: str,
+        mac_raw: str,
+        cable: dict[str, Any] | None,
+        cmts: str,
+        id_cable: str,
+        node: str,
+        contrato: str,
+        profile: str,
+        vlan: int,
+        vlan_text: str,
+    ) -> dict[str, Any]:
+        client = _resolve_client_fields(
+            contrato=contrato,
+            crm_by_contrato=crm_by_contrato,
+            cable_address=(cable.get("address") if cable else "") or "",
+            existing=existing_by_mac.get(mac_norm),
+        )
+        return {
+            "ope": ope,
+            "ddd": ddd,
+            "cmts": cmts,
+            "mac": mac_raw,
+            "id_cable": id_cable,
+            "node": node,
+            "contrato": contrato,
+            "profile": profile,
+            "cliente": client["cliente"],
+            "cadastro_responsavel": client["cadastro_responsavel"],
+            "designacao": client["designacao"],
+            "produto": resolve_produto(profile),
+            "address": client["address"],
+            "manual_override": client["manual_override"],
+            "bsod_vlan": vlan,
+            "vlan": vlan_text,
+        }
+
     pme_ip_count = 0
     for cable in cables:
         if not ip_in_pme_range(networks, cable.get("hostname_cmts") or "", cable.get("ip_ger") or ""):
@@ -126,20 +243,21 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
         keep_macs.add(mac_norm)
         ldap = ldap_fields(str(cable.get("mac") or ""))
         vlan = int(vlan_by_mac.get(mac_norm, 0) or 0)
+        contrato = ldap.get("contrato") or ""
+        profile = ldap.get("profile") or ""
         inventory_rows.append(
-            {
-                "ope": ope,
-                "ddd": ddd,
-                "cmts": cable.get("hostname_cmts") or "",
-                "mac": cable.get("mac") or "",
-                "id_cable": cable.get("id_cable") or "",
-                "node": cable.get("node") or "",
-                "contrato": ldap.get("contrato") or "",
-                "profile": ldap.get("profile") or "",
-                "address": cable.get("address") or "",
-                "bsod_vlan": vlan,
-                "vlan": str(vlan) if vlan else "",
-            }
+            build_row(
+                mac_norm=mac_norm,
+                mac_raw=cable.get("mac") or "",
+                cable=cable,
+                cmts=cable.get("hostname_cmts") or "",
+                id_cable=cable.get("id_cable") or "",
+                node=cable.get("node") or "",
+                contrato=contrato,
+                profile=profile,
+                vlan=vlan,
+                vlan_text=normalize_vlan(vlan) if vlan else "",
+            )
         )
         pme_ip_count += 1
 
@@ -153,44 +271,48 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
         keep_macs.add(mac_key)
         cable = cables_by_mac.get(mac_key)
         ldap = ldap_fields(mac_orig)
+        contrato = ldap.get("contrato") or ""
+        profile = ldap.get("profile") or ""
         inventory_rows.append(
-            {
-                "ope": ope,
-                "ddd": ddd,
-                "cmts": (cable.get("hostname_cmts") if cable else cmts_name) or "",
-                "mac": (cable.get("mac") if cable else mac_orig) or "",
-                "id_cable": (cable.get("id_cable") if cable else "") or "",
-                "node": (cable.get("node") if cable else "") or "",
-                "contrato": ldap.get("contrato") or "",
-                "profile": ldap.get("profile") or "",
-                "address": (cable.get("address") if cable else "") or "",
-                "bsod_vlan": int(vlan),
-                "vlan": str(int(vlan)),
-            }
+            build_row(
+                mac_norm=mac_key,
+                mac_raw=(cable.get("mac") if cable else mac_orig) or "",
+                cable=cable,
+                cmts=(cable.get("hostname_cmts") if cable else cmts_name) or "",
+                id_cable=(cable.get("id_cable") if cable else "") or "",
+                node=(cable.get("node") if cable else "") or "",
+                contrato=contrato,
+                profile=profile,
+                vlan=int(vlan),
+                vlan_text=normalize_vlan(vlan),
+            )
         )
         bsod_count += 1
 
     upserted = db.upsert_inventory(inventory_rows)
     deleted = db.cleanup_inventory_orphans(ope, keep_macs)
+    crm_stats = _crm_match_stats(inventory_rows, crm_by_contrato)
     return {
         "pme_ip": pme_ip_count,
         "bsod": bsod_count,
         "upserted": upserted,
         "orphans": deleted,
         "ldap": len(ldap_cache),
+        **crm_stats,
     }
 
 
 def run_city_cycle(city: dict[str, Any]) -> dict[str, Any]:
-    """Executa sweep + enrich para uma cidade."""
+    """Executa CRM sync + sweep + enrich para uma cidade."""
     ope = city["ope"]
     if not city.get("enabled"):
         logger.info("[%s] cidade desabilitada — pulando", ope)
         return {"ope": ope, "status": "skipped", "reason": "disabled"}
 
-    logger.info("[%s] iniciando ciclo BSOD ddd=%s", ope, city.get("ddd"))
+    logger.info("[%s] iniciando ciclo BSOD ddd=%s uf=%s", ope, city.get("ddd"), city.get("uf"))
+    crm = _sync_crm(city)
     sweep = _sweep_xpertrak(city)
     enrich = _enrich_inventory(city)
-    summary = {"ope": ope, "status": "ok", "sweep": sweep, "enrich": enrich}
+    summary = {"ope": ope, "status": "ok", "crm": crm, "sweep": sweep, "enrich": enrich}
     logger.info("[%s] ciclo concluído %s", ope, summary)
     return summary

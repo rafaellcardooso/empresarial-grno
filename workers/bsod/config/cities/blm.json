@@ -1,6 +1,7 @@
 {
   "ope": "blm",
   "ddd": "91",
+  "uf": "PA",
   "city": "BELÉM",
   "enabled": false,
   "env_prefix": "BSOD_BLM",

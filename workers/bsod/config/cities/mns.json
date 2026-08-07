@@ -1,6 +1,7 @@
 {
   "ope": "mns",
   "ddd": "92",
+  "uf": "AM",
   "city": "MANAUS",
   "enabled": false,
   "env_prefix": "BSOD_MNS",

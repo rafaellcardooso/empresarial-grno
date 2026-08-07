@@ -1,6 +1,7 @@
 {
   "ope": "sls",
   "ddd": "98",
+  "uf": "MA",
   "city": "SÃO LUÍS",
   "enabled": true,
   "env_prefix": "BSOD_SLS",
