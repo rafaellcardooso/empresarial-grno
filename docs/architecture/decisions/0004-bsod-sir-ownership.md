@@ -9,9 +9,10 @@ O inventário PME/BSoD e as amostras RF viviam no MySQL `hfc-sls` (`tbl_inventor
 
 ## Decisão
 
-- `workers/bsod` escreve `bsod_cables`, `bsod_inventory` e `bsod_monitor` no MySQL SIR.
-- Next `/bsod` lê somente essas tabelas SIR (não usa mais HFC para BSOD).
-- Config por `ope`/`ddd` (SLS/MNS/BLM); coleta habilitada por cidade.
+- `workers/bsod` escreve `bsod_cables`, `bsod_inventory`, `bsod_monitor` e `bsod_crm_clients` no MySQL SIR.
+- Next `/bsod` lê essas tabelas SIR (não usa mais HFC para BSOD); pode editar campos manuais do inventário.
+- Config por `ope`/`ddd`/`uf` (SLS/MNS/BLM); coleta habilitada por cidade.
+- Enrich: Xpertrak + SNMP VLAN + LDAP + CRM (contrato, fallback cvlan); portal `bsod.nocclaro.com.br`.
 - Enrich SNMP/LDAP/Xpertrak **não** roda no hfc-sls após o cutover; crônicos QoE permanecem no HFC.
 
 ## Consequências

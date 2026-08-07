@@ -25,7 +25,7 @@ flowchart TB
   subgraph writers [Writers]
     sirIngest[sir-ingest Playwright]
     tmip[tmip SFTP CSV]
-    bsodWorker[bsod Xpertrak SNMP LDAP]
+    bsodWorker[bsod CRM Xpertrak SNMP LDAP]
   end
 
   subgraph data [Dados]
@@ -48,15 +48,16 @@ flowchart TB
 
 ## Fronteiras (resumo)
 
-| Camada      | Local                          | Lê               | Escreve                                  |
-| ----------- | ------------------------------ | ---------------- | ---------------------------------------- |
-| UI + BFF    | `app/`, `components/`, `lib/`  | SIR, HFC         | Tabelas de aplicação no SIR (ver abaixo) |
-| Ingest SIR  | `workers/sir-ingest/`          | Portal SIR       | `rals`, `recs`                           |
-| Ingest TMIP | `workers/tmip/`                | SFTP CSV         | `sdh_alarms`                             |
-| Telegram    | `workers/sir-ingest/telegram/` | HTTP Next `/api` | Não grava DB                             |
-| Migrations  | `migrations/sir/`              | —                | DDL SIR                                  |
+| Camada      | Local                          | Lê                       | Escreve                                  |
+| ----------- | ------------------------------ | ------------------------ | ---------------------------------------- |
+| UI + BFF    | `app/`, `components/`, `lib/`  | SIR, HFC                 | Tabelas de aplicação no SIR (ver abaixo) |
+| Ingest SIR  | `workers/sir-ingest/`          | Portal SIR               | `rals`, `recs`                           |
+| Ingest TMIP | `workers/tmip/`                | SFTP CSV                 | `sdh_alarms`                             |
+| Ingest BSOD | `workers/bsod/`                | CRM + Xpertrak/SNMP/LDAP | `bsod_*` (cables/inventory/monitor/crm)  |
+| Telegram    | `workers/sir-ingest/telegram/` | HTTP Next `/api`         | Não grava DB                             |
+| Migrations  | `migrations/sir/`              | —                        | DDL SIR                                  |
 
-**Next escreve no SIR** em: `app_users`, preferências, notificações, `app_tratativas` / eventos, e colunas/eventos de tratativa SDH.
+**Next escreve no SIR** em: `app_users`, preferências, notificações, `app_tratativas` / eventos, colunas/eventos de tratativa SDH, e edição manual de `bsod_inventory` (cliente/endereço).
 
 **Next não escreve** em: `hfc-sls`, nem nas tabelas-fonte `rals` / `recs` (só workers).
 
@@ -68,11 +69,11 @@ Regras duras:
 
 ## Domínios de monitoramento
 
-| Domínio   | Fonte                       | Tabela / leitura                 | Tratativa                        |
-| --------- | --------------------------- | -------------------------------- | -------------------------------- |
-| RAL / REC | Scrape SIR                  | `rals`, `recs`                   | `app_tratativas` + eventos       |
-| BSOD      | Worker `workers/bsod` + SIR | `bsod_inventory`, `bsod_monitor` | `app_tratativas` (workflow FCA)  |
-| SDH       | CSV TMIP >6h                | `sdh_alarms`                     | Colunas + `sdh_tratativa_events` |
+| Domínio   | Fonte                       | Tabela / leitura                                     | Tratativa                        |
+| --------- | --------------------------- | ---------------------------------------------------- | -------------------------------- |
+| RAL / REC | Scrape SIR                  | `rals`, `recs`                                       | `app_tratativas` + eventos       |
+| BSOD      | Worker `workers/bsod` + SIR | `bsod_inventory`, `bsod_monitor`, `bsod_crm_clients` | `app_tratativas` (workflow FCA)  |
+| SDH       | CSV TMIP >6h                | `sdh_alarms`                                         | Colunas + `sdh_tratativa_events` |
 
 ## Tratativa unificada
 

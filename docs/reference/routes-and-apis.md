@@ -1,6 +1,6 @@
 # Referência — rotas e APIs
 
-> Última revisão: **2026-07-30** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-06** · Índice: [../README.md](../README.md)
 
 Catálogo operacional. Rotas autenticadas exigem cookie de sessão, salvo as APIs públicas usadas pelos bots.
 
@@ -32,6 +32,7 @@ Catálogo operacional. Rotas autenticadas exigem cookie de sessão, salvo as API
 | Área         | Rotas                                                                                             |
 | ------------ | ------------------------------------------------------------------------------------------------- |
 | SIR BFF      | `GET /api/sir/rals`, `/api/sir/recs`                                                              |
+| BSOD         | `GET /api/bsod`; `PATCH /api/bsod/inventory/[mac]` (cliente/cadastro/designação/endereço)         |
 | SDH          | `GET/PATCH /api/sdh`, `/api/sdh/:id/status`                                                       |
 | Tratativas   | `/api/tratativas`, `/open`, `/observacao`, `/acionamento`, `/validacao*`, `/concluir`, `/release` |
 | GRB          | `/api/grb/execute`, `/interfaces`, `/vprn`, `/console` (staff), `/critel/graph`                   |

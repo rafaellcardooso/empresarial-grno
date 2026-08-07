@@ -1,6 +1,6 @@
 # Referência — modelo de dados (SIR app)
 
-> Última revisão: **2026-07-30** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-06** · Índice: [../README.md](../README.md)
 
 Schema versionado em `migrations/sir/`. Fronteiras: [../architecture/data-and-write-boundaries.md](../architecture/data-and-write-boundaries.md).
 
@@ -12,6 +12,20 @@ Schema versionado em `migrations/sir/`. Fronteiras: [../architecture/data-and-wr
 | `recs`       | sir-ingest REC | Prefixo REC/DSR/TCQ                                     |
 | `sdh_alarms` | tmip           | `is_active`; colunas de tratativa atualizadas pelo Next |
 
+### BSOD (SIR — writer `workers/bsod`)
+
+| Tabela             | Notas                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `bsod_cables`      | Sweep Xpertrak (MAC, node, IP, endereço físico do PathTrak)                                                              |
+| `bsod_monitor`     | Amostras RF (TX/RX/MER/status)                                                                                           |
+| `bsod_crm_clients` | Catálogo portal nocclaro; sync por UF; sem linhas `CANCELADO`                                                            |
+| `bsod_inventory`   | Inventário PME/BSoD: LDAP + SNMP VLAN + enrich CRM; `manual_override` preserva edição na UI; `crm_cvlan` quando casa CRM |
+
+Join inventário ↔ CRM: `contrato` LDAP ↔ `contrato_netsms`; fallback `vlan` ↔ `cvlan` única ≠ 0.  
+Campos de cliente/endereço também editáveis na UI (`manual_override=1`).
+
+Legado HFC (não usado pela UI): `tbl_inventory_pme` / `tbl_monitor_pme`.
+
 ## Aplicação (Next)
 
 | Tabela                      | Uso                                                                                     |
@@ -22,9 +36,7 @@ Schema versionado em `migrations/sir/`. Fronteiras: [../architecture/data-and-wr
 | `sdh_tratativa_events`      | Cronologia SDH (`START`, `OBSERVACAO`, `CLOSE`, …)                                      |
 | Preferências / notificações | Conta e admin                                                                           |
 
-## HFC (somente leitura)
-
-`bsod_cables`, `bsod_inventory`, `bsod_monitor`, `bsod_crm_clients` (SIR) — BSOD. Legado HFC: `tbl_inventory_pme` / `tbl_monitor_pme`.
+Next também atualiza colunas de inventário BSOD em edição manual (`cliente`, `cadastro_responsavel`, `designacao`, `address`, `manual_override`).
 
 ## Normalizados
 
