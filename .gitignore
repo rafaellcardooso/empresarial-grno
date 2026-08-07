@@ -59,6 +59,11 @@ workers/tmip/venv/
 workers/tmip/**/__pycache__/
 workers/tmip/dados/*.csv
 
+# BSOD ingest
+workers/bsod/.env
+workers/bsod/venv/
+workers/bsod/**/__pycache__/
+workers/bsod/log/
 # vercel
 .vercel
 

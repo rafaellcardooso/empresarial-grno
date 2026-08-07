@@ -6,6 +6,9 @@ coverage
 workers/sir-ingest/node_modules
 workers/sir-ingest/states
 workers/sir-ingest/**/__pycache__
+workers/bsod/venv
+workers/bsod/**/__pycache__
+workers/tmip/venv
 _legacy-ui
 package-lock.json
 workers/sir-ingest/package-lock.json
