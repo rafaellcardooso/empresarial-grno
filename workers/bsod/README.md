@@ -34,7 +34,7 @@ Cidades em `config/cities/*.json` (`uf`: MA/AM/PA). `enabled: true` só em SLS p
    - **produto** a partir de `profile` (`config/profiles.txt`);
    - cliente/endereço/designação: CRM por **contrato**, senão **cvlan** única, senão override manual / endereço Xpertrak;
    - cleanup de órfãos do `ope`.
-4. Timer systemd a cada 6h (`bsod-ingest.timer` / lab `bsod-ingest-lab.timer`).
+4. Timer systemd a cada **30 min** (`bsod-ingest.timer` / lab `bsod-ingest-lab.timer`).
 
 CRM só sync: `venv/bin/python run_bsod_crm_sync.py --ope sls` (ou `--dry-run`).
 

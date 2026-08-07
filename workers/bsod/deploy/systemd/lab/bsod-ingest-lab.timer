@@ -1,9 +1,9 @@
 [Unit]
-Description=Timer BSOD ingest lab (6h)
+Description=Timer BSOD ingest lab (30min)
 
 [Timer]
-OnBootSec=20min
-OnUnitActiveSec=6h
+OnBootSec=5min
+OnUnitActiveSec=30min
 Persistent=true
 Unit=bsod-ingest-lab.service
 

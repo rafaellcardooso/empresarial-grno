@@ -35,6 +35,26 @@ sudo systemctl enable --now bsod-ingest-lab.timer
 
 Oneshot: `sudo systemctl start bsod-ingest.service` (lab: `bsod-ingest-lab.service`).
 
+Após mudar o `.timer` no repo:
+
+```bash
+sudo cp workers/bsod/deploy/systemd/bsod-ingest.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl restart bsod-ingest.timer
+systemctl list-timers 'bsod-ingest*'
+```
+
+Intervalo: **30 min** (`OnUnitActiveSec=30min`).
+
+## Persistência (update vs insert)
+
+| Tabela             | Comportamento                                            |
+| ------------------ | -------------------------------------------------------- |
+| `bsod_cables`      | **UPSERT** por `(ope, mac)`                              |
+| `bsod_inventory`   | **UPSERT** por `(ope, mac)`; órfãos do ope são removidos |
+| `bsod_crm_clients` | **replace** do ope (DELETE + INSERT da planilha ativa)   |
+| `bsod_monitor`     | **INSERT** de nova amostra a cada ciclo (histórico RF)   |
+
 ## Ciclo por cidade (`enabled: true`)
 
 1. **CRM** — login nocclaro → busca por `uf` do JSON → planilha → `bsod_crm_clients`
