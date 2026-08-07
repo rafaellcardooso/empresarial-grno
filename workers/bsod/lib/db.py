@@ -47,11 +47,11 @@ ON DUPLICATE KEY UPDATE
 INVENTORY_UPSERT = """
 INSERT INTO bsod_inventory (
   ope, ddd, cmts, mac, id_cable, node, contrato, profile, cliente, cadastro_responsavel,
-  designacao, produto, address, manual_override, bsod_vlan, vlan
+  designacao, produto, address, manual_override, bsod_vlan, vlan, crm_cvlan
 ) VALUES (
   %(ope)s, %(ddd)s, %(cmts)s, %(mac)s, %(id_cable)s, %(node)s, %(contrato)s,
   %(profile)s, %(cliente)s, %(cadastro_responsavel)s, %(designacao)s, %(produto)s,
-  %(address)s, %(manual_override)s, %(bsod_vlan)s, %(vlan)s
+  %(address)s, %(manual_override)s, %(bsod_vlan)s, %(vlan)s, %(crm_cvlan)s
 )
 ON DUPLICATE KEY UPDATE
   ddd = VALUES(ddd),
@@ -67,7 +67,8 @@ ON DUPLICATE KEY UPDATE
   address = VALUES(address),
   manual_override = VALUES(manual_override),
   bsod_vlan = VALUES(bsod_vlan),
-  vlan = VALUES(vlan)
+  vlan = VALUES(vlan),
+  crm_cvlan = VALUES(crm_cvlan)
 """
 
 MONITOR_INSERT = """
@@ -170,7 +171,7 @@ def list_inventory_client_fields(ope: str) -> dict[str, dict[str, Any]]:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT mac, cliente, cadastro_responsavel, designacao, address, manual_override
+                SELECT mac, cliente, cadastro_responsavel, designacao, address, crm_cvlan, manual_override
                 FROM bsod_inventory
                 WHERE ope = %s
                 """,

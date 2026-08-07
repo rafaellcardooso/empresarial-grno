@@ -42,7 +42,7 @@ export function BsodClassificationCard({
           <div className="bsod-classification-card__section-header">
             <span className="bsod-classification-card__title">VLAN</span>
             <span className="bsod-classification-card__description">
-              Classificação do inventário pela presença de VLAN BSOD
+              Classificação do inventário pela presença de VLAN CMTS
             </span>
           </div>
           <div className="sir-filter-toolbar__chips bsod-classification-card__chips bsod-classification-card__chips--vlan">

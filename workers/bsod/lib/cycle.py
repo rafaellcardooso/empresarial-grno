@@ -183,6 +183,7 @@ def _resolve_client_fields(
             "cadastro_responsavel": (crm.get("cadastro_responsavel") or "")[:255],
             "designacao": (crm.get("designacao") or "")[:255],
             "address": format_crm_address(crm) or xpertrak,
+            "crm_cvlan": normalize_vlan(crm.get("cvlan")),
             "manual_override": 0,
         }
     if existing and int(existing.get("manual_override") or 0) == 1:
@@ -191,6 +192,7 @@ def _resolve_client_fields(
             "cadastro_responsavel": (existing.get("cadastro_responsavel") or "")[:255],
             "designacao": (existing.get("designacao") or "")[:255],
             "address": (existing.get("address") or "")[:255],
+            "crm_cvlan": (existing.get("crm_cvlan") or "")[:32],
             "manual_override": 1,
         }
     return {
@@ -198,6 +200,7 @@ def _resolve_client_fields(
         "cadastro_responsavel": "",
         "designacao": "",
         "address": xpertrak,
+        "crm_cvlan": "",
         "manual_override": 0,
     }
 
@@ -269,6 +272,7 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
             "manual_override": client["manual_override"],
             "bsod_vlan": vlan,
             "vlan": vlan_text,
+            "crm_cvlan": client["crm_cvlan"],
         }
 
     pme_ip_count = 0

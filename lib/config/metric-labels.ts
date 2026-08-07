@@ -5,8 +5,8 @@ export const METRIC_LABELS = {
     online: "ONLINE",
     offline: "OFFLINE",
     semLeitura: "SEM LEITURA",
-    comVlan: "COM VLAN BSOD",
-    semVlan: "SEM VLAN BSOD",
+    comVlan: "COM VLAN CMTS",
+    semVlan: "SEM VLAN CMTS",
     inventario: "INVENTÁRIO PME",
   },
   sir: {

@@ -153,7 +153,7 @@ export const RELATORIOS_COPY = {
   nodeLabel: "Node",
   nodePlaceholder: "Opcional",
   saudeLabel: "Saúde",
-  vlanLabel: "VLAN BSOD",
+  vlanLabel: "VLAN CMTS",
   allTypes: "Todos",
   allHealth: "Todas",
   allVlan: "Todas",

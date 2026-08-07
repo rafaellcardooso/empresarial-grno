@@ -125,7 +125,7 @@ export function getCachedBsodHealthCounts(
   })();
 }
 
-/** Conta PME por VLAN BSOD respeitando filtros de saúde, CMTS e node. */
+/** Conta PME por VLAN CMTS respeitando filtros de saúde, CMTS e node. */
 export async function countBsodVlan(
   filters: Omit<BsodFilters, "vlan" | "limit" | "offset"> = {},
 ): Promise<BsodVlanCounts> {

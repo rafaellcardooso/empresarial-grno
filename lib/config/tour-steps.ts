@@ -22,7 +22,7 @@ export const APP_TOUR_STEPS: DriveStep[] = [
     element: "[data-tour='home-bsod']",
     popover: {
       title: "Inventário BSOD",
-      description: "Consulte PME com VLAN BSOD e indicadores TX/RX/MER.",
+      description: "Consulte PME com VLAN CMTS e indicadores TX/RX/MER.",
       side: "top",
     },
   },

@@ -23,6 +23,8 @@ export type PmeBsodRow = RowDataPacket & {
   /** 1 quando cliente/endereço foram editados na UI e não há match CRM. */
   manual_override: number;
   bsod_vlan: number | null;
+  /** CVLAN do catálogo CRM após enrich (vazio se sem match). */
+  crm_cvlan: string;
   vlan: string;
   monitor_status: number | null;
   monitor_label: string;
@@ -85,7 +87,8 @@ export const BSOD_INVENTORY_SELECT = `
     i.cliente, i.cadastro_responsavel, i.designacao, i.produto,
     NULLIF(TRIM(i.address), '') AS address,
     i.manual_override,
-    i.bsod_vlan, i.vlan
+    i.bsod_vlan, i.vlan,
+    NULLIF(TRIM(i.crm_cvlan), '') AS crm_cvlan
 `;
 
 /** Alias legado usado por helpers que ainda esperam SELECT “joined”. */
@@ -267,6 +270,7 @@ export function mapPmeRow(row: RowDataPacket): PmeBsodRow {
     address: addressRaw || null,
     manual_override: Number(row.manual_override) === 1 ? 1 : 0,
     bsod_vlan: bsodVlan > 0 ? bsodVlan : null,
+    crm_cvlan: String(row.crm_cvlan ?? "").trim(),
     monitor_status: row.monitor_status == null ? null : Number(row.monitor_status),
     monitor_label: monitorStatusLabel(
       row.monitor_status == null ? null : Number(row.monitor_status),

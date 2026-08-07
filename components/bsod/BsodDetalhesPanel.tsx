@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { BsodHealthBadge, BsodSignalMetric } from "@/components/bsod/bsod-table-cells";
+import {
+  BsodHealthBadge,
+  BsodSignalMetric,
+  buildBsodVlanCompareBadges,
+} from "@/components/bsod/bsod-table-cells";
 import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
 
@@ -65,6 +69,10 @@ function BsodDetalhesBody({
   row: PmeBsodRow;
   onSaved?: (row: PmeBsodRow) => void;
 }) {
+  const vlanBadges = buildBsodVlanCompareBadges({
+    cmtsVlan: row.bsod_vlan,
+    crmCvlan: row.crm_cvlan,
+  });
   const [editing, setEditing] = useState(false);
   const [cliente, setCliente] = useState(row.cliente ?? "");
   const [cadastroResponsavel, setCadastroResponsavel] = useState(row.cadastro_responsavel ?? "");
@@ -228,10 +236,8 @@ function BsodDetalhesBody({
         <BsodDetailItem label="Produto">{row.produto || "—"}</BsodDetailItem>
         <BsodDetailItem label="Profile">{row.profile || "—"}</BsodDetailItem>
         <BsodDetailItem label="Endereço">{row.address || "—"}</BsodDetailItem>
-        <BsodDetailItem label="VLAN BSOD">
-          {row.bsod_vlan != null ? <span className="bsod-vlan-badge">{row.bsod_vlan}</span> : "—"}
-        </BsodDetailItem>
-        <BsodDetailItem label="VLAN operacional">{row.vlan || "—"}</BsodDetailItem>
+        <BsodDetailItem label="VLAN CMTS">{vlanBadges.cmts}</BsodDetailItem>
+        <BsodDetailItem label="CVLAN CRM">{vlanBadges.crm}</BsodDetailItem>
         <BsodDetailItem label="TX">
           <BsodSignalMetric kind="tx" value={row.tx} monitorStatus={row.monitor_status} />
         </BsodDetailItem>
