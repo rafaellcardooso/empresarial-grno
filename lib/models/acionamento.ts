@@ -17,6 +17,10 @@ export type AcionamentoRecordKind = "BSOD" | "RAL" | "REC" | "SDH";
 export type BsodAcionamentoContext = {
   recordKind: "BSOD";
   recordKey: string;
+  cliente?: string;
+  cadastroResponsavel?: string;
+  designacao?: string;
+  produto?: string;
   contrato?: string;
   mac?: string;
   address?: string;

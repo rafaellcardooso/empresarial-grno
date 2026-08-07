@@ -14,16 +14,18 @@ export function parseAcionamentoMessageField(message: string, field: string): st
   return null;
 }
 
-/** Extrai contrato e sintoma de mensagem BSOD de acionamento. */
+/** Extrai cliente, contrato e sintoma de mensagem BSOD de acionamento. */
 export function parseBsodAcionamentoAnalytics(message: string | null | undefined): {
+  cliente: string | null;
   contrato: string | null;
   sintoma: string | null;
 } {
   if (!message?.trim()) {
-    return { contrato: null, sintoma: null };
+    return { cliente: null, contrato: null, sintoma: null };
   }
 
   return {
+    cliente: parseAcionamentoMessageField(message, "CLIENTE"),
     contrato: parseAcionamentoMessageField(message, "CONTRATO"),
     sintoma: parseAcionamentoMessageField(message, "SINTOMA"),
   };

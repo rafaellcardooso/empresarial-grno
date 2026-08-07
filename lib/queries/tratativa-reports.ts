@@ -289,9 +289,14 @@ function buildAcionamentoRankings(rows: AcionamentoRow[]): {
     const sintoma = normalizeRankLabel(parsed.sintoma) ?? "Não informado";
     symptomCounts.set(sintoma, (symptomCounts.get(sintoma) ?? 0) + 1);
 
+    const cliente = parsed.cliente?.trim();
     const contrato = parsed.contrato?.trim();
-    const clientKey = contrato ? `contrato:${contrato}` : `mac:${row.record_key}`;
-    const clientLabel = contrato ?? `MAC ${row.record_key}`;
+    const clientKey = contrato
+      ? `contrato:${contrato}`
+      : cliente
+        ? `cliente:${cliente.toLowerCase()}`
+        : `mac:${row.record_key}`;
+    const clientLabel = cliente || contrato || `MAC ${row.record_key}`;
     const current = clientCounts.get(clientKey);
     if (current) {
       current.total += 1;

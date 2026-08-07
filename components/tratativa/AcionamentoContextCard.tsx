@@ -9,9 +9,13 @@ type AcionamentoContextCardProps = {
 export function AcionamentoContextCard({ context }: AcionamentoContextCardProps) {
   if (context.recordKind === "BSOD") {
     const items = [
+      { label: "Cliente", value: context.cliente },
+      { label: "Cadastro responsável", value: context.cadastroResponsavel },
+      { label: "Designação", value: context.designacao },
+      { label: "Produto", value: context.produto },
+      { label: "Contrato", value: context.contrato },
       { label: "CMTS", value: context.cmts },
       { label: "Node", value: context.node },
-      { label: "Contrato", value: context.contrato },
       { label: "MAC", value: context.mac ?? context.recordKey },
       { label: "Profile", value: context.profile },
       { label: "Status", value: context.monitorLabel },

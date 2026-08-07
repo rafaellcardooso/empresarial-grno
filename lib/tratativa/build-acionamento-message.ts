@@ -41,9 +41,13 @@ function buildTechnicianBlock(technician: AcionamentoTechnicianInput): string[] 
 /** Monta bloco do equipamento/cliente na ordem operacional BSOD. */
 function buildEquipmentBlock(context: BsodAcionamentoContext, sintoma: string): string[] {
   return [
+    fieldLine("CLIENTE", context.cliente),
+    fieldLine("CADASTRO RESPONSÁVEL", context.cadastroResponsavel),
+    fieldLine("DESIGNAÇÃO", context.designacao),
+    fieldLine("PRODUTO", context.produto),
+    fieldLine("CONTRATO", context.contrato),
     fieldLine("CMTS", context.cmts),
     fieldLine("NODE", context.node),
-    fieldLine("CONTRATO", context.contrato),
     fieldLine("MAC", formatMac(context.mac ?? context.recordKey)),
     fieldLine("PROFILE", context.profile),
     fieldLine("STATUS", formatStatus(context.monitorLabel)),

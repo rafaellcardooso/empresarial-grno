@@ -191,6 +191,10 @@ async function buildSharedSummary(
     const row = await getPmeBsodByMac(key);
     return [
       { label: "Operação", value: row?.ope_label || row?.ope || "—" },
+      { label: "Cliente", value: row?.cliente || "—" },
+      { label: "Cadastro responsável", value: row?.cadastro_responsavel || "—" },
+      { label: "Designação", value: row?.designacao || "—" },
+      { label: "Produto", value: row?.produto || "—" },
       { label: "CMTS", value: row?.cmts || "—" },
       { label: "Node", value: row?.node || "—" },
       { label: "MAC", value: row?.mac || key },

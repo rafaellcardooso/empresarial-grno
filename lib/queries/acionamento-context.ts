@@ -60,15 +60,25 @@ async function getBsodAcionamentoContext(
   return {
     recordKind: "BSOD",
     recordKey,
-    contrato: row.contrato ?? undefined,
-    mac: row.mac ?? undefined,
-    address: row.address ?? undefined,
-    cmts: row.cmts ?? undefined,
-    node: row.node ?? undefined,
-    profile: row.profile ?? undefined,
-    monitorLabel: row.monitor_label ?? undefined,
+    cliente: emptyToUndef(row.cliente),
+    cadastroResponsavel: emptyToUndef(row.cadastro_responsavel),
+    designacao: emptyToUndef(row.designacao),
+    produto: emptyToUndef(row.produto),
+    contrato: emptyToUndef(row.contrato),
+    mac: emptyToUndef(row.mac),
+    address: emptyToUndef(row.address),
+    cmts: emptyToUndef(row.cmts),
+    node: emptyToUndef(row.node),
+    profile: emptyToUndef(row.profile),
+    monitorLabel: emptyToUndef(row.monitor_label),
     sintoma: bsodSintomaFromMonitorLabel(row.monitor_label),
   };
+}
+
+/** Converte string vazia em undefined para o contexto de acionamento. */
+function emptyToUndef(value: string | null | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 /** Carrega contexto RAL/REC para preencher acionamento WhatsApp. */
