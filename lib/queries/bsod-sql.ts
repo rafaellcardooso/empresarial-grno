@@ -15,7 +15,13 @@ export type PmeBsodRow = RowDataPacket & {
   node: string;
   contrato: string;
   profile: string;
+  cliente: string;
+  cadastro_responsavel: string;
+  designacao: string;
+  produto: string;
   address: string | null;
+  /** 1 quando cliente/endereço foram editados na UI e não há match CRM. */
+  manual_override: number;
   bsod_vlan: number | null;
   vlan: string;
   monitor_status: number | null;
@@ -76,7 +82,9 @@ export const BSOD_PME_FROM = `FROM bsod_inventory i`;
 export const BSOD_INVENTORY_SELECT = `
   SELECT
     i.id, i.ope, i.cmts, i.mac, i.id_cable, i.node, i.contrato, i.profile,
+    i.cliente, i.cadastro_responsavel, i.designacao, i.produto,
     NULLIF(TRIM(i.address), '') AS address,
+    i.manual_override,
     i.bsod_vlan, i.vlan
 `;
 
@@ -137,6 +145,10 @@ export function buildBsodInventoryWhere(
       where.push(`(
         i.mac LIKE ? ESCAPE '!'
         OR i.contrato LIKE ? ESCAPE '!'
+        OR i.cliente LIKE ? ESCAPE '!'
+        OR i.cadastro_responsavel LIKE ? ESCAPE '!'
+        OR i.designacao LIKE ? ESCAPE '!'
+        OR i.produto LIKE ? ESCAPE '!'
         OR i.node LIKE ? ESCAPE '!'
         OR i.cmts LIKE ? ESCAPE '!'
         OR i.ope LIKE ? ESCAPE '!'
@@ -145,7 +157,21 @@ export function buildBsodInventoryWhere(
         OR i.profile LIKE ? ESCAPE '!'
         OR i.vlan LIKE ? ESCAPE '!'
       )`);
-      params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+      params.push(
+        pattern,
+        pattern,
+        pattern,
+        pattern,
+        pattern,
+        pattern,
+        pattern,
+        pattern,
+        pattern,
+        pattern,
+        pattern,
+        pattern,
+        pattern,
+      );
     }
   }
 
@@ -239,6 +265,7 @@ export function mapPmeRow(row: RowDataPacket): PmeBsodRow {
     ope,
     ope_label: bsodOperationLabel(ope),
     address: addressRaw || null,
+    manual_override: Number(row.manual_override) === 1 ? 1 : 0,
     bsod_vlan: bsodVlan > 0 ? bsodVlan : null,
     monitor_status: row.monitor_status == null ? null : Number(row.monitor_status),
     monitor_label: monitorStatusLabel(

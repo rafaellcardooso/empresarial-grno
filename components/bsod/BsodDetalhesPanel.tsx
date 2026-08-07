@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { BsodHealthBadge, BsodSignalMetric } from "@/components/bsod/bsod-table-cells";
 import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
@@ -9,10 +9,11 @@ type BsodDetalhesPanelProps = {
   open: boolean;
   row: PmeBsodRow | null;
   onClose: () => void;
+  onSaved?: (row: PmeBsodRow) => void;
 };
 
 /** Painel lateral com endereço, profile, VLAN e métricas de sinal do PME. */
-export function BsodDetalhesPanel({ open, row, onClose }: BsodDetalhesPanelProps) {
+export function BsodDetalhesPanel({ open, row, onClose, onSaved }: BsodDetalhesPanelProps) {
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
@@ -41,7 +42,9 @@ export function BsodDetalhesPanel({ open, row, onClose }: BsodDetalhesPanelProps
           </div>
           <button type="button" className="btn-close" aria-label="Fechar" onClick={onClose} />
         </div>
-        <div className="offcanvas-body">{row ? <BsodDetalhesBody row={row} /> : null}</div>
+        <div className="offcanvas-body">
+          {row ? <BsodDetalhesBody row={row} onSaved={onSaved} /> : null}
+        </div>
       </div>
 
       {open ? (
@@ -55,37 +58,194 @@ export function BsodDetalhesPanel({ open, row, onClose }: BsodDetalhesPanelProps
   );
 }
 
-function BsodDetalhesBody({ row }: { row: PmeBsodRow }) {
+function BsodDetalhesBody({
+  row,
+  onSaved,
+}: {
+  row: PmeBsodRow;
+  onSaved?: (row: PmeBsodRow) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [cliente, setCliente] = useState(row.cliente ?? "");
+  const [cadastroResponsavel, setCadastroResponsavel] = useState(row.cadastro_responsavel ?? "");
+  const [designacao, setDesignacao] = useState(row.designacao ?? "");
+  const [address, setAddress] = useState(row.address ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEditing(false);
+    setError(null);
+    setCliente(row.cliente ?? "");
+    setCadastroResponsavel(row.cadastro_responsavel ?? "");
+    setDesignacao(row.designacao ?? "");
+    setAddress(row.address ?? "");
+  }, [row.id, row.mac, row.cliente, row.cadastro_responsavel, row.designacao, row.address]);
+
+  /** Envia os quatro campos manuais para a API de inventário. */
+  async function handleSave(event: FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/bsod/inventory/${encodeURIComponent(row.mac)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cliente,
+          cadastro_responsavel: cadastroResponsavel,
+          designacao,
+          address,
+        }),
+      });
+      const data = (await response.json()) as { error?: string; row?: PmeBsodRow };
+      if (!response.ok || !data.row) {
+        setError(data.error ?? "Não foi possível salvar.");
+        return;
+      }
+      setEditing(false);
+      onSaved?.(data.row);
+    } catch {
+      setError("Erro de conexão. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <dl className="bsod-detalhes-grid">
-      <BsodDetailItem label="Status">
-        <BsodHealthBadge label={row.monitor_label} status={row.monitor_status} />
-      </BsodDetailItem>
-      <BsodDetailItem label="Operação">{row.ope_label || row.ope || "—"}</BsodDetailItem>
-      <BsodDetailItem label="CMTS">{row.cmts || "—"}</BsodDetailItem>
-      <BsodDetailItem label="Node">{row.node || "—"}</BsodDetailItem>
-      <BsodDetailItem label="MAC">{row.mac || "—"}</BsodDetailItem>
-      <BsodDetailItem label="ID cable">{row.id_cable || "—"}</BsodDetailItem>
-      <BsodDetailItem label="Contrato">{row.contrato || "—"}</BsodDetailItem>
-      <BsodDetailItem label="Endereço">{row.address || "—"}</BsodDetailItem>
-      <BsodDetailItem label="Profile">{row.profile || "—"}</BsodDetailItem>
-      <BsodDetailItem label="VLAN BSOD">
-        {row.bsod_vlan != null ? <span className="bsod-vlan-badge">{row.bsod_vlan}</span> : "—"}
-      </BsodDetailItem>
-      <BsodDetailItem label="VLAN operacional">{row.vlan || "—"}</BsodDetailItem>
-      <BsodDetailItem label="TX">
-        <BsodSignalMetric kind="tx" value={row.tx} monitorStatus={row.monitor_status} />
-      </BsodDetailItem>
-      <BsodDetailItem label="RX">
-        <BsodSignalMetric kind="rx" value={row.rx} monitorStatus={row.monitor_status} />
-      </BsodDetailItem>
-      <BsodDetailItem label="MER">
-        <BsodSignalMetric kind="mer" value={row.mer} monitorStatus={row.monitor_status} />
-      </BsodDetailItem>
-      <BsodDetailItem label="Última leitura">
-        <DateTimeStacked value={row.monitor_time} />
-      </BsodDetailItem>
-    </dl>
+    <>
+      <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
+        <div>
+          {Number(row.manual_override) === 1 ? (
+            <span className="badge text-bg-secondary">Dados manuais</span>
+          ) : null}
+        </div>
+        {!editing ? (
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-primary"
+            onClick={() => setEditing(true)}
+          >
+            Editar cadastro
+          </button>
+        ) : null}
+      </div>
+
+      {editing ? (
+        <form className="mb-4" onSubmit={handleSave}>
+          <div className="mb-2">
+            <label className="form-label" htmlFor="bsod-edit-cliente">
+              Cliente
+            </label>
+            <input
+              id="bsod-edit-cliente"
+              className="form-control form-control-sm"
+              value={cliente}
+              maxLength={255}
+              onChange={(event) => setCliente(event.target.value)}
+              disabled={saving}
+            />
+          </div>
+          <div className="mb-2">
+            <label className="form-label" htmlFor="bsod-edit-cadastro">
+              Cadastro responsável
+            </label>
+            <input
+              id="bsod-edit-cadastro"
+              className="form-control form-control-sm"
+              value={cadastroResponsavel}
+              maxLength={255}
+              onChange={(event) => setCadastroResponsavel(event.target.value)}
+              disabled={saving}
+            />
+          </div>
+          <div className="mb-2">
+            <label className="form-label" htmlFor="bsod-edit-designacao">
+              Designação
+            </label>
+            <input
+              id="bsod-edit-designacao"
+              className="form-control form-control-sm"
+              value={designacao}
+              maxLength={255}
+              onChange={(event) => setDesignacao(event.target.value)}
+              disabled={saving}
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label" htmlFor="bsod-edit-address">
+              Endereço
+            </label>
+            <textarea
+              id="bsod-edit-address"
+              className="form-control form-control-sm"
+              rows={3}
+              value={address}
+              maxLength={255}
+              onChange={(event) => setAddress(event.target.value)}
+              disabled={saving}
+            />
+          </div>
+          {error ? <p className="text-danger small mb-2">{error}</p> : null}
+          <div className="d-flex gap-2">
+            <button type="submit" className="btn btn-sm btn-primary" disabled={saving}>
+              {saving ? "Salvando…" : "Salvar"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary"
+              disabled={saving}
+              onClick={() => {
+                setEditing(false);
+                setError(null);
+                setCliente(row.cliente ?? "");
+                setCadastroResponsavel(row.cadastro_responsavel ?? "");
+                setDesignacao(row.designacao ?? "");
+                setAddress(row.address ?? "");
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      <dl className="bsod-detalhes-grid">
+        <BsodDetailItem label="Status">
+          <BsodHealthBadge label={row.monitor_label} status={row.monitor_status} />
+        </BsodDetailItem>
+        <BsodDetailItem label="Operação">{row.ope_label || row.ope || "—"}</BsodDetailItem>
+        <BsodDetailItem label="CMTS">{row.cmts || "—"}</BsodDetailItem>
+        <BsodDetailItem label="Node">{row.node || "—"}</BsodDetailItem>
+        <BsodDetailItem label="MAC">{row.mac || "—"}</BsodDetailItem>
+        <BsodDetailItem label="ID cable">{row.id_cable || "—"}</BsodDetailItem>
+        <BsodDetailItem label="Contrato">{row.contrato || "—"}</BsodDetailItem>
+        <BsodDetailItem label="Cliente">{row.cliente || "—"}</BsodDetailItem>
+        <BsodDetailItem label="Cadastro responsável">
+          {row.cadastro_responsavel || "—"}
+        </BsodDetailItem>
+        <BsodDetailItem label="Designação">{row.designacao || "—"}</BsodDetailItem>
+        <BsodDetailItem label="Produto">{row.produto || "—"}</BsodDetailItem>
+        <BsodDetailItem label="Profile">{row.profile || "—"}</BsodDetailItem>
+        <BsodDetailItem label="Endereço">{row.address || "—"}</BsodDetailItem>
+        <BsodDetailItem label="VLAN BSOD">
+          {row.bsod_vlan != null ? <span className="bsod-vlan-badge">{row.bsod_vlan}</span> : "—"}
+        </BsodDetailItem>
+        <BsodDetailItem label="VLAN operacional">{row.vlan || "—"}</BsodDetailItem>
+        <BsodDetailItem label="TX">
+          <BsodSignalMetric kind="tx" value={row.tx} monitorStatus={row.monitor_status} />
+        </BsodDetailItem>
+        <BsodDetailItem label="RX">
+          <BsodSignalMetric kind="rx" value={row.rx} monitorStatus={row.monitor_status} />
+        </BsodDetailItem>
+        <BsodDetailItem label="MER">
+          <BsodSignalMetric kind="mer" value={row.mer} monitorStatus={row.monitor_status} />
+        </BsodDetailItem>
+        <BsodDetailItem label="Última leitura">
+          <DateTimeStacked value={row.monitor_time} />
+        </BsodDetailItem>
+      </dl>
+    </>
   );
 }
 

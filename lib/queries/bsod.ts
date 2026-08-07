@@ -1,6 +1,6 @@
 import { BSOD_LIST_MAX_PAGE_SIZE, BSOD_LIST_PAGE_SIZE } from "@/lib/config/bsod-pagination";
 import type { RowDataPacket } from "mysql2";
-import { sirQuery } from "@/lib/db/sir";
+import { sirExecute, sirQuery } from "@/lib/db/sir";
 import { getLatestMonitorByMac } from "@/lib/queries/bsod-monitor";
 import { countMergedPmeRows, listMergedPmeRows } from "@/lib/queries/bsod-rows";
 import {
@@ -94,6 +94,44 @@ export async function getPmeBsodByMac(mac: string): Promise<PmeBsodRow | null> {
   const rawMac = String(row.mac);
   const reading = monitorByMac.get(rawMac) ?? monitorByMac.get(rawMac.toUpperCase());
   return serializeRows([mapPmeRow(mergeInventoryWithMonitor(row, reading))])[0];
+}
+
+const MANUAL_FIELD_MAX = 255;
+
+function clipManualField(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .slice(0, MANUAL_FIELD_MAX);
+}
+
+/** Persiste preenchimento manual de cliente/endereço e marca override. */
+export async function updatePmeInventoryManualFields(input: {
+  mac: string;
+  cliente: string;
+  cadastro_responsavel: string;
+  designacao: string;
+  address: string;
+}): Promise<PmeBsodRow | null> {
+  const mac = input.mac.trim();
+  if (!mac) return null;
+
+  const cliente = clipManualField(input.cliente);
+  const cadastro_responsavel = clipManualField(input.cadastro_responsavel);
+  const designacao = clipManualField(input.designacao);
+  const address = clipManualField(input.address);
+
+  const result = await sirExecute(
+    `UPDATE bsod_inventory
+     SET cliente = ?, cadastro_responsavel = ?, designacao = ?, address = ?, manual_override = 1
+     WHERE UPPER(mac) = UPPER(?)`,
+    [cliente, cadastro_responsavel, designacao, address, mac],
+  );
+
+  if (Number(result.affectedRows) < 1) {
+    return null;
+  }
+
+  return getPmeBsodByMac(mac);
 }
 
 /** Testa conectividade SIR para o domínio BSOD (tabelas bsod_*). */

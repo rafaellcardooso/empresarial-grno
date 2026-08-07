@@ -9,8 +9,12 @@ export const BSOD_EXPORT_COLUMNS: CsvColumn<Record<string, unknown>>[] = [
   { key: "node", label: "NODE" },
   { key: "mac", label: "MAC" },
   { key: "contrato", label: "CONTRATO" },
-  { key: "address", label: "ENDEREÇO" },
+  { key: "cliente", label: "CLIENTE" },
+  { key: "cadastro_responsavel", label: "CADASTRO RESPONSÁVEL" },
+  { key: "designacao", label: "DESIGNAÇÃO" },
+  { key: "produto", label: "PRODUTO" },
   { key: "profile", label: "PROFILE" },
+  { key: "address", label: "ENDEREÇO" },
   { key: "bsod_vlan", label: "VLAN BSOD" },
   {
     key: "tx",

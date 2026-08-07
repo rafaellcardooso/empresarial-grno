@@ -48,10 +48,26 @@ export function BsodRecordsTable({
     setTratativas(tratativasByKey);
   }, [tratativasByKey]);
 
+  useEffect(() => {
+    if (!selectedRow) return;
+    const next = rows.find((row) => row.mac === selectedRow.mac);
+    if (next && next !== selectedRow) {
+      setSelectedRow(next);
+    }
+  }, [rows, selectedRow]);
+
   const handlePanelChanged = useCallback(() => {
     router.refresh();
   }, [router]);
 
+  /** Atualiza a linha selecionada após edição manual e recarrega a listagem. */
+  const handleInventorySaved = useCallback(
+    (row: PmeBsodRow) => {
+      setSelectedRow(row);
+      router.refresh();
+    },
+    [router],
+  );
   useEffect(() => {
     if (!selectedRow && !treatKey) return;
     function onKeyDown(event: KeyboardEvent) {
@@ -85,12 +101,12 @@ export function BsodRecordsTable({
           renderBsodCell(key, value, row, setSelectedRow, tratativas, setTreatKey)
         }
       />
-
       <BsodDetalhesPanel
         open={selectedRow != null}
         row={selectedRow}
         onClose={() => setSelectedRow(null)}
-      />
+        onSaved={handleInventorySaved}
+      />{" "}
       <TratativaPanel
         open={treatKey != null}
         domain="BSOD"
