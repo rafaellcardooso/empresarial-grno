@@ -27,14 +27,23 @@ def _snmpwalk_path() -> str | None:
 
 
 def parse_vlan_encap(hex_bytes: bytes, vendor: str) -> int:
-    """Extrai VLAN do Hex-STRING NSI conforme vendor."""
+    """Extrai VLAN do Hex-STRING NSI conforme vendor.
+
+    Cisco costuma devolver 2 bytes (VLAN nos 12 bits baixos).
+    Arris devolve 4 bytes (`00 XX X0 00` → VLAN = value >> 12).
+    Se o perfil CISCO zerar com payload de 4 bytes, tenta a regra Arris
+    (CMTS reclassificados ou JSON desatualizado).
+    """
     if not hex_bytes:
         return 0
     vendor_key = (vendor or "CISCO").strip().upper()
     value = int.from_bytes(hex_bytes, "big")
     if vendor_key == "ARRIS":
         return (value >> 12) & 0x0FFF
-    return value & 0x0FFF
+    vlan = value & 0x0FFF
+    if vlan == 0 and len(hex_bytes) >= 4:
+        return (value >> 12) & 0x0FFF
+    return vlan
 
 
 def _parse_hex_string_payload(line: str) -> bytes | None:
