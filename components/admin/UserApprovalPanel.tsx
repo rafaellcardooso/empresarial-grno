@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { AppUserPublic } from "@/lib/models/app-user";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
+import { apiFetch } from "@/lib/config/base-path";
 
 /** Painel staff para aprovar/rejeitar usuários pendentes. */
 export function UserApprovalPanel() {
@@ -14,7 +15,7 @@ export function UserApprovalPanel() {
   async function loadUsers() {
     setLoading(true);
     try {
-      const response = await fetch("/api/admin/users?pending=1");
+      const response = await apiFetch("/api/admin/users?pending=1");
       const data = (await response.json()) as { users?: AppUserPublic[] };
       setUsers(data.users ?? []);
     } finally {

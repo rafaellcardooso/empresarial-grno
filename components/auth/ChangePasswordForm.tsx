@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
+import { apiFetch } from "@/lib/config/base-path";
 
 type ChangePasswordFormProps = {
   onSuccess?: () => void;
@@ -25,7 +26,7 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/change-password", {
+      const response = await apiFetch("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),

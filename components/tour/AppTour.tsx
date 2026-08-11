@@ -4,6 +4,7 @@ import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { useEffect, useRef } from "react";
 import { APP_TOUR_STEPS } from "@/lib/config/tour-steps";
+import { apiFetch } from "@/lib/config/base-path";
 
 type AppTourProps = {
   shouldRun: boolean;
@@ -28,7 +29,7 @@ export function AppTour({ shouldRun }: AppTourProps) {
         progressText: "{{current}} de {{total}}",
         steps: APP_TOUR_STEPS,
         onDestroyed: () => {
-          fetch("/api/account/tour", { method: "POST" }).catch(() => undefined);
+          apiFetch("/api/account/tour", { method: "POST" }).catch(() => undefined);
         },
       });
 
@@ -55,7 +56,7 @@ export function TourRestartButton() {
       progressText: "{{current}} de {{total}}",
       steps: APP_TOUR_STEPS,
       onDestroyed: () => {
-        fetch("/api/account/tour", { method: "POST" }).catch(() => undefined);
+        apiFetch("/api/account/tour", { method: "POST" }).catch(() => undefined);
       },
     });
     tour.drive();

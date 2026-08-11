@@ -6,6 +6,7 @@ import { AuthLink, AuthShell } from "@/components/auth/AuthShell";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { CORPORATE_ID_HINT, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
+import { apiFetch } from "@/lib/config/base-path";
 
 /** Formulário de cadastro (conta pendente). */
 export function RegisterForm() {
@@ -27,7 +28,7 @@ export function RegisterForm() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await apiFetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

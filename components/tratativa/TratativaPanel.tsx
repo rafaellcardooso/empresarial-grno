@@ -8,6 +8,7 @@ import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 import type { TreatmentDomain, TreatmentSession } from "@/lib/tratativa/treatment-types";
 import { TREATMENT_EVENT_LABELS } from "@/lib/tratativa/treatment-types";
+import { apiFetch } from "@/lib/config/base-path";
 
 type TratativaPanelProps = {
   open: boolean;
@@ -36,7 +37,7 @@ export function TratativaPanel({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/tratativas/open", {
+      const response = await apiFetch("/api/tratativas/open", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain, recordKey }),
@@ -99,7 +100,7 @@ export function TratativaPanel({
           return;
         }
       } else {
-        const response = await fetch("/api/tratativas/observacao", {
+        const response = await apiFetch("/api/tratativas/observacao", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -134,7 +135,7 @@ export function TratativaPanel({
       setError(null);
       try {
         if (action === "conclude") {
-          const response = await fetch("/api/tratativas/concluir", {
+          const response = await apiFetch("/api/tratativas/concluir", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -161,7 +162,7 @@ export function TratativaPanel({
             return;
           }
         } else {
-          const response = await fetch("/api/tratativas/release", {
+          const response = await apiFetch("/api/tratativas/release", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

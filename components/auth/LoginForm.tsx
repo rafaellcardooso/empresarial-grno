@@ -7,6 +7,7 @@ import { LoadingButton } from "@/components/ui/LoadingButton";
 import { applyClientTheme } from "@/lib/auth/theme-client";
 import type { AppTheme } from "@/lib/auth/theme";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
+import { appHref, apiFetch } from "@/lib/config/base-path";
 import { CORPORATE_ID_HINT } from "@/lib/auth/validation";
 
 const REMEMBER_ME_KEY = "emp_remember_me";
@@ -44,7 +45,7 @@ export function LoginForm() {
     }
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
@@ -62,7 +63,7 @@ export function LoginForm() {
       }
 
       const next = searchParams.get("next") || "/";
-      window.location.assign(next);
+      window.location.assign(appHref(next));
       return;
     } catch {
       setError("Erro de conexão. Tente novamente.");

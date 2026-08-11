@@ -1,4 +1,5 @@
 import type { GrbTelnetExecuteResult } from "@/components/grb/grb-telnet-form-types";
+import { apiFetch } from "@/lib/config/base-path";
 
 export type TelnetExecuteRequest = {
   eqpto: string;
@@ -17,7 +18,7 @@ export type TelnetExecuteRequest = {
 export async function executeTelnetPreset(
   body: TelnetExecuteRequest,
 ): Promise<GrbTelnetExecuteResult> {
-  const response = await fetch("/api/grb/execute", {
+  const response = await apiFetch("/api/grb/execute", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

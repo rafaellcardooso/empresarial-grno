@@ -24,6 +24,16 @@ function isStaticAsset(pathname: string): boolean {
   );
 }
 
+/** Monta URL absoluta respeitando `basePath` (evita cair na raiz do host/Nginx). */
+function appAbsoluteUrl(request: NextRequest, path: string): URL {
+  const base = request.nextUrl.basePath || "";
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  const url = request.nextUrl.clone();
+  url.pathname = normalized === "/" ? base || "/" : `${base}${normalized}`;
+  url.search = "";
+  return url;
+}
+
 /** Middleware de autenticação e autorização staff. */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -43,7 +53,7 @@ export async function middleware(request: NextRequest) {
     if (isApi) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = appAbsoluteUrl(request, "/login");
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -54,7 +64,7 @@ export async function middleware(request: NextRequest) {
     if (isApi) {
       return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     }
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(appAbsoluteUrl(request, "/"));
   }
 
   if (
@@ -64,7 +74,7 @@ export async function middleware(request: NextRequest) {
       pathname === "/esqueci-senha" ||
       pathname === "/redefinir-senha")
   ) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(appAbsoluteUrl(request, "/"));
   }
 
   return NextResponse.next();

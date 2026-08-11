@@ -6,6 +6,7 @@ import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic, TratativaWorkflowStatus } from "@/lib/models/tratativa";
 import type { ValidacaoFcaInput } from "@/lib/models/validacao";
 import type { ValidacaoOutcome } from "@/lib/config/tratativa-workflow";
+import { apiFetch } from "@/lib/config/base-path";
 
 type TratativaBsodWorkflowProps = {
   recordKey: string;
@@ -150,7 +151,7 @@ export function TratativaBsodWorkflow({
           onBusyChange(true);
           onError(null);
           try {
-            const response = await fetch("/api/tratativas/validacao", {
+            const response = await apiFetch("/api/tratativas/validacao", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ recordKind: "BSOD", recordKey, outcome, fca }),

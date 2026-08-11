@@ -5,6 +5,7 @@ import type { AppUserPublic } from "@/lib/models/app-user";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { CORPORATE_ID_HINT, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
+import { apiFetch } from "@/lib/config/base-path";
 
 const STATUS_LABELS: Record<AppUserPublic["status"], string> = {
   PENDING: "Pendente",
@@ -402,7 +403,7 @@ export function UserManagementPanel({ currentUserId }: { currentUserId: number }
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/admin/users");
+      const response = await apiFetch("/api/admin/users");
       const data = (await response.json()) as { users?: AppUserPublic[] };
       setUsers(data.users ?? []);
     } finally {
@@ -418,7 +419,7 @@ export function UserManagementPanel({ currentUserId }: { currentUserId: number }
   async function handleSaved() {
     await loadUsers();
     if (editingUser) {
-      const response = await fetch("/api/admin/users");
+      const response = await apiFetch("/api/admin/users");
       const data = (await response.json()) as { users?: AppUserPublic[] };
       const refreshed = data.users?.find((user) => user.id === editingUser.id);
       if (refreshed) {

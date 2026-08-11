@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import type { ShellSessionData } from "@/lib/auth/shell-session";
 import { applyClientTheme } from "@/lib/auth/theme-client";
 import type { AppTheme } from "@/lib/auth/theme";
+import { apiFetch } from "@/lib/config/base-path";
 
 type SessionContextValue = ShellSessionData & {
   setTheme: (theme: AppTheme) => void;
@@ -34,7 +35,7 @@ export function SessionProvider({ initial, children }: SessionProviderProps) {
   const setTheme = useCallback((nextTheme: AppTheme) => {
     setThemeState(nextTheme);
     applyClientTheme(nextTheme);
-    fetch("/api/account/theme", {
+    apiFetch("/api/account/theme", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ theme: nextTheme }),

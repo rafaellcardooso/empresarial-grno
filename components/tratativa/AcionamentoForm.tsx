@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AcionamentoContextCard } from "@/components/tratativa/AcionamentoContextCard";
 import { AcionamentoFormFields } from "@/components/tratativa/AcionamentoFormFields";
 import {
+import { apiFetch } from "@/lib/config/base-path";
   ACIONAMENTO_SCHEDULE_FIELDS,
   ACIONAMENTO_SINTOMA_FIELD,
   ACIONAMENTO_SINTOMA_FIELD_SIR,
@@ -120,7 +121,7 @@ export function AcionamentoForm({
     setCopyOk(false);
     setCopyWarning(null);
     try {
-      const response = await fetch("/api/tratativas/acionamento", {
+      const response = await apiFetch("/api/tratativas/acionamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recordKind, recordKey, technician }),

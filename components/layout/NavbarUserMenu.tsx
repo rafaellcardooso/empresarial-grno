@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/layout/SessionProvider";
+import { apiFetch } from "@/lib/config/base-path";
 
 /** Menu do usuário logado na navbar. */
 export function NavbarUserMenu() {
@@ -25,7 +26,7 @@ export function NavbarUserMenu() {
 
   /** Encerra sessão e redireciona para login. */
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await apiFetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
   }

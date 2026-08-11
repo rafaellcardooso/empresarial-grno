@@ -1,4 +1,5 @@
 import type { AppTheme } from "@/lib/auth/theme";
+import { apiFetch } from "@/lib/config/base-path";
 
 /** Aplica tema no documento e cache local (fallback em telas públicas). */
 export function applyClientTheme(theme: AppTheme): void {
@@ -26,7 +27,7 @@ export function readStoredClientTheme(): AppTheme {
 /** Persiste tema no perfil do usuário logado. */
 export async function persistUserTheme(theme: AppTheme): Promise<void> {
   applyClientTheme(theme);
-  await fetch("/api/account/theme", {
+  await apiFetch("/api/account/theme", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ theme }),
@@ -36,7 +37,7 @@ export async function persistUserTheme(theme: AppTheme): Promise<void> {
 /** Carrega tema preferido do usuário autenticado. */
 export async function loadAuthenticatedTheme(): Promise<AppTheme> {
   try {
-    const response = await fetch("/api/auth/me");
+    const response = await apiFetch("/api/auth/me");
     if (!response.ok) {
       return readStoredClientTheme();
     }
