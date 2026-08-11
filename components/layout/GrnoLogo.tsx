@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { withBasePath } from "@/lib/config/base-path";
 
 /** Link da marca GRNO/Claro na navbar. */
 export function GrnoLogo() {
@@ -10,7 +11,13 @@ export function GrnoLogo() {
       title="Empresarial GRNO"
     >
       <div className="bg-white rounded p-1 d-flex align-items-center justify-content-center">
-        <Image src="/assets/img/logo-claro.png" alt="Claro" width={37} height={35} priority />
+        <Image
+          src={withBasePath("/assets/img/logo-claro.png")}
+          alt="Claro"
+          width={37}
+          height={35}
+          priority
+        />
         <span className="fw-bold ms-1 d-none d-lg-inline" style={{ color: "#333" }}>
           GR<span style={{ color: "#da0000" }}>NO</span>
         </span>
