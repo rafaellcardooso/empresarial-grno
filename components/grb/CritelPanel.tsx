@@ -3,7 +3,6 @@
 import { FormEvent, useMemo, useState } from "react";
 import { ContentCard } from "@/components/ui/ContentCard";
 import {
-import { apiFetch } from "@/lib/config/base-path";
   CRITEL_DEFAULT_GRAPH_KIND,
   CRITEL_DEFAULT_GRAPH_TYPE,
   CRITEL_DEFAULT_RANGE,
@@ -15,6 +14,7 @@ import { apiFetch } from "@/lib/config/base-path";
   type CritelGraphKind,
   type CritelSearchMatch,
 } from "@/lib/config/critel";
+import { apiFetch } from "@/lib/config/base-path";
 
 type CritelPanelProps = {
   configured: boolean;

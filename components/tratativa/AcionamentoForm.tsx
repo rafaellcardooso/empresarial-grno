@@ -4,12 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AcionamentoContextCard } from "@/components/tratativa/AcionamentoContextCard";
 import { AcionamentoFormFields } from "@/components/tratativa/AcionamentoFormFields";
 import {
-import { apiFetch } from "@/lib/config/base-path";
   ACIONAMENTO_SCHEDULE_FIELDS,
   ACIONAMENTO_SINTOMA_FIELD,
   ACIONAMENTO_SINTOMA_FIELD_SIR,
   ACIONAMENTO_TECHNICIAN_FIELDS,
 } from "@/lib/config/acionamento-form";
+import { apiFetch } from "@/lib/config/base-path";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import { copyTextToClipboard } from "@/lib/browser/clipboard";
 import type {
