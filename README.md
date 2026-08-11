@@ -28,7 +28,7 @@ npm run db:bootstrap
 npm run db:migrate && npm run db:import   # lab; NÃO use db:import em prod
 npm run db:seed-staff
 npm run env:check
-npm run dev    # http://localhost:3003
+npm run dev    # http://localhost:4001/empresarial
 ```
 
 Passo a passo: [docs/getting-started/development.md](docs/getting-started/development.md).
@@ -45,7 +45,7 @@ npm run validate   # pre-push (format:check + lint)
 
 Modelo: **SSH + systemd**. Checklist: [docs/runbooks/production-install.md](docs/runbooks/production-install.md) · release: [docs/runbooks/production-release.md](docs/runbooks/production-release.md) · units: [deploy/README.md](deploy/README.md).
 
-Porta **3003** · usuário típico **`datacenter`**. Não use units `*-lab*` em produção.
+Next em **4001** com `basePath` **`/empresarial`** (Nginx no portal) · usuário típico **`datacenter`**. Não use units `*-lab*` em produção.
 
 ## Regras
 

@@ -44,7 +44,7 @@ Valores devem ser idênticos em `.env.local`, `workers/sir-ingest/.env` e `worke
 | ------------- | ------------------------------------------------------------ |
 | Senha/token   | `troque_me` ou vazio                                         |
 | Dev SIR local | `monitor` (mesmo do HFC) / `claroEmpresarial` / porta `3306` |
-| URL interna   | `http://127.0.0.1:3003/api`                                  |
+| URL interna   | `http://127.0.0.1:4001/empresarial/api`                      |
 
 ## Validação
 

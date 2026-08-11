@@ -101,7 +101,7 @@ if [[ "$PROFILE" == "auto" ]]; then
 fi
 
 EXPECTED_LAB=(
-  "empresarial-next-lab|svc|Next.js (dev, porta 3003)"
+  "empresarial-next-lab|svc|Next.js (dev, porta 4001 /empresarial)"
   "sir-ingest-ral-lab|svc|Scrape RAL → SIR"
   "sir-ingest-rec-lab|svc|Scrape REC → SIR"
   "sir-telegram-ops-lab|svc|Bot Telegram ops"
@@ -111,7 +111,7 @@ EXPECTED_LAB=(
 )
 
 EXPECTED_PROD=(
-  "empresarial-next|svc|Next.js (start, porta 3003)"
+  "empresarial-next|svc|Next.js (start, porta 4001 /empresarial)"
   "sir-ingest-ral|svc|Scrape RAL → SIR"
   "sir-ingest-rec|svc|Scrape REC → SIR"
   "sir-telegram-ops|svc|Bot Telegram ops"

@@ -56,8 +56,8 @@ command -v snmpwalk >/dev/null && echo "snmpwalk ok" || echo "FALTA snmpwalk"
 ## 6. Saúde da app
 
 ```bash
-curl -s http://127.0.0.1:3003/api/saude | jq
-curl -s http://127.0.0.1:3003/api/rals | jq '.status, .total_registros'
+curl -s http://127.0.0.1:4001/empresarial/api/saude | jq
+curl -s http://127.0.0.1:4001/empresarial/api/rals | jq '.status, .total_registros'
 ```
 
 ## Decisão

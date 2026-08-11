@@ -1,6 +1,6 @@
 # Runbook — bots Telegram SIR
 
-> Última revisão: **2026-07-30** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
 
 Bots em `workers/sir-ingest/telegram/`. Consomem HTTP do Next; **não** gravam MySQL.
 
@@ -21,7 +21,8 @@ Bots em `workers/sir-ingest/telegram/`. Consomem HTTP do Next; **não** gravam M
 | `TELEGRAM_OPS_BOT_TOKEN` / `TELEGRAM_OPS_CHAT_ID`               | Bot ops                             |
 | `TELEGRAM_OPS_DASHBOARD_INTERVAL_MS`                            | Default 6 h                         |
 | `TELEGRAM_DATACENTER_BOT_TOKEN` / `TELEGRAM_DATACENTER_CHAT_ID` | Notify                              |
-| `EMPRESARIAL_API_URL`                                           | Default `http://127.0.0.1:3003/api` |
+| `EMPRESARIAL_API_URL`                                           | Default `http://127.0.0.1:4001/empresarial/api` |
+
 | `SIR_DATACENTER_POLL_MS`                                        | Default 60 s                        |
 
 ## Produção

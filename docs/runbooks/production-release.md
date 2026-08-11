@@ -44,8 +44,8 @@ Evite o atalho que reinicia ingest em todo release — interrompe o ciclo de scr
 ## Smoke pós-release
 
 ```bash
-curl -s http://127.0.0.1:3003/api/saude | jq
-curl -s http://127.0.0.1:3003/api/rals | jq '.status, .total_registros'
+curl -s http://127.0.0.1:4001/empresarial/api/saude | jq
+curl -s http://127.0.0.1:4001/empresarial/api/rals | jq '.status, .total_registros'
 sudo systemctl status empresarial-next --no-pager
 ```
 

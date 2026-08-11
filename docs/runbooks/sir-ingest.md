@@ -25,7 +25,7 @@ Units `sir-ingest-*-lab` — ver [../getting-started/development.md](../getting-
 ```bash
 sudo journalctl -u sir-ingest-ral -u sir-ingest-rec -n 40 --no-pager
 sudo journalctl -u sir-ingest-ral --since today | grep scrape_cycle
-curl -s http://127.0.0.1:3003/api/rals | jq '.status, .total_registros'
+curl -s http://127.0.0.1:4001/empresarial/api/rals | jq '.status, .total_registros'
 ```
 
 `states/*.json` é runtime local e **não** entra no git.

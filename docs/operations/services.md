@@ -8,7 +8,7 @@ Inventário canônico das units. Instalação e restart: runbooks. Troubleshooti
 
 | Unit                      | Processo               | Efeito                              |
 | ------------------------- | ---------------------- | ----------------------------------- |
-| `empresarial-next`        | `npm run start`        | Next 15 na **3003**                 |
+| `empresarial-next`        | `npm run start`        | Next 15 na **4001** (`/empresarial`) |
 | `sir-ingest-ral`          | `AlertasRalRede.js`    | Grava `rals`                        |
 | `sir-ingest-rec`          | `AlertasRecRede.js`    | Grava `recs` (offset 90s)           |
 | `sir-telegram-ops`        | `main-ops-bot.py`      | Bot operacional + dashboard         |
@@ -32,6 +32,8 @@ Checagem rápida no host:
 ```
 
 `empresarial-next` exige `EnvironmentFile=/usr/local/empresarial/.env.local` (obrigatório — sem `-`).
+A unit do repo define `HOSTNAME=0.0.0.0` e `PORT=4001` **depois** do `EnvironmentFile` (acesso direto `:4001` / pfSense).
+Se o Node for via **nvm**, não sobrescreva a unit instalada com um `cp` cego: preserve `PATH` + `ExecStart` absolutos do npm do nvm.
 
 ## Lab (`User=rcard`)
 

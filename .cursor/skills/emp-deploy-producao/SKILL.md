@@ -27,6 +27,6 @@ Seguir os runbooks — **não** inventar roteiro paralelo nem afirmar status Lab
 1. Confirmar ambiente (prod `datacenter` vs lab `*-lab*` / `rcard`).
 2. Se status do host for incerto → inventário primeiro.
 3. Backup opcional de schema/env antes de DDL ou troca de secrets.
-4. Release típico: `git pull` → `npm ci` → `env:check` se necessário → `db:migrate` se necessário → `build` → restart seletivo → smoke (`api/saude`, `.status`/`.total_registros` em `/api/rals`).
+4. Release típico: `git pull` → `npm ci` → `env:check` se necessário → `db:migrate` se necessário → `build` → restart seletivo → smoke (`/empresarial/api/saude`, `.status`/`.total_registros` em `/empresarial/api/rals`).
 5. Ordem: env → DDL → build → Next OK → ingest/TMIP/BSOD → bots.
 6. Não copiar secrets lab→prod; não misturar units lab/prod; não usar `db:import` em prod.

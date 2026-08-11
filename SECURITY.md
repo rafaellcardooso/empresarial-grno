@@ -15,7 +15,7 @@ Expectativa: triagem pelo staff do repositório; não há SLA público formal ne
 
 ## Escopo
 
-Cobre o monorepo Empresarial (Next, workers SIR/TMIP, bots Telegram, units systemd) e a exposição das APIs na porta **3003**.
+Cobre o monorepo Empresarial (Next, workers SIR/TMIP, bots Telegram, units systemd) e a exposição das APIs na porta **4001** (path `/empresarial`, tipicamente atrás do Nginx do portal).
 
 ## Práticas do repositório
 

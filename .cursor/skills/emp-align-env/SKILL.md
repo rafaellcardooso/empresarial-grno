@@ -40,13 +40,14 @@ cd ../.. && npm run env:check
 
 ## Cross-check
 
-- `PORT=3003` ↔ `EMPRESARIAL_API_URL=http://127.0.0.1:3003/api`
+- `PORT=4001` ↔ `EMPRESARIAL_API_URL=http://127.0.0.1:4001/empresarial/api`
+- `NEXT_PUBLIC_BASE_PATH=/empresarial` ↔ `next.config.ts` `basePath`
 - `SIR_DB_*` idêntico entre Next e workers (`sir-ingest`, `tmip`)
 
 ## Saúde
 
 ```bash
-curl -s http://127.0.0.1:3003/api/saude | jq
+curl -s http://127.0.0.1:4001/empresarial/api/saude | jq
 ```
 
 Deploy: skill `emp-deploy-producao` · runbooks em `docs/runbooks/` · config: `docs/reference/configuration.md`.

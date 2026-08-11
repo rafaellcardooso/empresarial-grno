@@ -74,8 +74,8 @@ Melhorias em relação ao fluxo anterior:
 ```bash
 journalctl -u sir-ingest-ral -u sir-ingest-rec -f
 journalctl -u sir-ingest-ral --since today | grep scrape_cycle
-curl -s http://127.0.0.1:3003/api/saude | jq
-curl -s http://127.0.0.1:3003/api/rals | jq '.status, .total_registros'
+curl -s http://127.0.0.1:4001/empresarial/api/saude | jq
+curl -s http://127.0.0.1:4001/empresarial/api/rals | jq '.status, .total_registros'
 ```
 
 ### Variáveis úteis

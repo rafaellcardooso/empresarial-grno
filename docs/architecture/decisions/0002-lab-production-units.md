@@ -5,7 +5,7 @@
 
 ## Contexto
 
-Lab (WSL) e produção compartilham o mesmo path `/usr/local/empresarial` e a porta 3003. Misturar units causa conflito de processo, `states/` e permissões.
+Lab (WSL) e produção compartilham o mesmo path `/usr/local/empresarial` e a porta Next (hoje **4001**, path `/empresarial`). Misturar units causa conflito de processo, `states/` e permissões.
 
 ## Decisão
 

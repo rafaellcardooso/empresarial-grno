@@ -1,6 +1,6 @@
 # Arquitetura — Empresarial GRNO
 
-> Última revisão: **2026-07-30** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
 
 Visão estrutural do monorepo: fronteiras de escrita, fluxos de dados e responsabilidades por camada.
 
@@ -17,7 +17,7 @@ flowchart TB
     telegram[Bots Telegram]
   end
 
-  subgraph next [Next.js :3003]
+  subgraph next [Next.js :4001 /empresarial]
     ui[UI App Router]
     bff[BFF app/api]
   end
@@ -110,4 +110,4 @@ Rankings sensíveis ficam restritos a `STAFF`.
 | Release    | [../runbooks/production-release.md](../runbooks/production-release.md)     | restart seletivo                       |
 | Inventário | [../runbooks/production-inventory.md](../runbooks/production-inventory.md) | verificar host antes de assumir status |
 
-Porta padrão: **3003**.
+Porta Next: **4001** · `basePath` **`/empresarial`** (Nginx no portal).

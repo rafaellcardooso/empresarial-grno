@@ -6,7 +6,7 @@ Ambiente de **lab** (WSL ou Debian de desenvolvimento): usuário típico **`rcar
 
 Produção: [../runbooks/production-install.md](../runbooks/production-install.md).
 
-**Não** misture units lab e prod no mesmo host (porta **3003** e `states/` do ingest).
+**Não** misture units lab e prod no mesmo host (porta **4001**, path `/empresarial` e `states/` do ingest).
 
 ## Pré-requisitos
 
@@ -33,7 +33,7 @@ Ver [database.md](database.md). Em lab: `db:import` ok. Em prod: **proibido**.
 ## Next.js
 
 ```bash
-npm run dev    # http://127.0.0.1:3003
+npm run dev    # http://127.0.0.1:4001/empresarial
 ```
 
 Ou unit:
@@ -54,8 +54,8 @@ sudo systemctl enable --now empresarial-next-lab
 ## Validação
 
 ```bash
-curl -s http://127.0.0.1:3003/api/saude | jq
-curl -s http://127.0.0.1:3003/api/rals | jq '.status, .total_registros'
+curl -s http://127.0.0.1:4001/empresarial/api/saude | jq
+curl -s http://127.0.0.1:4001/empresarial/api/rals | jq '.status, .total_registros'
 ```
 
 ## Atualização no lab

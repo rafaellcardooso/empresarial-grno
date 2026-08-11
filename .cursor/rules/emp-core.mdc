@@ -22,7 +22,7 @@ Monorepo em `/usr/local/empresarial`. Workers gravam tabelas-fonte; Next lê SIR
 - **Não** colocar Selenium, scrapers ou bots dentro de `app/`.
 - **Não** escrever no MySQL do `hfc-sls` a partir deste repo.
 - Detalhe: `docs/architecture/data-and-write-boundaries.md`.
-- Porta padrão: **3003**.
+- Porta Next: **4001** · basePath **`/empresarial`** (Nginx no portal).
 - Documentação: `docs/README.md` · deploy: `docs/runbooks/production-*.md` + `docs/operations/`.
 - Passos no host: atualizar runbook relevante; histórico opcional em `docs/changes/`.
 

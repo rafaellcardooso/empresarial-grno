@@ -26,9 +26,9 @@
 Smoke mínimo:
 
 ```bash
-curl -s http://127.0.0.1:3003/api/saude | jq
-curl -s http://127.0.0.1:3003/api/rals | jq '.status, .total_registros'
-curl -s http://127.0.0.1:3003/api/rals/contagem_por_cf | jq '.status'
+curl -s http://127.0.0.1:4001/empresarial/api/saude | jq
+curl -s http://127.0.0.1:4001/empresarial/api/rals | jq '.status, .total_registros'
+curl -s http://127.0.0.1:4001/empresarial/api/rals/contagem_por_cf | jq '.status'
 ```
 
 `/api/sdh` e exports CSV exigem sessão autenticada — não use curl anônimo como prova de saúde SDH.

@@ -4,7 +4,7 @@ import os
 
 import aiohttp
 
-DEFAULT_API_BASE = "http://127.0.0.1:3003/api"
+DEFAULT_API_BASE = "http://127.0.0.1:4001/empresarial/api"
 
 
 def api_base_url() -> str:

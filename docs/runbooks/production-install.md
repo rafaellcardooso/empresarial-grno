@@ -2,7 +2,7 @@
 
 > Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
 
-Primeira instalação em host Debian/Linux. Usuário **`datacenter`**, path **`/usr/local/empresarial`**, porta **3003**.
+Primeira instalação em host Debian/Linux. Usuário **`datacenter`**, path **`/usr/local/empresarial`**, Next na porta **4001** com `basePath` **`/empresarial`** (Nginx do portal).
 
 Lab: [../getting-started/development.md](../getting-started/development.md). Release depois: [production-release.md](production-release.md).
 
@@ -45,6 +45,8 @@ npm ci                 # lockfile; inclui devDependencies (necessárias ao build
 ```bash
 cp .env.example .env.local
 # Editar: SIR_DB_*, HFC_DB_*, AUTH_SECRET, APP_PUBLIC_URL
+# APP_PUBLIC_URL público via portal (ex. http://192.168.95.40/empresarial)
+# PORT=4001 · NEXT_PUBLIC_BASE_PATH=/empresarial
 # GRB_BASE_URL, CRITEL_BASE_URL se usar TELNET/gráficos
 
 cp workers/sir-ingest/.env.example workers/sir-ingest/.env
@@ -139,6 +141,8 @@ Tokens em `workers/sir-ingest/.env` — ver [telegram-bots.md](telegram-bots.md)
 ```bash
 cd /usr/local/empresarial
 sudo cp deploy/systemd/empresarial-next.service /etc/systemd/system/
+# Se o host usa nvm: editar a unit instalada — PATH do nvm + ExecStart=/…/nvm/…/bin/npm run start
+# (não voltar a /usr/bin/npm). Manter Environment=HOSTNAME=0.0.0.0 e PORT=4001.
 sudo cp workers/sir-ingest/deploy/systemd/sir-ingest-ral.service /etc/systemd/system/
 sudo cp workers/sir-ingest/deploy/systemd/sir-ingest-rec.service /etc/systemd/system/
 sudo cp workers/sir-ingest/deploy/systemd/sir-telegram-ops.service /etc/systemd/system/
@@ -180,9 +184,9 @@ sudo systemctl status empresarial-next sir-ingest-ral sir-ingest-rec \
   sir-telegram-ops sir-telegram-datacenter
 sudo systemctl list-timers 'tmip-ingest*' 'bsod-ingest*'
 
-curl -s http://127.0.0.1:3003/api/saude | jq
-curl -s http://127.0.0.1:3003/api/rals | jq '.status, .total_registros'
-curl -s http://127.0.0.1:3003/api/rals/contagem_por_cf | jq '.status'
+curl -s http://127.0.0.1:4001/empresarial/api/saude | jq
+curl -s http://127.0.0.1:4001/empresarial/api/rals | jq '.status, .total_registros'
+curl -s http://127.0.0.1:4001/empresarial/api/rals/contagem_por_cf | jq '.status'
 
 sudo journalctl -u sir-ingest-ral -n 30 --no-pager
 sudo journalctl -u tmip-ingest -n 30 --no-pager
@@ -206,3 +210,4 @@ telegram/venv/bin/python3 telegram/send-management-dashboard.py --dry-run
 - Inventário de host: [production-inventory.md](production-inventory.md)
 - Rollback: [rollback.md](rollback.md)
 - BSOD: [bsod-ingest.md](bsod-ingest.md)
+- Nginx / porta: [../operations/deployment.md](../operations/deployment.md)

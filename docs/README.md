@@ -30,7 +30,7 @@ flowchart LR
   hub --> hist[changes]
 ```
 
-**Lab** e **produção** usam o mesmo repo e a porta **3003**, mas usuários, units systemd e carga de dados são diferentes — não misture units `*-lab*` com units de prod no mesmo host.
+**Lab** e **produção** usam o mesmo repo, porta **4001** e path **`/empresarial`**, mas usuários, units systemd e carga de dados são diferentes — não misture units `*-lab*` com units de prod no mesmo host.
 
 ---
 

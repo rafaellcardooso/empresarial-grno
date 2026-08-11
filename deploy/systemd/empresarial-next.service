@@ -8,8 +8,12 @@ User=datacenter
 Group=datacenter
 WorkingDirectory=/usr/local/empresarial
 Environment=NODE_ENV=production
-Environment=PORT=3003
+# EnvironmentFile primeiro; HOSTNAME/PORT abaixo sobrescrevem o .env.local se necessário.
 EnvironmentFile=/usr/local/empresarial/.env.local
+# 0.0.0.0: acesso direto :4001 (pfSense / VPN). Nginx do portal continua em 127.0.0.1:4001.
+Environment=HOSTNAME=0.0.0.0
+Environment=PORT=4001
+# Hosts com Node via nvm: definir PATH do nvm e ExecStart absoluto do npm (não /usr/bin/npm).
 ExecStart=/usr/bin/npm run start
 Restart=on-failure
 RestartSec=10
