@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { GRB_DEFAULT_ID_REDE } from "@/lib/config/grb";
+import { apiFetch } from "@/lib/config/base-path";
 
 type UseGrbTelnetInterfacesInput = {
   baseUrl: string;
@@ -30,7 +31,7 @@ export function useGrbTelnetInterfaces({ baseUrl, eqpto }: UseGrbTelnetInterface
       id_rede: String(GRB_DEFAULT_ID_REDE),
     });
 
-    fetch(`/api/grb/interfaces?${params.toString()}`, { signal: controller.signal })
+    apiFetch(`/api/grb/interfaces?${params.toString()}`, { signal: controller.signal })
       .then(async (response) => {
         const payload = (await response.json()) as {
           interfaces?: string[];

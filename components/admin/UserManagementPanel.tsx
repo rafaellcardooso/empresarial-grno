@@ -79,7 +79,7 @@ function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalP
     setChangingRole(true);
 
     try {
-      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
+      const response = await apiFetch(`/api/admin/users/${editingUser.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
@@ -110,7 +110,7 @@ function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalP
     setSavingProfile(true);
 
     try {
-      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
+      const response = await apiFetch(`/api/admin/users/${editingUser.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,7 +143,7 @@ function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalP
     setResettingPassword(true);
 
     try {
-      const response = await fetch(`/api/admin/users/${editingUser.id}/reset-password`, {
+      const response = await apiFetch(`/api/admin/users/${editingUser.id}/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: newPassword, confirmPassword }),
@@ -179,7 +179,7 @@ function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEditModalP
     setDeleting(true);
 
     try {
-      const response = await fetch(`/api/admin/users/${editingUser.id}`, { method: "DELETE" });
+      const response = await apiFetch(`/api/admin/users/${editingUser.id}`, { method: "DELETE" });
       const data = (await response.json()) as { error?: string };
 
       if (!response.ok) {

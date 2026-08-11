@@ -41,7 +41,7 @@ export function TratativaBsodWorkflow({
       onBusyChange(true);
       onError(null);
       try {
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ recordKind: "BSOD", recordKey, ...body }),

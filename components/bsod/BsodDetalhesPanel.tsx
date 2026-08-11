@@ -7,6 +7,7 @@ import {
   buildBsodVlanCompareBadges,
 } from "@/components/bsod/bsod-table-cells";
 import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
+import { apiFetch } from "@/lib/config/base-path";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
 
 type BsodDetalhesPanelProps = {
@@ -106,7 +107,7 @@ function BsodDetalhesBody({
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch(`/api/bsod/inventory/${encodeURIComponent(row.mac)}`, {
+      const response = await apiFetch(`/api/bsod/inventory/${encodeURIComponent(row.mac)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

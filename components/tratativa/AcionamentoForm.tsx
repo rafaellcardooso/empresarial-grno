@@ -74,7 +74,7 @@ export function AcionamentoForm({
     setTechnician(EMPTY_TECHNICIAN);
 
     const params = new URLSearchParams({ kind: recordKind, key: recordKey });
-    fetch(`/api/tratativas/acionamento/context?${params.toString()}`)
+    apiFetch(`/api/tratativas/acionamento/context?${params.toString()}`)
       .then(async (response) => {
         const payload = (await response.json()) as {
           context?: AcionamentoContext;

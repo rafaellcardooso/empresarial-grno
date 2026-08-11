@@ -30,7 +30,7 @@ export function UserApprovalPanel() {
   /** Executa ação staff sobre usuário. */
   async function handleAction(userId: number, action: "approve" | "reject") {
     setMessage(null);
-    const response = await fetch(`/api/admin/users/${userId}`, {
+    const response = await apiFetch(`/api/admin/users/${userId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),

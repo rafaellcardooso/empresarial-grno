@@ -10,6 +10,7 @@ import { TratativaStatusCell } from "@/components/tratativa/TratativaStandardCel
 import { TratativaTreatButton } from "@/components/tratativa/TratativaTreatButton";
 import { formatDateTimeDisplay } from "@/components/ui/DateTimeStacked";
 import { SortableDataTable, type SortableColumn } from "@/components/ui/SortableDataTable";
+import { apiFetch } from "@/lib/config/base-path";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 import { normalizeTratativaKey } from "@/lib/tratativa/keys";
@@ -61,10 +62,20 @@ export function SirRecordsTable({
 
       try {
         const segment = recordLabel === "RAL" ? "rals" : "recs";
-        const response = await fetch(`/api/sir/${segment}/${encodeURIComponent(numRecup)}`);
+        const response = await apiFetch(`/api/sir/${segment}/${encodeURIComponent(numRecup)}`);
         const payload = (await response.json()) as {
           data?: Record<string, unknown>;
+          mensagem?: string;
         };
+        if (!response.ok) {
+          setSelected({
+            numRecup,
+            row,
+            text: payload.mensagem ?? "Não foi possível carregar os detalhes.",
+            loading: false,
+          });
+          return;
+        }
         const text =
           recordLabel === "RAL"
             ? String(payload.data?.detalhes ?? "—")

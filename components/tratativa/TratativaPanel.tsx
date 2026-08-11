@@ -89,7 +89,7 @@ export function TratativaPanel({
     setError(null);
     try {
       if (session.domain === "SDH") {
-        const response = await fetch(`/api/sdh/${session.recordKey}/status`, {
+        const response = await apiFetch(`/api/sdh/${session.recordKey}/status`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ emTratativa: true, observacao: note.trim() }),
@@ -151,7 +151,7 @@ export function TratativaPanel({
           }
         } else if (session.domain === "SDH") {
           const observacao = note.trim() || "Encerramento via painel Tratar.";
-          const response = await fetch(`/api/sdh/${session.recordKey}/status`, {
+          const response = await apiFetch(`/api/sdh/${session.recordKey}/status`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ emTratativa: false, observacao }),

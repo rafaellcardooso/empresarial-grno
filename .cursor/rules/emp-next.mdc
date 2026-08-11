@@ -20,6 +20,8 @@ alwaysApply: false
 - Config de nav/textos: `lib/config/`.
 - Regras de copy e ícones: rule `emp-ui`.
 - Preferir Server Components para listagens; Client Components só para interatividade.
+- **Client `fetch` para `/api/…`**: usar `apiFetch` / `fetchJson` (`lib/config/base-path`, `lib/http/fetch-json`) — nunca `fetch('/api/…')` cru (quebra com `basePath` `/empresarial`).
+- `next/link` e `router.push('/…')` já aplicam `basePath`; não prefixar `/empresarial` manualmente nesses casos.
 
 ## O que evitar
 

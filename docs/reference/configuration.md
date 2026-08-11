@@ -29,5 +29,7 @@ Placeholders nos examples — nunca secrets reais no git.
 
 Portal Nginx: [../operations/deployment.md](../operations/deployment.md) (`/empresarial` → `127.0.0.1:4001`).
 
+`NEXT_PUBLIC_BASE_PATH` alimenta `next.config.ts` **e** `apiFetch` / `fetchJson` no browser. Sem o prefixo, `fetch('/api/…')` cai fora do Next no portal. Links (`next/link`) e `router.push` já recebem o `basePath` automaticamente.
+
 Detalhe operacional BSOD: [../runbooks/bsod-ingest.md](../runbooks/bsod-ingest.md).  
 Regras: `.cursor/rules/emp-env.mdc` · skill `emp-align-env`.

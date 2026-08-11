@@ -21,6 +21,8 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 - Ingest BSOD (`bsod-ingest.timer`) incluído em install/inventory, `deploy/README`, lab e troubleshooting.
 - Next em **4001** com `basePath` `/empresarial` (Nginx); docs, units e `EMPRESARIAL_API_URL` alinhados.
 - Unit `empresarial-next`: `HOSTNAME=0.0.0.0` para acesso direto `:4001` (pfSense); nota nvm no install.
+- Client `fetch` de RAL/REC detalhes e demais APIs passam por `apiFetch` (respeitam `/empresarial`).
+- `fetchJson` (notificações) e default de `NEXT_PUBLIC_BASE_PATH` alinhados ao `basePath` do Next.
 
 ## [2026-07-30]
 

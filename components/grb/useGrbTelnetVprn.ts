@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { GrbTelnetVprnFieldState } from "@/components/grb/grb-telnet-form-types";
+import { apiFetch } from "@/lib/config/base-path";
 import { GRB_DEFAULT_ID_REDE } from "@/lib/config/grb";
 import { resolveVprnServiceId, type VprnEntry } from "@/lib/grb/telnet-vprn";
 
@@ -54,7 +55,7 @@ export function useGrbTelnetVprn({
         eqpto,
         id_rede: String(GRB_DEFAULT_ID_REDE),
       });
-      const response = await fetch(`/api/grb/vprn?${params.toString()}`);
+      const response = await apiFetch(`/api/grb/vprn?${params.toString()}`);
       const payload = (await response.json()) as {
         entries?: VprnEntry[];
         error?: string;

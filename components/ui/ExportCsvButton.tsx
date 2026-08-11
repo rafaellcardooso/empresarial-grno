@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiFetch } from "@/lib/config/base-path";
 import { parseContentDispositionFilename } from "@/lib/export/download";
 
 type ExportCsvButtonProps = {
@@ -25,7 +26,7 @@ export function ExportCsvButton({
     setError(null);
 
     try {
-      const response = await fetch(href, { credentials: "include" });
+      const response = await apiFetch(href, { credentials: "include" });
       if (!response.ok) {
         let detail = `HTTP ${response.status}`;
         try {

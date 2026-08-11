@@ -1,5 +1,7 @@
-/** Prefixo público Next (`basePath`); vazio se a app roda na raiz. */
-export const APP_BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(
+/** Prefixo público Next (`basePath`); vazio se a app roda na raiz.
+ * Deve coincidir com `next.config.ts` / `NEXT_PUBLIC_BASE_PATH` (default `/empresarial`).
+ */
+export const APP_BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH ?? "/empresarial").replace(
   /\/$/,
   "",
 );
