@@ -1,6 +1,6 @@
 # Runbook — instalação de produção
 
-> Última revisão: **2026-07-30** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
 
 Primeira instalação em host Debian/Linux. Usuário **`datacenter`**, path **`/usr/local/empresarial`**, porta **3003**.
 
@@ -12,13 +12,14 @@ Lab: [../getting-started/development.md](../getting-started/development.md). Rel
 
 ## 1. Pré-requisitos
 
-| Item                 | Notas                                               |
-| -------------------- | --------------------------------------------------- |
-| Node.js 20+          | `node -v` / `npm -v`                                |
-| MariaDB/MySQL        | Banco SIR + leitura HFC                             |
-| Git                  | Clone em `/usr/local/empresarial`                   |
-| Usuário `datacenter` | Dono do repo, units e Playwright                    |
-| Rede                 | GRB/Critel, portal SIR, SFTP TMIP, HFC conforme uso |
+| Item                 | Notas                                                                  |
+| -------------------- | ---------------------------------------------------------------------- |
+| Node.js 20+          | `node -v` / `npm -v`                                                   |
+| MariaDB/MySQL        | Banco SIR + leitura HFC                                                |
+| Git                  | Clone em `/usr/local/empresarial`                                      |
+| Usuário `datacenter` | Dono do repo, units e Playwright                                       |
+| `snmpwalk`           | Pacote `snmp` — necessário ao ingest BSOD                              |
+| Rede                 | GRB/Critel, portal SIR, SFTP TMIP, HFC, Xpertrak/CMTS/LDAP/nocclaro BSOD |
 
 ```bash
 sudo mkdir -p /usr/local/empresarial
@@ -52,10 +53,14 @@ cp workers/sir-ingest/.env.example workers/sir-ingest/.env
 cp workers/tmip/.env.example workers/tmip/.env
 # Editar: SIR_DB_* (iguais), SFTP_*
 
+cp workers/bsod/.env.example workers/bsod/.env
+# Editar: SIR_DB_* (iguais), BSOD_<OPE>_*, BSOD_NOCCLARO_*
+# env:check não cobre BSOD — alinhar manualmente com o example
+
 npm run env:check
 ```
 
-Detalhes: [../reference/configuration.md](../reference/configuration.md).
+Detalhes: [../reference/configuration.md](../reference/configuration.md). BSOD: [bsod-ingest.md](bsod-ingest.md).
 
 ---
 
@@ -103,7 +108,21 @@ venv/bin/python ingest_sdh.py   # smoke oneshot opcional
 
 ---
 
-## 7. Telegram (venv)
+## 7. Worker BSOD
+
+```bash
+cd /usr/local/empresarial/workers/bsod
+python3 -m venv venv
+venv/bin/pip install -r requirements.txt
+# conferir SIR_DB_*, BSOD_<OPE>_*, BSOD_NOCCLARO_*
+# smoke opcional: venv/bin/python run_bsod_cycle.py --ope sls --force
+```
+
+Detalhe: [bsod-ingest.md](bsod-ingest.md).
+
+---
+
+## 8. Telegram (venv)
 
 ```bash
 cd /usr/local/empresarial/workers/sir-ingest/telegram
@@ -115,7 +134,7 @@ Tokens em `workers/sir-ingest/.env` — ver [telegram-bots.md](telegram-bots.md)
 
 ---
 
-## 8. Systemd (uma vez)
+## 9. Systemd (uma vez)
 
 ```bash
 cd /usr/local/empresarial
@@ -126,16 +145,18 @@ sudo cp workers/sir-ingest/deploy/systemd/sir-telegram-ops.service /etc/systemd/
 sudo cp workers/sir-ingest/deploy/systemd/sir-telegram-datacenter.service /etc/systemd/system/
 sudo cp workers/tmip/deploy/systemd/tmip-ingest.service /etc/systemd/system/
 sudo cp workers/tmip/deploy/systemd/tmip-ingest.timer /etc/systemd/system/
+sudo cp workers/bsod/deploy/systemd/bsod-ingest.service /etc/systemd/system/
+sudo cp workers/bsod/deploy/systemd/bsod-ingest.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable empresarial-next sir-ingest-ral sir-ingest-rec \
-  sir-telegram-ops sir-telegram-datacenter tmip-ingest.timer
+  sir-telegram-ops sir-telegram-datacenter tmip-ingest.timer bsod-ingest.timer
 ```
 
 Inventário: [../operations/services.md](../operations/services.md).
 
 ---
 
-## 9. Build e start
+## 10. Build e start
 
 ```bash
 cd /usr/local/empresarial
@@ -144,19 +165,20 @@ sudo systemctl start empresarial-next
 # aguardar api/saude OK
 sudo systemctl start sir-ingest-ral sir-ingest-rec
 sudo systemctl start tmip-ingest.timer
+sudo systemctl start bsod-ingest.timer
 sudo systemctl start sir-telegram-ops sir-telegram-datacenter
 ```
 
-Ordem: **Next saudável → ingest → TMIP → bots**.
+Ordem: **Next saudável → ingest SIR → TMIP/BSOD → bots**.
 
 ---
 
-## 10. Validação
+## 11. Validação
 
 ```bash
 sudo systemctl status empresarial-next sir-ingest-ral sir-ingest-rec \
   sir-telegram-ops sir-telegram-datacenter
-sudo systemctl list-timers 'tmip-ingest*'
+sudo systemctl list-timers 'tmip-ingest*' 'bsod-ingest*'
 
 curl -s http://127.0.0.1:3003/api/saude | jq
 curl -s http://127.0.0.1:3003/api/rals | jq '.status, .total_registros'
@@ -164,6 +186,7 @@ curl -s http://127.0.0.1:3003/api/rals/contagem_por_cf | jq '.status'
 
 sudo journalctl -u sir-ingest-ral -n 30 --no-pager
 sudo journalctl -u tmip-ingest -n 30 --no-pager
+sudo journalctl -u bsod-ingest -n 30 --no-pager
 ```
 
 UI autenticada: `/sir`, `/bsod`, `/sdh`, `/grb`, `/relatorios`.
@@ -182,3 +205,4 @@ telegram/venv/bin/python3 telegram/send-management-dashboard.py --dry-run
 - Release: [production-release.md](production-release.md)
 - Inventário de host: [production-inventory.md](production-inventory.md)
 - Rollback: [rollback.md](rollback.md)
+- BSOD: [bsod-ingest.md](bsod-ingest.md)

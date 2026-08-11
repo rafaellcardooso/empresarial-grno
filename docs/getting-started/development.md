@@ -1,6 +1,6 @@
 # Getting started — lab / desenvolvimento
 
-> Última revisão: **2026-07-30** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
 
 Ambiente de **lab** (WSL ou Debian de desenvolvimento): usuário típico **`rcard`**, units com sufixo **`-lab`**, dados SIR via snapshot (`db:import`) ou ingest opcional.
 
@@ -19,6 +19,7 @@ cd /usr/local/empresarial
 cp .env.example .env.local
 cp workers/sir-ingest/.env.example workers/sir-ingest/.env
 cp workers/tmip/.env.example workers/tmip/.env   # se for usar SDH
+cp workers/bsod/.env.example workers/bsod/.env   # se for usar BSOD (alinhamento manual)
 npm install
 npm run env:check
 ```
@@ -47,6 +48,7 @@ sudo systemctl enable --now empresarial-next-lab
 
 - SIR: [../runbooks/sir-ingest.md](../runbooks/sir-ingest.md) — units `sir-ingest-*-lab`
 - TMIP: [../runbooks/tmip-sdh-ingest.md](../runbooks/tmip-sdh-ingest.md) — `tmip-ingest-lab.timer`
+- BSOD: [../runbooks/bsod-ingest.md](../runbooks/bsod-ingest.md) — `bsod-ingest-lab.timer`
 - Telegram: [../runbooks/telegram-bots.md](../runbooks/telegram-bots.md) — `sir-telegram-*-lab`
 
 ## Validação

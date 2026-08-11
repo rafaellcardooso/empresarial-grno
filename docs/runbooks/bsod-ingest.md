@@ -1,12 +1,12 @@
 # BSOD ingest (PME / BSoD)
 
-> Última revisão: **2026-08-06**
+> Última revisão: **2026-08-11**
 
 Coleta multi-cidade para `/bsod`. Worker: [`workers/bsod`](../../workers/bsod/README.md).
 
 ## Pré-requisitos
 
-1. `npm run db:migrate` (migrations `015`–`022` em `migrations/sir/`).
+1. `npm run db:migrate` (migrations BSOD `015`–`023` em `migrations/sir/`).
 2. `workers/bsod/.env` com:
    - `SIR_DB_*` iguais ao Next
    - por cidade: `BSOD_<OPE>_XPERTRAK_*`, `BSOD_<OPE>_LDAP_*`, `BSOD_<OPE>_SNMP_COMMUNITY`

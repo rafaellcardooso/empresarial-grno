@@ -1,6 +1,6 @@
 # Troubleshooting
 
-> Última revisão: **2026-07-30** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
 
 | Sintoma                                          | Causa típica            | Correção                                                              |
 | ------------------------------------------------ | ----------------------- | --------------------------------------------------------------------- |
@@ -18,6 +18,10 @@
 | TELNET 403                                       | Comando staff-only      | USER só ping                                                          |
 | Critel vazio                                     | Designação inválida     | Formato `LOC/TIPO/NUM`                                                |
 | TMIP aborta sem fechar backlog                   | CSV vazio/desatualizado | Esperado; conferir SFTP e `SFTP_MAX_AGE_HOURS`                        |
+| BSOD timer inativo / sem dados em `/bsod`        | Unit/venv/env ausentes  | [bsod-ingest.md](../runbooks/bsod-ingest.md); `list-timers 'bsod*'`   |
+| `BSOD_NOCCLARO_USER / PASS não configurados`     | CRM sem credenciais     | Preencher `workers/bsod/.env` e rodar oneshot                         |
+| `Login nocclaro rejeitado`                       | User/senha CRM inválidos| Testar login no portal; aspas se senha tiver `#`                      |
+| `snmpwalk: command not found`                    | Pacote SNMP ausente     | Instalar `snmp` (`snmpwalk` no PATH)                                  |
 
 Smoke mínimo:
 

@@ -1,6 +1,6 @@
 # Serviços systemd
 
-> Última revisão: **2026-08-06** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
 
 Inventário canônico das units. Instalação e restart: runbooks. Troubleshooting: [troubleshooting.md](troubleshooting.md).
 
@@ -52,7 +52,8 @@ sudo journalctl -u empresarial-next -f
 sudo journalctl -u sir-ingest-ral -u sir-ingest-rec -f
 sudo journalctl -u sir-telegram-ops -u sir-telegram-datacenter -f
 sudo journalctl -u tmip-ingest -n 50 --no-pager
-sudo systemctl list-timers 'tmip-ingest*'
+sudo journalctl -u bsod-ingest -n 50 --no-pager
+sudo systemctl list-timers 'tmip-ingest*' 'bsod-ingest*'
 ```
 
 No lab, acrescente o sufixo `-lab` aos nomes das units.

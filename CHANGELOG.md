@@ -18,6 +18,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 - Documentação alinhada a fontes estáveis (sem monólitos datados como procedimento atual).
 - SDH permite observação/encerramento de alarme inativo com tratativa aberta; claim permanece só em ativo.
 - Deploy produção padronizado em `npm ci` + restart seletivo; TMIP incluído no install.
+- Ingest BSOD (`bsod-ingest.timer`) incluído em install/inventory, `deploy/README`, lab e troubleshooting.
 
 ## [2026-07-30]
 

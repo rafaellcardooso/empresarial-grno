@@ -1,6 +1,6 @@
 # Runbook — release de produção
 
-> Última revisão: **2026-07-30** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
 
 Atualização rotineira quando o host **já** está instalado. Se o estado for desconhecido, rode antes [production-inventory.md](production-inventory.md).
 
@@ -49,7 +49,8 @@ curl -s http://127.0.0.1:3003/api/rals | jq '.status, .total_registros'
 sudo systemctl status empresarial-next --no-pager
 ```
 
-UI autenticada conforme o que mudou (`/sdh`, `/relatorios`, …).
+UI autenticada conforme o que mudou (`/sdh`, `/bsod`, `/relatorios`, …).
+Timers: `systemctl list-timers 'tmip-ingest*' 'bsod-ingest*'`.
 
 ## Telegram (se `telegram/` mudou)
 
