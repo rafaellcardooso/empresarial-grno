@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const rememberMe = Boolean(body?.rememberMe);
 
   if (!isValidCorporateId(corporateId) || !password) {
-    return NextResponse.json({ error: "Matrícula ou senha inválidos." }, { status: 400 });
+    return NextResponse.json({ error: "Login ou senha inválidos." }, { status: 400 });
   }
 
   const user = await getUserByCorporateId(corporateId);

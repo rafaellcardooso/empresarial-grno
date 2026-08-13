@@ -1,6 +1,8 @@
 /** Textos de interface centralizados. */
 export const UI_COPY = {
   appName: "Empresarial",
+  navbarSuffix: "Empresarial",
+  navbarLabel: "GRNO Empresarial",
   footer: "Claro — Equipe GRNO · Empresarial",
   emptyDefault: "Nenhum registro.",
   connectionOk: "OK",

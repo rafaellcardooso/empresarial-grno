@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 import { apiFetch } from "@/lib/config/base-path";
@@ -51,14 +52,14 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="auth-form">
+    <form onSubmit={handleSubmit} className="auth-form" autoComplete="off">
       {error ? (
         <div className="alert alert-danger py-2" role="alert">
           {error}
         </div>
       ) : null}
       {success ? (
-        <div className="alert alert-success py-2" role="alert">
+        <div className="alert alert-success py-2" role="status">
           {success}
         </div>
       ) : null}
@@ -67,14 +68,13 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
         <label htmlFor="current-password" className="form-label">
           Senha atual
         </label>
-        <input
+        <PasswordInput
           id="current-password"
-          type="password"
           className="form-control"
           autoComplete="current-password"
           required
           value={currentPassword}
-          onChange={(event) => setCurrentPassword(event.target.value)}
+          onChange={setCurrentPassword}
         />
       </div>
 
@@ -82,14 +82,13 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
         <label htmlFor="new-password" className="form-label">
           Nova senha
         </label>
-        <input
+        <PasswordInput
           id="new-password"
-          type="password"
           className="form-control"
           autoComplete="new-password"
           required
           value={newPassword}
-          onChange={(event) => setNewPassword(event.target.value)}
+          onChange={setNewPassword}
         />
         <div className="form-text">{PASSWORD_REQUIREMENTS}</div>
       </div>
@@ -98,14 +97,13 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
         <label htmlFor="confirm-new-password" className="form-label">
           Confirmar nova senha
         </label>
-        <input
+        <PasswordInput
           id="confirm-new-password"
-          type="password"
           className="form-control"
           autoComplete="new-password"
           required
           value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
+          onChange={setConfirmPassword}
         />
       </div>
 

@@ -3,16 +3,16 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuthLink, AuthShell } from "@/components/auth/AuthShell";
-import { LoadingButton } from "@/components/ui/LoadingButton";
+import { PasswordInput } from "@/components/auth/PasswordInput";
+import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { applyClientTheme } from "@/lib/auth/theme-client";
 import type { AppTheme } from "@/lib/auth/theme";
-import { AUTH_COPY } from "@/lib/config/auth-copy";
-import { appHref, apiFetch } from "@/lib/config/base-path";
 import { CORPORATE_ID_HINT } from "@/lib/auth/validation";
+import { appHref, apiFetch } from "@/lib/config/base-path";
 
 const REMEMBER_ME_KEY = "emp_remember_me";
 
-/** Formulário de login. */
+/** Formulário de login por login corporativo. */
 export function LoginForm() {
   const searchParams = useSearchParams();
   const [corporateId, setCorporateId] = useState("");
@@ -64,7 +64,6 @@ export function LoginForm() {
 
       const next = searchParams.get("next") || "/";
       window.location.assign(appHref(next));
-      return;
     } catch {
       setError("Erro de conexão. Tente novamente.");
     } finally {
@@ -75,7 +74,6 @@ export function LoginForm() {
   return (
     <AuthShell
       title={AUTH_COPY.loginTitle}
-      description={AUTH_COPY.loginLead}
       footer={
         <>
           <AuthLink href="/esqueci-senha">Esqueci a senha</AuthLink>
@@ -86,19 +84,17 @@ export function LoginForm() {
     >
       <form onSubmit={handleSubmit} className="auth-form">
         {error ? (
-          <div className="alert alert-danger py-2" role="alert">
+          <div className="auth-alert auth-alert--error" role="alert">
             {error}
           </div>
         ) : null}
 
-        <div className="mb-3">
-          <label htmlFor="login-corporate-id" className="form-label">
-            Matrícula corporativa
-          </label>
+        <div className="auth-field">
+          <label htmlFor="login-corporate-id">Login corporativo</label>
           <input
             id="login-corporate-id"
             type="text"
-            className="form-control text-uppercase"
+            className="auth-input auth-input--upper"
             autoComplete="username"
             autoCapitalize="characters"
             spellCheck={false}
@@ -106,45 +102,32 @@ export function LoginForm() {
             value={corporateId}
             onChange={(event) => setCorporateId(event.target.value.toUpperCase())}
           />
-          <div className="form-text">{CORPORATE_ID_HINT}</div>
+          <p className="auth-hint">{CORPORATE_ID_HINT}</p>
         </div>
 
-        <div className="mb-3">
-          <label htmlFor="login-password" className="form-label">
-            Senha
-          </label>
-          <input
+        <div className="auth-field">
+          <label htmlFor="login-password">Senha</label>
+          <PasswordInput
             id="login-password"
-            type="password"
-            className="form-control"
             autoComplete="current-password"
             required
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={setPassword}
           />
         </div>
 
-        <div className="form-check mb-3">
+        <label className="auth-check">
           <input
-            id="login-remember-me"
             type="checkbox"
-            className="form-check-input"
             checked={rememberMe}
             onChange={(event) => setRememberMe(event.target.checked)}
           />
-          <label htmlFor="login-remember-me" className="form-check-label">
-            Manter conectado
-          </label>
-        </div>
+          <span>Manter conectado</span>
+        </label>
 
-        <LoadingButton
-          type="submit"
-          className="btn btn-primary w-100"
-          loading={loading}
-          loadingLabel="Entrando…"
-        >
-          Entrar
-        </LoadingButton>
+        <button type="submit" className="auth-submit" disabled={loading}>
+          {loading ? "Entrando…" : "Entrar"}
+        </button>
       </form>
     </AuthShell>
   );

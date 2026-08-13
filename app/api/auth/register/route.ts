@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
   const existing = await getUserByCorporateId(corporateId);
   if (existing) {
-    return NextResponse.json({ error: "Matrícula já cadastrada." }, { status: 409 });
+    return NextResponse.json({ error: "Login já cadastrado." }, { status: 409 });
   }
 
   const passwordHash = await hashPassword(password);
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 
   await notifyActiveStaff(
     "Nova solicitação de acesso",
-    `${name} (${normalizedId}) solicitou acesso. Aprove em Administração → Aprovações.`,
+    `${name} (${normalizedId}) solicitou acesso. Aprove em Administração → Usuários.`,
   );
 
   return NextResponse.json({

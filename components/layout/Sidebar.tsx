@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { useSession } from "@/components/layout/SessionProvider";
+import { SidebarUserFooter } from "@/components/layout/SidebarUserFooter";
 import { useSidebarLayout } from "@/components/layout/SidebarLayoutProvider";
 import { isNavItemActive, NAV_SECTIONS, type NavItem } from "@/lib/config/navigation";
 
@@ -59,7 +60,7 @@ export function Sidebar() {
   return (
     <nav
       id="sidebarMenu"
-      className={`col-md-3 col-lg-2 sidebar ${mobileOpen ? "sidebar-open" : ""}`}
+      className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}
       aria-label="Menu principal"
       data-tour="sidebar"
     >
@@ -87,6 +88,7 @@ export function Sidebar() {
           );
         })}
       </div>
+      <SidebarUserFooter />
     </nav>
   );
 }

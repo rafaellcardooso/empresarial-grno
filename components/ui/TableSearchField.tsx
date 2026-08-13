@@ -39,16 +39,18 @@ export function TableSearchField({
 
   return (
     <div className="table-search-field">
-      <i className="bi bi-search table-search-field__icon" aria-hidden="true" />
-      <input
-        type="search"
-        className="form-control form-control-sm table-search-field__input"
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        placeholder={placeholder}
-        autoComplete="off"
-        aria-label={ariaLabel}
-      />
+      <div className="table-search-field__control">
+        <i className="bi bi-search table-search-field__icon" aria-hidden="true" />
+        <input
+          type="search"
+          className="form-control form-control-sm table-search-field__input"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={placeholder}
+          autoComplete="off"
+          aria-label={ariaLabel}
+        />
+      </div>
     </div>
   );
 }

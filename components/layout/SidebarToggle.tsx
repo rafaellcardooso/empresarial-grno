@@ -8,7 +8,7 @@ export function SidebarToggle() {
 
   return (
     <button
-      className="btn btn-link text-white me-3 d-none d-md-block"
+      className="btn btn-link text-white d-none d-md-block p-0 border-0"
       type="button"
       onClick={toggleDesktopSidebar}
       title="Expandir ou ocultar menu"

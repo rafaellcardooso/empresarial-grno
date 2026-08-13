@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthLink, AuthShell } from "@/components/auth/AuthShell";
-import { LoadingButton } from "@/components/ui/LoadingButton";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { CORPORATE_ID_HINT, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 import { apiFetch } from "@/lib/config/base-path";
@@ -63,24 +63,22 @@ export function RegisterForm() {
     >
       <form onSubmit={handleSubmit} className="auth-form">
         {error ? (
-          <div className="alert alert-danger py-2" role="alert">
+          <div className="auth-alert auth-alert--error" role="alert">
             {error}
           </div>
         ) : null}
         {success ? (
-          <div className="alert alert-success py-2" role="alert">
+          <div className="auth-alert auth-alert--success" role="status">
             {success}
           </div>
         ) : null}
 
-        <div className="mb-3">
-          <label htmlFor="register-corporate-id" className="form-label">
-            Matrícula corporativa
-          </label>
+        <div className="auth-field">
+          <label htmlFor="register-corporate-id">Login corporativo</label>
           <input
             id="register-corporate-id"
             type="text"
-            className="form-control text-uppercase"
+            className="auth-input auth-input--upper"
             autoComplete="username"
             autoCapitalize="characters"
             spellCheck={false}
@@ -88,17 +86,15 @@ export function RegisterForm() {
             value={corporateId}
             onChange={(event) => setCorporateId(event.target.value.toUpperCase())}
           />
-          <div className="form-text">{CORPORATE_ID_HINT}</div>
+          <p className="auth-hint">{CORPORATE_ID_HINT}</p>
         </div>
 
-        <div className="mb-3">
-          <label htmlFor="register-name" className="form-label">
-            Nome
-          </label>
+        <div className="auth-field">
+          <label htmlFor="register-name">Nome</label>
           <input
             id="register-name"
             type="text"
-            className="form-control"
+            className="auth-input"
             autoComplete="name"
             required
             value={name}
@@ -106,60 +102,46 @@ export function RegisterForm() {
           />
         </div>
 
-        <div className="mb-3">
-          <label htmlFor="register-email" className="form-label">
-            E-mail corporativo <span className="text-body-secondary">(opcional)</span>
+        <div className="auth-field">
+          <label htmlFor="register-email">
+            E-mail corporativo <span className="auth-optional">(opcional)</span>
           </label>
           <input
             id="register-email"
             type="email"
-            className="form-control"
+            className="auth-input"
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
-          <div className="form-text">Usado para recuperação de senha, se configurado.</div>
         </div>
 
-        <div className="mb-3">
-          <label htmlFor="register-password" className="form-label">
-            Senha
-          </label>
-          <input
+        <div className="auth-field">
+          <label htmlFor="register-password">Senha</label>
+          <PasswordInput
             id="register-password"
-            type="password"
-            className="form-control"
             autoComplete="new-password"
             required
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={setPassword}
           />
-          <div className="form-text">{PASSWORD_REQUIREMENTS}</div>
+          <p className="auth-hint">{PASSWORD_REQUIREMENTS}</p>
         </div>
 
-        <div className="mb-3">
-          <label htmlFor="register-confirm" className="form-label">
-            Confirmar senha
-          </label>
-          <input
+        <div className="auth-field">
+          <label htmlFor="register-confirm">Confirmar senha</label>
+          <PasswordInput
             id="register-confirm"
-            type="password"
-            className="form-control"
             autoComplete="new-password"
             required
             value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
+            onChange={setConfirmPassword}
           />
         </div>
 
-        <LoadingButton
-          type="submit"
-          className="btn btn-primary w-100"
-          loading={loading}
-          loadingLabel="Enviando…"
-        >
-          Solicitar acesso
-        </LoadingButton>
+        <button type="submit" className="auth-submit" disabled={loading}>
+          {loading ? "Enviando…" : "Solicitar acesso"}
+        </button>
       </form>
     </AuthShell>
   );

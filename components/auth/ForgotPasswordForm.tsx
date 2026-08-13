@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AuthLink, AuthShell } from "@/components/auth/AuthShell";
-import { LoadingButton } from "@/components/ui/LoadingButton";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { CORPORATE_ID_HINT, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 import { apiFetch } from "@/lib/config/base-path";
 
-/** Formulário de redefinição de senha (matrícula + nova senha). */
+/** Formulário de redefinição de senha (login corporativo + nova senha). */
 export function ForgotPasswordForm() {
   const [corporateId, setCorporateId] = useState("");
   const [password, setPassword] = useState("");
@@ -58,29 +58,27 @@ export function ForgotPasswordForm() {
     >
       {submitted && feedback ? (
         <div className="auth-form">
-          <div className="alert alert-success py-2 mb-3" role="status">
+          <div className="auth-alert auth-alert--success" role="status">
             {feedback}
           </div>
-          <Link href="/login" className="btn btn-primary w-100">
+          <Link href="/login" className="auth-submit">
             Ir para o login
           </Link>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="auth-form">
           {error ? (
-            <div className="alert alert-danger py-2" role="alert">
+            <div className="auth-alert auth-alert--error" role="alert">
               {error}
             </div>
           ) : null}
 
-          <div className="mb-3">
-            <label htmlFor="forgot-corporate-id" className="form-label">
-              Matrícula corporativa
-            </label>
+          <div className="auth-field">
+            <label htmlFor="forgot-corporate-id">Login corporativo</label>
             <input
               id="forgot-corporate-id"
               type="text"
-              className="form-control text-uppercase"
+              className="auth-input auth-input--upper"
               autoComplete="username"
               autoCapitalize="characters"
               spellCheck={false}
@@ -88,48 +86,35 @@ export function ForgotPasswordForm() {
               value={corporateId}
               onChange={(event) => setCorporateId(event.target.value.toUpperCase())}
             />
-            <div className="form-text">{CORPORATE_ID_HINT}</div>
+            <p className="auth-hint">{CORPORATE_ID_HINT}</p>
           </div>
 
-          <div className="mb-3">
-            <label htmlFor="forgot-password" className="form-label">
-              Nova senha
-            </label>
-            <input
+          <div className="auth-field">
+            <label htmlFor="forgot-password">Nova senha</label>
+            <PasswordInput
               id="forgot-password"
-              type="password"
-              className="form-control"
               autoComplete="new-password"
               required
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={setPassword}
             />
-            <div className="form-text">{PASSWORD_REQUIREMENTS}</div>
+            <p className="auth-hint">{PASSWORD_REQUIREMENTS}</p>
           </div>
 
-          <div className="mb-3">
-            <label htmlFor="forgot-confirm-password" className="form-label">
-              Confirmar nova senha
-            </label>
-            <input
+          <div className="auth-field">
+            <label htmlFor="forgot-confirm-password">Confirmar nova senha</label>
+            <PasswordInput
               id="forgot-confirm-password"
-              type="password"
-              className="form-control"
               autoComplete="new-password"
               required
               value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
+              onChange={setConfirmPassword}
             />
           </div>
 
-          <LoadingButton
-            type="submit"
-            className="btn btn-primary w-100"
-            loading={loading}
-            loadingLabel="Salvando…"
-          >
-            Redefinir senha
-          </LoadingButton>
+          <button type="submit" className="auth-submit" disabled={loading}>
+            {loading ? "Salvando…" : "Redefinir senha"}
+          </button>
         </form>
       )}
     </AuthShell>

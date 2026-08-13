@@ -159,7 +159,7 @@ export function NotificationBell() {
                       className="notification-menu__item-link"
                       onClick={() => setOpen(false)}
                     >
-                      Ver aprovações
+                      Ver usuários
                     </Link>
                   ) : null}
                   <time className="notification-menu__item-time" dateTime={item.deliveredAt}>

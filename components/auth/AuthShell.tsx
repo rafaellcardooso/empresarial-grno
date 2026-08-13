@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { GrnoLogo } from "@/components/layout/GrnoLogo";
 import { UI_COPY } from "@/lib/config/ui-copy";
 
 type AuthShellProps = {
@@ -16,9 +15,9 @@ export function AuthShell({ title, description, children, footer }: AuthShellPro
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-card__brand">
-          <GrnoLogo />
-          <span className="auth-card__app-name">{UI_COPY.appName}</span>
+        <div className="auth-card__brand auth-card__brand--text">
+          <p className="auth-card__eyebrow">GRNO</p>
+          <p className="auth-card__app-name">{UI_COPY.appName}</p>
         </div>
 
         <h1 className="auth-card__title">{title}</h1>

@@ -1,5 +1,6 @@
 import { HomeNavCard } from "@/components/home/HomeNavCard";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { requireAuth } from "@/lib/auth/guards";
 import { HOME_COPY } from "@/lib/config/home-copy";
 import { pingBsodDb } from "@/lib/queries/bsod";
 import { pingSirDb } from "@/lib/queries/sir";
@@ -7,18 +8,17 @@ import { pingSirDb } from "@/lib/queries/sir";
 export const revalidate = 60;
 export const metadata = { title: "Início" };
 
-/** Página inicial com boas-vindas e atalhos para monitoramento. */
+/** Página inicial com atalhos para monitoramento. */
 export default async function Page() {
-  const [sirPing, hfcPing] = await Promise.all([pingSirDb(), pingBsodDb()]);
+  const session = await requireAuth();
+  const isStaff = session.role === "STAFF";
+  const [sirPing, hfcPing] = isStaff
+    ? await Promise.all([pingSirDb(), pingBsodDb()])
+    : [null, null];
 
   return (
     <>
       <PageHeader title={HOME_COPY.title} description={HOME_COPY.lead} />
-
-      <section className="home-welcome mb-4">
-        <h2 className="home-welcome__title">{HOME_COPY.welcome}</h2>
-        <p className="home-welcome__text mb-0">{HOME_COPY.lead}</p>
-      </section>
 
       <section aria-labelledby="home-sections-title">
         <h2 id="home-sections-title" className="home-sections-title">
@@ -61,24 +61,26 @@ export default async function Page() {
         </div>
       </section>
 
-      <section className="home-status" aria-label="Status das conexões">
-        <div className="home-status__item">
-          <span className="home-status__label">{HOME_COPY.statusSir}</span>
-          <span
-            className={`home-status__badge ${sirPing.ok ? "home-status__badge--ok" : "home-status__badge--error"}`}
-          >
-            {sirPing.ok ? HOME_COPY.statusConnected : HOME_COPY.statusUnavailable}
-          </span>
-        </div>
-        <div className="home-status__item">
-          <span className="home-status__label">{HOME_COPY.statusHfc}</span>
-          <span
-            className={`home-status__badge ${hfcPing.ok ? "home-status__badge--ok" : "home-status__badge--error"}`}
-          >
-            {hfcPing.ok ? HOME_COPY.statusConnected : HOME_COPY.statusUnavailable}
-          </span>
-        </div>
-      </section>
+      {isStaff && sirPing && hfcPing ? (
+        <section className="home-status" aria-label="Status das conexões">
+          <div className="home-status__item">
+            <span className="home-status__label">{HOME_COPY.statusSir}</span>
+            <span
+              className={`home-status__badge ${sirPing.ok ? "home-status__badge--ok" : "home-status__badge--error"}`}
+            >
+              {sirPing.ok ? HOME_COPY.statusConnected : HOME_COPY.statusUnavailable}
+            </span>
+          </div>
+          <div className="home-status__item">
+            <span className="home-status__label">{HOME_COPY.statusHfc}</span>
+            <span
+              className={`home-status__badge ${hfcPing.ok ? "home-status__badge--ok" : "home-status__badge--error"}`}
+            >
+              {hfcPing.ok ? HOME_COPY.statusConnected : HOME_COPY.statusUnavailable}
+            </span>
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }

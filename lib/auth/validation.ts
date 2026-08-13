@@ -27,7 +27,7 @@ export function isValidPassword(password: string): boolean {
 export const PASSWORD_REQUIREMENTS = "Mínimo 8 caracteres, com letras e números.";
 
 /** Mensagem de formato de matrícula para UI. */
-export const CORPORATE_ID_HINT = "Matrícula corporativa (ex.: F104262).";
+export const CORPORATE_ID_HINT = "Ex.: F104262";
 
 /** Extrai mensagem de erro de unknown. */
 export function getErrorMessage(err: unknown, fallback: string): string {

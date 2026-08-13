@@ -26,18 +26,16 @@ export default function RootLayout({
           }}
         />
         {/* Tema Bootstrap Claro / GRNO — paths com basePath (/empresarial) */}
-        {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link
-          rel="stylesheet"
-          href={withBasePath("/assets/css/bootstrap.min.css")}
-        />
-        {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link
-          rel="stylesheet"
-          href={withBasePath("/assets/css/bootstrap-icons.min.css")}
-        />
-        {/* eslint-disable-next-line @next/next/no-css-tags */}
+        { }
+        <link rel="stylesheet" href={withBasePath("/assets/css/bootstrap.min.css")} />
+        { }
+        <link rel="stylesheet" href={withBasePath("/assets/css/bootstrap-icons.min.css")} />
+        { }
         <link rel="stylesheet" href={withBasePath("/assets/css/style.css")} />
+        { }
+        <link rel="stylesheet" href={withBasePath("/assets/css/page-body-shell.css")} />
+        { }
+        <link rel="stylesheet" href={withBasePath("/assets/css/shell-drawer.css")} />
       </head>
       <body>
         {children}
