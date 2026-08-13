@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BsodDetalhesPanel } from "@/components/bsod/BsodDetalhesPanel";
-import { BsodHealthBadge } from "@/components/bsod/bsod-table-cells";
+import { BsodCompactTextCell, BsodHealthBadge } from "@/components/bsod/bsod-table-cells";
 import { TratativaPanel } from "@/components/tratativa/TratativaPanel";
 import { TratativaBsodStatusCell } from "@/components/tratativa/TratativaBsodCell";
 import { TratativaTreatButton } from "@/components/tratativa/TratativaTreatButton";
@@ -157,6 +157,12 @@ function renderBsodCell(
         <i className="bi bi-eye" aria-hidden="true" />
       </button>
     );
+  }
+  if (key === "cliente") {
+    return <BsodCompactTextCell value={value} variant="cliente" />;
+  }
+  if (key === "cadastro_responsavel") {
+    return <BsodCompactTextCell value={value} variant="razao-social" />;
   }
   if (value == null || value === "") return "—";
   return String(value);

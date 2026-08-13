@@ -160,6 +160,11 @@ def _crm_row_for_inventory(
     return None
 
 
+def _crm_razao_social(crm: dict[str, Any]) -> str:
+    """Razão social do inventário: nome_fantasia do CRM."""
+    return (crm.get("nome_fantasia") or "")[:255]
+
+
 def _resolve_client_fields(
     *,
     contrato: str,
@@ -180,10 +185,12 @@ def _resolve_client_fields(
     if crm:
         return {
             "cliente": (crm.get("cliente") or "")[:255],
-            "cadastro_responsavel": (crm.get("cadastro_responsavel") or "")[:255],
+            "cadastro_responsavel": _crm_razao_social(crm),
             "designacao": (crm.get("designacao") or "")[:255],
             "address": format_crm_address(crm) or xpertrak,
             "crm_cvlan": normalize_vlan(crm.get("cvlan")),
+            "contato_cliente_nome_1": (crm.get("contato_cliente_nome_1") or "")[:255],
+            "contato_cliente_telefone_1": (crm.get("contato_cliente_telefone_1") or "")[:64],
             "manual_override": 0,
         }
     if existing and int(existing.get("manual_override") or 0) == 1:
@@ -193,6 +200,8 @@ def _resolve_client_fields(
             "designacao": (existing.get("designacao") or "")[:255],
             "address": (existing.get("address") or "")[:255],
             "crm_cvlan": (existing.get("crm_cvlan") or "")[:32],
+            "contato_cliente_nome_1": (existing.get("contato_cliente_nome_1") or "")[:255],
+            "contato_cliente_telefone_1": (existing.get("contato_cliente_telefone_1") or "")[:64],
             "manual_override": 1,
         }
     return {
@@ -201,6 +210,8 @@ def _resolve_client_fields(
         "designacao": "",
         "address": xpertrak,
         "crm_cvlan": "",
+        "contato_cliente_nome_1": "",
+        "contato_cliente_telefone_1": "",
         "manual_override": 0,
     }
 
@@ -272,6 +283,8 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
             "manual_override": client["manual_override"],
             "bsod_vlan": vlan,
             "vlan": vlan_text,
+            "contato_cliente_nome_1": client["contato_cliente_nome_1"],
+            "contato_cliente_telefone_1": client["contato_cliente_telefone_1"],
             "crm_cvlan": client["crm_cvlan"],
         }
 

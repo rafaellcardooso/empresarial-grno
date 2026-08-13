@@ -47,11 +47,13 @@ ON DUPLICATE KEY UPDATE
 INVENTORY_UPSERT = """
 INSERT INTO bsod_inventory (
   ope, ddd, cmts, mac, id_cable, node, contrato, profile, cliente, cadastro_responsavel,
-  designacao, produto, address, manual_override, bsod_vlan, vlan, crm_cvlan
+  designacao, produto, address, manual_override, bsod_vlan, vlan, crm_cvlan,
+  contato_cliente_nome_1, contato_cliente_telefone_1
 ) VALUES (
   %(ope)s, %(ddd)s, %(cmts)s, %(mac)s, %(id_cable)s, %(node)s, %(contrato)s,
   %(profile)s, %(cliente)s, %(cadastro_responsavel)s, %(designacao)s, %(produto)s,
-  %(address)s, %(manual_override)s, %(bsod_vlan)s, %(vlan)s, %(crm_cvlan)s
+  %(address)s, %(manual_override)s, %(bsod_vlan)s, %(vlan)s, %(crm_cvlan)s,
+  %(contato_cliente_nome_1)s, %(contato_cliente_telefone_1)s
 )
 ON DUPLICATE KEY UPDATE
   ddd = VALUES(ddd),
@@ -68,7 +70,9 @@ ON DUPLICATE KEY UPDATE
   manual_override = VALUES(manual_override),
   bsod_vlan = VALUES(bsod_vlan),
   vlan = VALUES(vlan),
-  crm_cvlan = VALUES(crm_cvlan)
+  crm_cvlan = VALUES(crm_cvlan),
+  contato_cliente_nome_1 = VALUES(contato_cliente_nome_1),
+  contato_cliente_telefone_1 = VALUES(contato_cliente_telefone_1)
 """
 
 MONITOR_INSERT = """
@@ -171,7 +175,8 @@ def list_inventory_client_fields(ope: str) -> dict[str, dict[str, Any]]:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT mac, cliente, cadastro_responsavel, designacao, address, crm_cvlan, manual_override
+                SELECT mac, cliente, cadastro_responsavel, designacao, address, crm_cvlan,
+                       contato_cliente_nome_1, contato_cliente_telefone_1, manual_override
                 FROM bsod_inventory
                 WHERE ope = %s
                 """,
@@ -226,7 +231,7 @@ def cleanup_inventory_orphans(ope: str, keep_macs: set[str]) -> int:
 
 CRM_INSERT = """
 INSERT INTO bsod_crm_clients (
-  ope, protocolo, uf, svlan, cvlan, contrato_netsms, cadastro_responsavel, cliente, tipo_logradouro,
+  ope, protocolo, uf, svlan, cvlan, contrato_netsms, cadastro_responsavel, nome_fantasia, cliente, tipo_logradouro,
   logradouro, numero, complemento, bairro, cep,
   cidade, produto, designacao,
   contato_cliente_nome_1, contato_cliente_telefone_1,
@@ -236,7 +241,7 @@ INSERT INTO bsod_crm_clients (
   synced_at
 ) VALUES (
   %(ope)s, %(protocolo)s, %(uf)s, %(svlan)s, %(cvlan)s, %(contrato_netsms)s,
-  %(cadastro_responsavel)s, %(cliente)s,
+  %(cadastro_responsavel)s, %(nome_fantasia)s, %(cliente)s,
   %(tipo_logradouro)s, %(logradouro)s, %(numero)s,
   %(complemento)s, %(bairro)s, %(cep)s, %(cidade)s, %(produto)s, %(designacao)s,
   %(contato_cliente_nome_1)s, %(contato_cliente_telefone_1)s,
@@ -266,6 +271,7 @@ def replace_crm_clients(ope: str, rows: Iterable[dict[str, Any]]) -> int:
                 "cvlan": (raw.get("cvlan") or "")[:32],
                 "contrato_netsms": (raw.get("contrato_netsms") or "")[:64],
                 "cadastro_responsavel": (raw.get("cadastro_responsavel") or "")[:255],
+                "nome_fantasia": (raw.get("nome_fantasia") or "")[:255],
                 "cliente": (raw.get("cliente") or "")[:255],
                 "tipo_logradouro": (raw.get("tipo_logradouro") or "")[:64],
                 "logradouro": (raw.get("logradouro") or "")[:255],
@@ -312,8 +318,9 @@ def list_crm_by_contrato(ope: str) -> dict[str, dict[str, Any]]:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT protocolo, contrato_netsms, cvlan, uf, svlan, cadastro_responsavel, cliente,
-                       designacao, tipo_logradouro, logradouro, numero, complemento, bairro, cep, cidade
+                SELECT protocolo, contrato_netsms, cvlan, uf, svlan, cadastro_responsavel, nome_fantasia, cliente,
+                       designacao, tipo_logradouro, logradouro, numero, complemento, bairro, cep, cidade,
+                       contato_cliente_nome_1, contato_cliente_telefone_1
                 FROM bsod_crm_clients
                 WHERE ope = %s AND contrato_netsms <> ''
                 """,
@@ -336,8 +343,9 @@ def list_crm_by_cvlan(ope: str) -> dict[str, dict[str, Any]]:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT protocolo, contrato_netsms, cvlan, uf, svlan, cadastro_responsavel, cliente,
-                       designacao, tipo_logradouro, logradouro, numero, complemento, bairro, cep, cidade
+                SELECT protocolo, contrato_netsms, cvlan, uf, svlan, cadastro_responsavel, nome_fantasia, cliente,
+                       designacao, tipo_logradouro, logradouro, numero, complemento, bairro, cep, cidade,
+                       contato_cliente_nome_1, contato_cliente_telefone_1
                 FROM bsod_crm_clients
                 WHERE ope = %s AND cvlan <> ''
                 """,

@@ -10,7 +10,7 @@ export function AcionamentoContextCard({ context }: AcionamentoContextCardProps)
   if (context.recordKind === "BSOD") {
     const items = [
       { label: "Cliente", value: context.cliente },
-      { label: "Cadastro responsável", value: context.cadastroResponsavel },
+      { label: "Razão social", value: context.cadastroResponsavel },
       { label: "Designação", value: context.designacao },
       { label: "Produto", value: context.produto },
       { label: "Contrato", value: context.contrato },

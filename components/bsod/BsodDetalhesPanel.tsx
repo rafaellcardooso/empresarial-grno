@@ -168,7 +168,7 @@ function BsodDetalhesBody({
           </div>
           <div className="mb-2">
             <label className="form-label" htmlFor="bsod-edit-cadastro">
-              Cadastro responsável
+              Razão social
             </label>
             <input
               id="bsod-edit-cadastro"
@@ -257,9 +257,9 @@ function BsodDetalhesBody({
         <BsodDetailItem label="ID cable">{row.id_cable || "—"}</BsodDetailItem>
         <BsodDetailItem label="Contrato">{row.contrato || "—"}</BsodDetailItem>
         <BsodDetailItem label="Cliente">{row.cliente || "—"}</BsodDetailItem>
-        <BsodDetailItem label="Cadastro responsável">
-          {row.cadastro_responsavel || "—"}
-        </BsodDetailItem>
+        <BsodDetailItem label="Razão social">{row.cadastro_responsavel || "—"}</BsodDetailItem>
+        <BsodDetailItem label="Contato">{row.contato_cliente_nome_1 || "—"}</BsodDetailItem>
+        <BsodDetailItem label="Telefone">{row.contato_cliente_telefone_1 || "—"}</BsodDetailItem>
         <BsodDetailItem label="Designação">{row.designacao || "—"}</BsodDetailItem>
         <BsodDetailItem label="Produto">{row.produto || "—"}</BsodDetailItem>
         <BsodDetailItem label="Profile">{row.profile || "—"}</BsodDetailItem>

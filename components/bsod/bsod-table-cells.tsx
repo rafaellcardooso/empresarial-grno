@@ -1,5 +1,24 @@
 import { formatNumberPtBr } from "@/lib/format/number";
 
+type BsodCompactTextCellProps = {
+  value: unknown;
+  variant?: "cliente" | "razao-social" | "default";
+};
+
+/** Exibe texto compacto na tabela BSOD com tooltip nativo no hover. */
+export function BsodCompactTextCell({ value, variant = "default" }: BsodCompactTextCellProps) {
+  if (value == null || value === "") return "—";
+
+  const text = String(value).trim();
+  if (!text) return "—";
+
+  return (
+    <span className={`bsod-table-text-cell bsod-table-text-cell--${variant}`} title={text}>
+      {text}
+    </span>
+  );
+}
+
 /** Badge de saúde do monitor PME (online, offline ou sem leitura). */
 export function BsodHealthBadge({ label, status }: { label: string; status: number | null }) {
   let className = "badge rounded-pill bsod-health-badge bsod-health-badge--unknown";

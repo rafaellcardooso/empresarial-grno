@@ -192,7 +192,7 @@ async function buildSharedSummary(
     return [
       { label: "Operação", value: row?.ope_label || row?.ope || "—" },
       { label: "Cliente", value: row?.cliente || "—" },
-      { label: "Cadastro responsável", value: row?.cadastro_responsavel || "—" },
+      { label: "Razão social", value: row?.cadastro_responsavel || "—" },
       { label: "Designação", value: row?.designacao || "—" },
       { label: "Produto", value: row?.produto || "—" },
       { label: "CMTS", value: row?.cmts || "—" },

@@ -42,7 +42,7 @@ function buildTechnicianBlock(technician: AcionamentoTechnicianInput): string[] 
 function buildEquipmentBlock(context: BsodAcionamentoContext, sintoma: string): string[] {
   return [
     fieldLine("CLIENTE", context.cliente),
-    fieldLine("CADASTRO RESPONSÁVEL", context.cadastroResponsavel),
+    fieldLine("RAZÃO SOCIAL", context.cadastroResponsavel),
     fieldLine("DESIGNAÇÃO", context.designacao),
     fieldLine("PRODUTO", context.produto),
     fieldLine("CONTRATO", context.contrato),
