@@ -2381,18 +2381,19 @@ body {
   vertical-align: middle;
 }
 
+.sortable-data-table--bsod td:has(.bsod-table-text-cell) {
+  max-width: 12rem;
+  overflow: hidden;
+}
+
 .bsod-table-text-cell {
-  display: inline-block;
-  max-width: 10rem;
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  vertical-align: middle;
+  line-height: var(--leading-tight);
   text-align: center;
-}
-
-.sortable-data-table--bsod td.text-center .bsod-table-text-cell {
-  margin-inline: auto;
 }
 
 .bsod-table-text-cell--cliente {
@@ -2400,13 +2401,26 @@ body {
 }
 
 .bsod-table-text-cell--razao-social {
-  max-width: 13rem;
+  max-width: 12rem;
 }
 
-.sortable-data-table--bsod th,
-.sortable-data-table--bsod td:has(.bsod-table-text-cell--razao-social),
+.bsod-table-text-cell--designacao {
+  max-width: 14rem;
+}
+
 .sortable-data-table--bsod td:has(.bsod-table-text-cell--cliente) {
-  max-width: 0;
+  width: 9rem;
+  max-width: 9rem;
+}
+
+.sortable-data-table--bsod td:has(.bsod-table-text-cell--razao-social) {
+  width: 12rem;
+  max-width: 12rem;
+}
+
+.sortable-data-table--bsod td:has(.bsod-table-text-cell--designacao) {
+  width: 14rem;
+  max-width: 14rem;
 }
 
 .sortable-data-table--sir th,

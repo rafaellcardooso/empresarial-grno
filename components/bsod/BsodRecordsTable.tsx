@@ -164,6 +164,9 @@ function renderBsodCell(
   if (key === "cadastro_responsavel") {
     return <BsodCompactTextCell value={value} variant="razao-social" />;
   }
+  if (key === "designacao") {
+    return <BsodCompactTextCell value={value} variant="designacao" />;
+  }
   if (value == null || value === "") return "—";
   return String(value);
 }

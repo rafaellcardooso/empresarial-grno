@@ -2,19 +2,20 @@ import { formatNumberPtBr } from "@/lib/format/number";
 
 type BsodCompactTextCellProps = {
   value: unknown;
-  variant?: "cliente" | "razao-social" | "default";
+  variant?: "cliente" | "razao-social" | "designacao" | "default";
 };
 
 /** Exibe texto compacto na tabela BSOD com tooltip nativo no hover. */
 export function BsodCompactTextCell({ value, variant = "default" }: BsodCompactTextCellProps) {
-  if (value == null || value === "") return "—";
-
-  const text = String(value).trim();
-  if (!text) return "—";
+  const text = value == null || value === "" ? "" : String(value).trim();
+  const display = text || "—";
 
   return (
-    <span className={`bsod-table-text-cell bsod-table-text-cell--${variant}`} title={text}>
-      {text}
+    <span
+      className={`bsod-table-text-cell bsod-table-text-cell--${variant}`}
+      title={text || undefined}
+    >
+      {display}
     </span>
   );
 }
