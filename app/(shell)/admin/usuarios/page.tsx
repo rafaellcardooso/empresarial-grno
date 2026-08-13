@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { requireStaff } from "@/lib/auth/guards";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 
-export const metadata = { title: "Usuários" };
+export const metadata = { title: AUTH_COPY.adminUsersTitle };
 
 /** Página staff: aprovação de cadastros e listagem. */
 export default async function Page() {
@@ -15,14 +15,13 @@ export default async function Page() {
     <>
       <PageHeader title={AUTH_COPY.adminUsersTitle} description={AUTH_COPY.adminUsersLead} />
 
-      <div className="row g-3">
-        <div className="col-lg-6">
-          <ContentCard title="Cadastros pendentes" bodyClassName="p-3">
-            <UserApprovalPanel />
-          </ContentCard>
-        </div>
-        <div className="col-12">
-          <ContentCard title="Todos os usuários" bodyClassName="p-3">
+      <div className="content-card-grid content-card-grid--2">
+        <ContentCard title={AUTH_COPY.adminPendingTitle} bodyClassName="p-3">
+          <UserApprovalPanel />
+        </ContentCard>
+
+        <div className="content-card-grid__full">
+          <ContentCard title={AUTH_COPY.adminAllUsersTitle} bodyClassName="p-3">
             <UserManagementPanel currentUserId={session.userId} />
           </ContentCard>
         </div>

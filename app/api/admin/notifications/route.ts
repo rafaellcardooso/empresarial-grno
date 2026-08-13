@@ -3,28 +3,38 @@ import { getSession } from "@/lib/auth/session";
 import { parseJsonBody } from "@/lib/auth/validation";
 import {
   createNotification,
-  listStaffNotifications,
+  getStaffNotificationsPage,
   sendNotificationToAllUsers,
 } from "@/lib/queries/notifications";
 
 type CreateBody = { title?: string; body?: string; send?: boolean };
 
-/** Lista ou cria notificações (staff). */
-export async function GET() {
+/** Lista notificações criadas (staff), paginadas. */
+export async function GET(request: Request) {
   const session = await getSession();
   if (!session || session.role !== "STAFF") {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
 
-  const notifications = await listStaffNotifications();
+  const { searchParams } = new URL(request.url);
+  const pageParam = Number(searchParams.get("page"));
+  const page = Number.isFinite(pageParam) && pageParam >= 1 ? Math.floor(pageParam) : 1;
+
+  const result = await getStaffNotificationsPage(page);
+
   return NextResponse.json({
-    notifications: notifications.map((item) => ({
+    notifications: result.items.map((item) => ({
       id: item.id,
       title: item.title,
       body: item.body,
       createdAt: item.created_at.toISOString(),
       sentAt: item.sent_at ? item.sent_at.toISOString() : null,
     })),
+    total: result.total,
+    page: result.page,
+    pageSize: result.pageSize,
+    totalPages: result.totalPages,
+    draftCount: result.draftCount,
   });
 }
 

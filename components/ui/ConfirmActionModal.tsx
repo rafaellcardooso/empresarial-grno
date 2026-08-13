@@ -67,8 +67,20 @@ export function ConfirmActionModal({
                 className={`btn btn-${confirmVariant}`}
                 onClick={onConfirm}
                 disabled={confirming}
+                aria-busy={confirming}
               >
-                {confirming ? "Aguarde…" : confirmLabel}
+                {confirming ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm me-1"
+                      role="status"
+                      aria-hidden="true"
+                    />
+                    Aguarde…
+                  </>
+                ) : (
+                  confirmLabel
+                )}
               </button>
             </div>
           </div>

@@ -7,6 +7,61 @@ type NotificationRow = AppNotificationRecord & RowDataPacket;
 
 type UserNotificationRow = UserNotificationRecord & RowDataPacket;
 
+/** Itens por página no histórico staff. */
+export const STAFF_NOTIFICATIONS_PAGE_SIZE = 5;
+
+export type StaffNotificationsPage = {
+  items: AppNotificationRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  draftCount: number;
+};
+
+/** Conta notificações criadas (staff). */
+export async function countStaffNotifications(): Promise<number> {
+  const rows = await sirQuery<(RowDataPacket & { cnt: number })[]>(
+    `SELECT COUNT(*) AS cnt FROM app_notifications`,
+  );
+  return Number(rows[0]?.cnt ?? 0);
+}
+
+/** Conta rascunhos ainda não enviados. */
+export async function countStaffNotificationDrafts(): Promise<number> {
+  const rows = await sirQuery<(RowDataPacket & { cnt: number })[]>(
+    `SELECT COUNT(*) AS cnt FROM app_notifications WHERE sent_at IS NULL`,
+  );
+  return Number(rows[0]?.cnt ?? 0);
+}
+
+/** Lista página do histórico staff (mais recentes primeiro). */
+export async function getStaffNotificationsPage(page: number): Promise<StaffNotificationsPage> {
+  const pageSize = STAFF_NOTIFICATIONS_PAGE_SIZE;
+  const total = await countStaffNotifications();
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(Math.floor(page), 1), totalPages);
+  const offset = (safePage - 1) * pageSize;
+
+  const items = await sirQuery<NotificationRow[]>(
+    `SELECT id, title, body, created_by, created_at, sent_at
+     FROM app_notifications
+     ORDER BY created_at DESC
+     LIMIT ${pageSize} OFFSET ${offset}`,
+  );
+
+  const draftCount = await countStaffNotificationDrafts();
+
+  return {
+    items,
+    total,
+    page: safePage,
+    pageSize,
+    totalPages,
+    draftCount,
+  };
+}
+
 /** Cria rascunho de notificação (ainda não enviada). */
 export async function createNotification(input: {
   title: string;
@@ -20,12 +75,10 @@ export async function createNotification(input: {
   return result.insertId;
 }
 
-/** Lista notificações criadas (staff). */
+/** Lista notificações criadas (staff) — primeira página. */
 export async function listStaffNotifications(): Promise<AppNotificationRecord[]> {
-  return sirQuery<NotificationRow[]>(
-    `SELECT id, title, body, created_by, created_at, sent_at
-     FROM app_notifications ORDER BY created_at DESC`,
-  );
+  const result = await getStaffNotificationsPage(1);
+  return result.items;
 }
 
 /** Busca notificação por ID. */

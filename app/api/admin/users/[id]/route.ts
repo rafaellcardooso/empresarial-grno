@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
-import {
-  CORPORATE_ID_HINT,
-  isValidCorporateId,
-  isValidEmail,
-  parseJsonBody,
-} from "@/lib/auth/validation";
+import { parseProfileUpdateFields } from "@/lib/auth/profile-update";
+import { getSession, setSessionCookie } from "@/lib/auth/session";
+import { parseJsonBody } from "@/lib/auth/validation";
 import {
   countActiveStaffExcept,
   deleteUser,
@@ -127,7 +123,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   return NextResponse.json({ ok: true, status });
 }
 
-/** Atualiza matrícula, nome e e-mail (staff). */
+/** Atualiza matrícula, nome e e-mail (staff — qualquer usuário). */
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "STAFF") {
@@ -140,9 +136,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const body = await parseJsonBody<PutBody>(request);
-  if (!body) {
-    return NextResponse.json({ error: "Corpo inválido." }, { status: 400 });
+  const parsed = parseProfileUpdateFields(await parseJsonBody<PutBody>(request));
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: parsed.status });
   }
 
   const user = await getUserById(userId);
@@ -150,44 +146,34 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
   }
 
-  const corporateId = body.corporateId?.trim();
-  const name = body.name?.trim();
-  const email =
-    body.email === undefined
-      ? undefined
-      : body.email === null || body.email.trim() === ""
-        ? null
-        : body.email.trim();
-
-  if (corporateId !== undefined) {
-    if (!isValidCorporateId(corporateId)) {
-      return NextResponse.json({ error: CORPORATE_ID_HINT }, { status: 400 });
-    }
-    if (await isCorporateIdTaken(corporateId, userId)) {
-      return NextResponse.json({ error: "Matrícula já cadastrada." }, { status: 409 });
-    }
+  const { fields } = parsed;
+  if (await isCorporateIdTaken(fields.corporateId, userId)) {
+    return NextResponse.json({ error: "Login já cadastrado." }, { status: 409 });
   }
 
-  if (name !== undefined && name.length < 2) {
-    return NextResponse.json({ error: "Informe um nome válido." }, { status: 400 });
-  }
-
-  if (email && !isValidEmail(email)) {
-    return NextResponse.json({ error: "E-mail inválido." }, { status: 400 });
-  }
-
-  if (corporateId === undefined && name === undefined && email === undefined) {
-    return NextResponse.json({ error: "Nenhum campo para atualizar." }, { status: 400 });
-  }
-
-  await updateUserProfile(userId, {
-    corporateId,
-    name,
-    email,
-  });
+  await updateUserProfile(userId, fields);
 
   const updated = await getUserById(userId);
-  return NextResponse.json({ ok: true, user: updated ? toPublicUser(updated) : null });
+  const response = NextResponse.json({
+    ok: true,
+    user: updated ? toPublicUser(updated) : null,
+  });
+
+  if (updated && userId === session.userId) {
+    await setSessionCookie(
+      response,
+      {
+        userId: updated.id,
+        corporateId: updated.corporate_id,
+        name: updated.name,
+        role: updated.role,
+        status: updated.status,
+      },
+      true,
+    );
+  }
+
+  return response;
 }
 
 /** Exclui usuário (staff). */

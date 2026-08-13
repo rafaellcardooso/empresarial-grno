@@ -1,3 +1,5 @@
+import { AUTH_COPY } from "@/lib/config/auth-copy";
+
 export type NavItem = {
   href?: string;
   label: string;
@@ -24,10 +26,10 @@ export const PAGE_TITLES: Record<string, string> = {
   "/relatorios/tratativas": "BSOD",
   "/relatorios/sdh": "SDH",
   "/relatorios/exportacao": "Exportação CSV",
-  "/configuracoes": "Configurações",
-  "/conta": "Minha conta",
-  "/admin/usuarios": "Aprovações",
-  "/admin/notificacoes": "Enviar notificações",
+  "/configuracoes": AUTH_COPY.settingsTitle,
+  "/conta": AUTH_COPY.accountTitle,
+  "/admin/usuarios": AUTH_COPY.adminUsersTitle,
+  "/admin/notificacoes": AUTH_COPY.adminNotificationsTitle,
 };
 
 const NAV_SECTIONS_RAW: NavItem[] = [
@@ -42,26 +44,26 @@ const NAV_SECTIONS_RAW: NavItem[] = [
   { href: "/grb/critel", label: "CRITEL", icon: "bi-graph-up" },
   { header: true, label: "Sistema" },
   { href: "/relatorios", label: "Relatórios", icon: "bi-file-earmark-bar-graph" },
-  { href: "/conta", label: "Minha conta", icon: "bi-person" },
-  { href: "/configuracoes", label: "Configurações", icon: "bi-gear" },
+  { href: "/conta", label: AUTH_COPY.accountTitle, icon: "bi-person" },
+  { href: "/configuracoes", label: AUTH_COPY.settingsTitle, icon: "bi-gear" },
   { header: true, label: "Administração", staffOnly: true },
   {
     href: "/admin/usuarios",
-    label: "Aprovações",
+    label: AUTH_COPY.adminUsersTitle,
     icon: "bi-person-check",
     staffOnly: true,
     badgeKey: "pendingUsers",
   },
   {
     href: "/admin/notificacoes",
-    label: "Enviar notificações",
+    label: AUTH_COPY.adminNotificationsTitle,
     icon: "bi-megaphone",
     staffOnly: true,
   },
 ];
 
 /** Seções cujo ordem de links segue a declaração em NAV_SECTIONS_RAW. */
-const NAV_SECTIONS_MANUAL_ORDER = new Set(["Sistema", "GRB"]);
+const NAV_SECTIONS_MANUAL_ORDER = new Set(["Sistema", "GRB", "Administração"]);
 
 /** Agrupa itens por seção; ordena links alfabeticamente, exceto seções manuais. */
 function sortNavSectionsByLabel(items: NavItem[]): NavItem[] {

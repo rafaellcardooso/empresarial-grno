@@ -1,8 +1,9 @@
+import { AUTH_COPY } from "@/lib/config/auth-copy";
+
 /** Textos da página inicial. */
 export const HOME_COPY = {
   title: "Início",
   lead: "Monitoramento operacional da rede empresarial GRNO.",
-  welcome: "Bem-vindo",
   sectionsTitle: "Áreas de monitoramento",
   sir: {
     title: "SIR",
@@ -17,8 +18,8 @@ export const HOME_COPY = {
     description: "Análises operacionais e exportação CSV de RAL, REC e inventário PME.",
   },
   configuracoes: {
-    title: "Configurações",
-    description: "Preferências de interface e parâmetros do sistema.",
+    title: AUTH_COPY.settingsTitle,
+    description: AUTH_COPY.settingsLead,
   },
   statusSir: "SIR",
   statusHfc: "BSOD (SIR)",

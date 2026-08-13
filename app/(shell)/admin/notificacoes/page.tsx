@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { requireStaff } from "@/lib/auth/guards";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 
-export const metadata = { title: "Notificações — admin" };
+export const metadata = { title: AUTH_COPY.adminNotificationsTitle };
 
 /** Página staff para criar e disparar notificações. */
 export default async function Page() {

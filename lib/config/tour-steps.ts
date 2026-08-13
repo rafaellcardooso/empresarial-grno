@@ -38,8 +38,8 @@ export const APP_TOUR_STEPS: DriveStep[] = [
     element: "[data-tour='user-menu']",
     popover: {
       title: "Sua conta",
-      description: "Altere senha, acesse aprovações (staff) ou encerre a sessão.",
-      side: "bottom",
+      description: "Identidade, sair e links de conta no rodapé do menu lateral.",
+      side: "right",
     },
   },
 ];
