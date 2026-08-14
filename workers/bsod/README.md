@@ -24,7 +24,9 @@ cd ../.. && npm run db:migrate && cd workers/bsod
 venv/bin/python run_bsod_cycle.py --ope sls
 ```
 
-Cidades em `config/cities/*.json` (`uf`: MA/AM/PA). `enabled: true` só em SLS por padrão; MNS/BLM exigem `cmts` + credenciais.
+Cidades em `config/cities/*.json` (`uf`: MA/AM/PA). `enabled: true` só em SLS por padrão; MNS/BLM exigem `cmts` (`ip`, `vendor`, `pme_cidr`) + credenciais Xpertrak/LDAP/SNMP.
+
+Manaus (MNS): Xpertrak `http://200.160.100.6/pathtrak/api`, 19 CMTS com faixas PME em `config/cities/mns.json` — preencher `ip` de cada CMTS para SNMP L2VPN.
 
 ## Comportamento
 
