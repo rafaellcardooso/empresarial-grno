@@ -38,6 +38,10 @@ Cidades em `config/cities/*.json` (`uf`: MA/AM/PA). `enabled: true` só em SLS p
 
 CRM só sync: `venv/bin/python run_bsod_crm_sync.py --ope sls` (ou `--dry-run`).
 
+Planilha local (`data/BSOD.xlsx`, colunas designação/razão social/endereço/contrato) — compara contrato com `bsod_inventory` e preenche **somente campos vazios** (não insere CRM nem sobrescreve dados):
+
+`venv/bin/python run_bsod_sheet_enrich.py --ope sls` (ou `--dry-run`).
+
 ## Estrutura
 
 ```
