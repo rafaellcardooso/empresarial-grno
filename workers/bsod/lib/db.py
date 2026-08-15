@@ -48,12 +48,14 @@ INVENTORY_UPSERT = """
 INSERT INTO bsod_inventory (
   ope, ddd, cmts, mac, id_cable, node, contrato, profile, cliente, cadastro_responsavel,
   designacao, produto, address, manual_override, bsod_vlan, vlan, crm_cvlan,
-  contato_cliente_nome_1, contato_cliente_telefone_1
+  contato_cliente_nome_1, contato_cliente_telefone_1,
+  cmts_reg_status, cmts_status_at, ping_reachable, ping_checked_at
 ) VALUES (
   %(ope)s, %(ddd)s, %(cmts)s, %(mac)s, %(id_cable)s, %(node)s, %(contrato)s,
   %(profile)s, %(cliente)s, %(cadastro_responsavel)s, %(designacao)s, %(produto)s,
   %(address)s, %(manual_override)s, %(bsod_vlan)s, %(vlan)s, %(crm_cvlan)s,
-  %(contato_cliente_nome_1)s, %(contato_cliente_telefone_1)s
+  %(contato_cliente_nome_1)s, %(contato_cliente_telefone_1)s,
+  %(cmts_reg_status)s, %(cmts_status_at)s, %(ping_reachable)s, %(ping_checked_at)s
 )
 ON DUPLICATE KEY UPDATE
   ddd = VALUES(ddd),
@@ -72,7 +74,11 @@ ON DUPLICATE KEY UPDATE
   vlan = VALUES(vlan),
   crm_cvlan = VALUES(crm_cvlan),
   contato_cliente_nome_1 = VALUES(contato_cliente_nome_1),
-  contato_cliente_telefone_1 = VALUES(contato_cliente_telefone_1)
+  contato_cliente_telefone_1 = VALUES(contato_cliente_telefone_1),
+  cmts_reg_status = VALUES(cmts_reg_status),
+  cmts_status_at = VALUES(cmts_status_at),
+  ping_reachable = VALUES(ping_reachable),
+  ping_checked_at = VALUES(ping_checked_at)
 """
 
 MONITOR_INSERT = """
@@ -163,6 +169,35 @@ def list_cables_for_ope(ope: str) -> list[dict[str, Any]]:
                 ((ope or "").strip().lower(),),
             )
             return list(cursor.fetchall())
+    finally:
+        conn.close()
+
+
+def list_latest_monitor_by_mac(ope: str) -> dict[str, dict[str, Any]]:
+    """Mapa MAC normalizado → última amostra bsod_monitor do ope."""
+    ope_key = (ope or "").strip().lower()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT m.mac, m.status
+                FROM bsod_monitor m
+                INNER JOIN (
+                    SELECT mac, MAX(sampled_at) AS max_time
+                    FROM bsod_monitor
+                    WHERE ope = %s
+                    GROUP BY mac
+                ) latest ON m.mac = latest.mac AND m.sampled_at = latest.max_time
+                """,
+                (ope_key,),
+            )
+            out: dict[str, dict[str, Any]] = {}
+            for row in cursor.fetchall():
+                key = normalize_mac(row.get("mac")) or str(row.get("mac") or "").strip().lower()
+                if key:
+                    out[key] = row
+            return out
     finally:
         conn.close()
 

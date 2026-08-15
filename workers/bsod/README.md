@@ -32,7 +32,10 @@ Manaus (MNS): Xpertrak `http://200.160.100.6/pathtrak/api`, 19 CMTS em `config/c
 
 1. Sync CRM por UF → `bsod_crm_clients` (ignora `STATUS=CANCELADO`; falha não aborta o ciclo).
 2. Xpertrak → `bsod_cables` + amostras `bsod_monitor`.
-3. SNMP L2VPN + LDAP → `bsod_inventory`:
+3. SNMP L2VPN + **docsIfCmtsCmStatusValue** + **ping ICMP** + LDAP → `bsod_inventory`:
+   - VLAN L2VPN por CMTS (`bsod_vlan`);
+   - status de registro CMTS (`cmts_reg_status`, `8`=operational);
+   - ping (3 tentativas) quando PathTrak offline + CMTS operational + IP PME (`ping_reachable`);
    - **produto** a partir de `profile` (`config/profiles.txt`);
    - cliente/endereço/designação: CRM por **contrato**, senão **cvlan** única, senão override manual / endereço Xpertrak;
    - cleanup de órfãos do `ope`.

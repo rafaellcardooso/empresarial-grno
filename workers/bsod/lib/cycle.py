@@ -8,7 +8,9 @@ from typing import Any
 
 from lib import db, nocclaro, snmp_bsod, xpertrak
 from lib.ldap_modem import lookup_modem_ldap
+from lib.ping_tiebreaker import apply_ping_tiebreaker
 from lib.profiles import resolve_produto
+from lib.snmp_cmts_status import CMTS_REG_OPERATIONAL, collect_all_cmts_reg_status_maps
 from lib.util import (
     build_pme_networks,
     first_modem_channel,
@@ -224,6 +226,8 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
     maps = snmp_bsod.collect_all_bsod_vlan_maps(city)
     flat = snmp_bsod.flatten_bsod_maps(maps)
     vlan_by_mac = {mac: vlan for mac, (_cmts, _orig, vlan) in flat.items()}
+    reg_maps = collect_all_cmts_reg_status_maps(city)
+    cmts_status_at = db.now_local()
     crm_by_contrato = db.list_crm_by_contrato(ope)
     crm_by_cvlan = db.list_crm_by_cvlan(ope)
     existing_by_mac = db.list_inventory_client_fields(ope)
@@ -245,6 +249,13 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
         ldap_cache[key] = result
         return result
 
+    def cmts_reg_status_for(cmts: str, mac_norm: str) -> int | None:
+        """Status DOCS-IF no CMTS do inventário, ou None se ausente na tabela."""
+        cmts_key = (cmts or "").strip().upper()
+        if not cmts_key:
+            return None
+        return reg_maps.get(cmts_key, {}).get(mac_norm)
+
     def build_row(
         *,
         mac_norm: str,
@@ -257,6 +268,7 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
         profile: str,
         vlan: int,
         vlan_text: str,
+        cmts_reg_status: int | None,
     ) -> dict[str, Any]:
         client = _resolve_client_fields(
             contrato=contrato,
@@ -286,6 +298,10 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
             "contato_cliente_nome_1": client["contato_cliente_nome_1"],
             "contato_cliente_telefone_1": client["contato_cliente_telefone_1"],
             "crm_cvlan": client["crm_cvlan"],
+            "cmts_reg_status": cmts_reg_status,
+            "cmts_status_at": cmts_status_at if reg_maps else None,
+            "ping_reachable": None,
+            "ping_checked_at": None,
         }
 
     pme_ip_count = 0
@@ -310,6 +326,7 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
                 profile=profile,
                 vlan=vlan,
                 vlan_text=normalize_vlan(vlan) if vlan else "",
+                cmts_reg_status=cmts_reg_status_for(cable.get("hostname_cmts") or "", mac_norm),
             )
         )
         pme_ip_count += 1
@@ -338,19 +355,44 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
                 profile=profile,
                 vlan=int(vlan),
                 vlan_text=normalize_vlan(vlan),
+                cmts_reg_status=cmts_reg_status_for(
+                    (cable.get("hostname_cmts") if cable else cmts_name) or "",
+                    mac_key,
+                ),
             )
         )
         bsod_count += 1
 
+    monitor_by_mac = db.list_latest_monitor_by_mac(ope)
+    ping_stats = apply_ping_tiebreaker(inventory_rows, cables_by_mac, monitor_by_mac)
+
     upserted = db.upsert_inventory(inventory_rows)
     deleted = db.cleanup_inventory_orphans(ope, keep_macs)
     crm_stats = _crm_match_stats(inventory_rows, crm_by_contrato, crm_by_cvlan)
+    false_offline = 0
+    for row in inventory_rows:
+        if row.get("cmts_reg_status") != CMTS_REG_OPERATIONAL:
+            continue
+        mac_key = normalize_mac(row["mac"]) or str(row["mac"]).lower()
+        cable = cables_by_mac.get(mac_key)
+        monitor = monitor_by_mac.get(mac_key)
+        xpertrak_offline = (
+            monitor is not None and int(monitor.get("status") or 0) == 0
+        ) or str((cable or {}).get("reg_status") or "").strip().lower() != "online"
+        if not xpertrak_offline:
+            continue
+        if row.get("ping_reachable") == 0:
+            continue
+        false_offline += 1
     return {
         "pme_ip": pme_ip_count,
         "bsod": bsod_count,
         "upserted": upserted,
         "orphans": deleted,
         "ldap": len(ldap_cache),
+        "cmts_reg_maps": len(reg_maps),
+        "false_offline": false_offline,
+        **ping_stats,
         **crm_stats,
     }
 

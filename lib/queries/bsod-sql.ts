@@ -1,5 +1,6 @@
 import { bsodOperationLabel } from "@/lib/config/bsod-locations";
 import { BSOD_STATUS_LABELS } from "@/lib/config/metric-labels";
+import { deriveEffectiveMonitorStatus } from "@/lib/bsod/cmts-health";
 import { likeContainsPattern, normalizeTableSearch } from "@/lib/config/table-search";
 import { normalizeDateTimeIso } from "@/lib/format/datetime";
 import type { LatestMonitorReading } from "@/lib/queries/bsod-monitor";
@@ -92,7 +93,11 @@ export const BSOD_INVENTORY_SELECT = `
     i.bsod_vlan, i.vlan,
     NULLIF(TRIM(i.crm_cvlan), '') AS crm_cvlan,
     NULLIF(TRIM(i.contato_cliente_nome_1), '') AS contato_cliente_nome_1,
-    NULLIF(TRIM(i.contato_cliente_telefone_1), '') AS contato_cliente_telefone_1
+    NULLIF(TRIM(i.contato_cliente_telefone_1), '') AS contato_cliente_telefone_1,
+    i.cmts_reg_status,
+    i.cmts_status_at,
+    i.ping_reachable,
+    i.ping_checked_at
 `;
 
 /** Alias legado usado por helpers que ainda esperam SELECT “joined”. */
@@ -267,6 +272,16 @@ export function mapPmeRow(row: RowDataPacket): PmeBsodRow {
   const bsodVlan = Number(row.bsod_vlan);
   const addressRaw = row.address == null ? null : String(row.address).trim();
   const ope = String(row.ope ?? "");
+  const xpertrakStatus = row.monitor_status == null ? null : Number(row.monitor_status);
+  const cmtsRegStatus =
+    row.cmts_reg_status == null || row.cmts_reg_status === "" ? null : Number(row.cmts_reg_status);
+  const pingReachable =
+    row.ping_reachable == null || row.ping_reachable === "" ? null : Number(row.ping_reachable);
+  const effectiveStatus = deriveEffectiveMonitorStatus(
+    xpertrakStatus,
+    cmtsRegStatus,
+    pingReachable,
+  );
   return {
     ...(row as PmeBsodRow),
     ope,
@@ -277,10 +292,8 @@ export function mapPmeRow(row: RowDataPacket): PmeBsodRow {
     crm_cvlan: String(row.crm_cvlan ?? "").trim(),
     contato_cliente_nome_1: String(row.contato_cliente_nome_1 ?? "").trim(),
     contato_cliente_telefone_1: String(row.contato_cliente_telefone_1 ?? "").trim(),
-    monitor_status: row.monitor_status == null ? null : Number(row.monitor_status),
-    monitor_label: monitorStatusLabel(
-      row.monitor_status == null ? null : Number(row.monitor_status),
-    ),
+    monitor_status: effectiveStatus,
+    monitor_label: monitorStatusLabel(effectiveStatus),
     tx: row.tx == null ? null : Number(row.tx),
     rx: row.rx == null ? null : Number(row.rx),
     mer: row.mer == null ? null : Number(row.mer),

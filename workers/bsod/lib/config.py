@@ -100,3 +100,18 @@ def list_enabled_opes() -> list[str]:
         if cfg.get("enabled"):
             enabled.append(ope)
     return enabled
+
+
+def ping_enabled() -> bool:
+    """Indica se ping ICMP de desempate está habilitado."""
+    raw = (os.environ.get("BSOD_PING_ENABLED") or "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
+def get_ping_config() -> dict[str, int | float]:
+    """Parâmetros do desempate ICMP (PathTrak offline + CMTS operational)."""
+    return {
+        "attempts": int(os.environ.get("BSOD_PING_ATTEMPTS", "3")),
+        "timeout_sec": float(os.environ.get("BSOD_PING_TIMEOUT_SEC", "2")),
+        "parallel": int(os.environ.get("BSOD_PING_PARALLEL", "16")),
+    }

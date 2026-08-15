@@ -12,6 +12,11 @@ if str(WORKER_ROOT) not in sys.path:
     sys.path.insert(0, str(WORKER_ROOT))
 
 from lib.config import load_worker_env  # noqa: E402
+from lib.snmp_cmts_status import (  # noqa: E402
+    CMTS_REG_OPERATIONAL,
+    OID_CM_STATUS_VALUE,
+    collect_cmts_reg_status_map,
+)
 from lib.snmp_bsod import (  # noqa: E402
     OID_CASA_CM_STATUS_INDEX,
     OID_CASA_VPN_CM,
@@ -62,6 +67,7 @@ def main() -> int:
         ("DOCS-L2VPN docsL2vpnVpnCmCMIM (CASA)", OID_CASA_VPN_CM),
         ("DOCS-L2VPN docsL2vpnCmNsiEncapValue", OID_NSI_ENCAP),
         ("DOCS-IF docsIfCmtsCmStatusMac", OID_CM_MAC),
+        ("DOCS-IF docsIfCmtsCmStatusValue", OID_CM_STATUS_VALUE),
         ("Q-BRIDGE dot1qTpFdbPort", OID_DOT1Q_TP_FDB_PORT),
         ("CASA casaCmtsCmCpeCmStatusIndex", OID_CASA_CM_STATUS_INDEX),
     ]
@@ -96,6 +102,13 @@ def main() -> int:
 
     casa_idx = _collect_casa_cm_index_map(host, community)
     print(f"CASA cmStatusIndex→MAC: {len(casa_idx)}")
+
+    reg_map = collect_cmts_reg_status_map(host, community)
+    operational = sum(1 for value in reg_map.values() if value == CMTS_REG_OPERATIONAL)
+    print(f"DOCS-IF MAC→regStatus: {len(reg_map)} (operational={operational})")
+    if reg_map:
+        sample = list(reg_map.items())[:5]
+        print(f"  amostra: {sample}")
 
     merged = collect_bsod_vlan_map_for_cmts(args.cmts, host, vendor, community)
     print()

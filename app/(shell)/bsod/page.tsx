@@ -150,10 +150,7 @@ export default async function Page({ searchParams }: PageProps) {
 
     return (
       <>
-        <PageHeader
-          title="BSOD"
-          description="Modems PME com última leitura SNMP offline — escopo inicial DDD 98 (MA)."
-        />
+        <PageHeader title="BSOD" description="Modems PME offline — escopo inicial DDD 98 (MA)." />
         <BsodScopeNav active="alarms" />
         <BsodAlarmToolbar
           kpiCounts={{
