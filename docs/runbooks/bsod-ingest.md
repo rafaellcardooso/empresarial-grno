@@ -62,10 +62,9 @@ Intervalo: **30 min** (`OnUnitActiveSec=30min`).
    - falha de CRM **não** aborta Xpertrak/SNMP/LDAP
 2. **Xpertrak** — nodes/modems → `bsod_cables` + amostras `bsod_monitor`
 3. **SNMP** — VLAN L2VPN por CMTS → `bsod_vlan` / `vlan` no inventário
-4. **SNMP CMTS reg** — `docsIfCmtsCmStatusValue` (`1.3.6.1.2.1.10.127.1.3.3.1.6`) → `cmts_reg_status` / `cmts_status_at`
-5. **Ping PME** — 3 ICMP quando PathTrak offline + CMTS operational + `ip_ger` → `ping_reachable` / `ping_checked_at`
-6. **LDAP** — contrato + profile → inventário; **produto** via `config/profiles.txt`
-7. **Enrich CRM** no inventário (ordem):
+4. **Ping PME** — 3 ICMP quando PathTrak offline + `ip_ger` → `ping_reachable` / `ping_checked_at`
+5. **LDAP** — contrato + profile → inventário; **produto** via `config/profiles.txt`
+6. **Enrich CRM** no inventário (ordem):
    1. contrato LDAP ↔ `contrato_netsms`
    2. se falhar: VLAN SNMP ↔ `cvlan` **única** e ≠ `0`
    3. se falhar: mantém override manual (`manual_override=1`) ou endereço Xpertrak
@@ -124,41 +123,26 @@ CRM só sync: `venv/bin/python run_bsod_crm_sync.py --ope sls` (ou `--dry-run`).
 A coluna interna `vlan` guarda a VLAN CMTS normalizada (string) só para join/filtros; não é exibida como “operacional”.
 PME só por faixa IP, sem L2VPN no CMTS, fica sem VLAN CMTS.
 
-## Offline confirmado (PathTrak × CMTS × ping)
+## Offline confirmado (PathTrak × ping)
 
-Migrations `026`–`027`: `cmts_reg_status`, `ping_reachable`.
+Migration `027`: `ping_reachable` (coluna `cmts_reg_status` da `026` permanece no schema, sem coleta no ciclo).
 
-| Fonte    | Coluna / campo        | Uso                                                          |
-| -------- | --------------------- | ------------------------------------------------------------ |
-| PathTrak | `bsod_monitor.status` | Última leitura SNMP PathTrak (0=offline, 1=online)           |
-| CMTS     | `cmts_reg_status`     | Walk SNMP no ciclo de enrich                                 |
-| Ping     | `ping_reachable`      | 3 ICMP no IP PME quando PathTrak offline e CMTS operational  |
-| UI       | status efetivo        | CMTS prevalece; ping falho mantém offline (sem rótulo extra) |
+| Fonte    | Coluna / campo        | Uso                                               |
+| -------- | --------------------- | ------------------------------------------------- |
+| PathTrak | `bsod_monitor.status` | Última leitura (0=offline, 1=online)              |
+| Ping     | `ping_reachable`      | 3 ICMP no IP PME quando PathTrak offline          |
+| UI       | status efetivo        | Ping confirma/desmente offline (sem rótulo extra) |
 
 Regra efetiva (interna, transparente na UI):
 
 1. PathTrak online → online
-2. PathTrak offline + CMTS ≠ operational → offline
-3. PathTrak offline + CMTS operational + ping OK (ou sem IP / não testado) → online
-4. PathTrak offline + CMTS operational + ping falhou 3× → offline
+2. PathTrak offline + ping OK → online
+3. PathTrak offline + ping falhou 3× (ou sem IP / não testado) → offline
 
 Env worker: `BSOD_PING_ATTEMPTS=3`, `BSOD_PING_TIMEOUT_SEC=2`, `BSOD_PING_PARALLEL=16`, `BSOD_PING_ENABLED=1`.
-
-CMTS reg status (MNS/CMTS grandes): `BSOD_CMTS_REG_PARALLEL=2`, `BSOD_CMTS_REG_SNMP_TIMEOUT=15`, `BSOD_CMTS_REG_WALK_DEADLINE_SEC=180`, `BSOD_CMTS_REG_ALLOW_FULL_WALK=0`. Coleta via **id_cable** (cmIndex Xpertrak) + índices NSI/CASA — **sem walk completo** por padrão.
-
-Sonda antes do ciclo (no host com rede até os CMTS):
-
-```bash
-cd /usr/local/empresarial/workers/bsod
-# sysUpTime + índices + reg status dos MACs já no banco (pós Xpertrak)
-venv/bin/python scripts/snmp_probe_cmts_reg.py --ope mns --cmts MNSNSGCMT01 --from-db
-# testar id_cable isolado (valor do Xpertrak)
-venv/bin/python scripts/snmp_probe_cmts_reg.py --ope mns --cmts MNSNSGCMT01 --id-cable 12345
-# MAC específico
-venv/bin/python scripts/snmp_probe_cmts_reg.py --ope mns --cmts MNSNSGCMT02 --mac aa:bb:cc:dd:ee:ff
-```
 
 - Alarmes `/bsod` e KPI **Offline** usam status efetivo; o operador vê apenas online/offline.
 - Tratativa BSOD só inicia para modem offline (status efetivo).
 - Log do worker: `false_offline`, `ping_checked`, `ping_ok`, `ping_fail` (métricas internas).
-- Sonda: `scripts/snmp_probe_bsod.py --host IP --vendor CASA` inclui walk de `docsIfCmtsCmStatusValue`.
+- UI: `lib/bsod/cmts-health.ts` (`deriveEffectiveMonitorStatus`).
+- Sonda VLAN: `scripts/snmp_probe_bsod.py --host IP --vendor CASA`.

@@ -273,15 +273,9 @@ export function mapPmeRow(row: RowDataPacket): PmeBsodRow {
   const addressRaw = row.address == null ? null : String(row.address).trim();
   const ope = String(row.ope ?? "");
   const xpertrakStatus = row.monitor_status == null ? null : Number(row.monitor_status);
-  const cmtsRegStatus =
-    row.cmts_reg_status == null || row.cmts_reg_status === "" ? null : Number(row.cmts_reg_status);
   const pingReachable =
     row.ping_reachable == null || row.ping_reachable === "" ? null : Number(row.ping_reachable);
-  const effectiveStatus = deriveEffectiveMonitorStatus(
-    xpertrakStatus,
-    cmtsRegStatus,
-    pingReachable,
-  );
+  const effectiveStatus = deriveEffectiveMonitorStatus(xpertrakStatus, pingReachable);
   return {
     ...(row as PmeBsodRow),
     ope,

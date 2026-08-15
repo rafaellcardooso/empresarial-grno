@@ -1,4 +1,4 @@
-"""Aplica ping ICMP no desempate PathTrak offline × CMTS operational."""
+"""Aplica ping ICMP quando PathTrak indica offline (desempate interno)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ from typing import Any
 from lib import db
 from lib.config import get_ping_config, ping_enabled
 from lib.ping_pme import collect_ping_results, parse_pme_ip
-from lib.snmp_cmts_status import CMTS_REG_OPERATIONAL
 from lib.util import normalize_mac
 
 
@@ -29,7 +28,7 @@ def apply_ping_tiebreaker(
     cables_by_mac: dict[str, dict[str, Any]],
     monitor_by_mac: dict[str, dict[str, Any]],
 ) -> dict[str, int]:
-    """Preenche ping_reachable nas linhas elegíveis; retorna contadores internos."""
+    """Preenche ping_reachable nas linhas com PathTrak offline e IP; retorna contadores."""
     cfg = get_ping_config()
     ping_at = db.now_local()
     jobs: list[tuple[str, str]] = []
@@ -38,8 +37,6 @@ def apply_ping_tiebreaker(
         row.setdefault("ping_reachable", None)
         row.setdefault("ping_checked_at", None)
         if not ping_enabled():
-            continue
-        if row.get("cmts_reg_status") != CMTS_REG_OPERATIONAL:
             continue
         mac_key = normalize_mac(row.get("mac")) or str(row.get("mac") or "").lower()
         cable = cables_by_mac.get(mac_key)
