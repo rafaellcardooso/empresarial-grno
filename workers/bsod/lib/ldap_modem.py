@@ -115,6 +115,39 @@ def lookup_modem_ldap(city: dict[str, Any], mac: str) -> dict[str, Any]:
     return dict(_EMPTY_LDAP)
 
 
+def prefetch_ldap_by_macs(
+    city: dict[str, Any],
+    macs: set[str],
+    parallel: int = 16,
+) -> dict[str, dict[str, Any]]:
+    """Consulta LDAP em paralelo; chave MAC normalizado → attrs."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    if not macs:
+        return {}
+    workers = min(max(1, int(parallel)), len(macs))
+    ope = city.get("ope")
+    logger.info("[%s] LDAP lookup macs=%d parallel=%d", ope, len(macs), workers)
+    cache: dict[str, dict[str, Any]] = {}
+    done = 0
+    total = len(macs)
+
+    def work(mac: str) -> tuple[str, dict[str, Any]]:
+        key = normalize_mac_ldap(mac) or (mac or "").strip().lower()
+        return key, lookup_modem_ldap(city, mac)
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(work, mac): mac for mac in macs}
+        for future in as_completed(futures):
+            key, result = future.result()
+            if key:
+                cache[key] = result
+            done += 1
+            if done == total or done % 100 == 0:
+                logger.info("[%s] LDAP progresso %d/%d", ope, done, total)
+    return cache
+
+
 def lookup_modem_ldap_raw(city: dict[str, Any], mac: str) -> tuple[str, dict[str, Any]] | None:
     """Busca entrada LDAP completa; retorna (host, attrs) ou None."""
     if Server is None or Connection is None:

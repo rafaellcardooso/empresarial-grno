@@ -109,9 +109,17 @@ def ping_enabled() -> bool:
 
 
 def get_ping_config() -> dict[str, int | float]:
-    """Parâmetros do desempate ICMP (PathTrak offline + CMTS operational)."""
+    """Parâmetros do desempate ICMP (PathTrak offline)."""
     return {
         "attempts": int(os.environ.get("BSOD_PING_ATTEMPTS", "3")),
         "timeout_sec": float(os.environ.get("BSOD_PING_TIMEOUT_SEC", "2")),
         "parallel": int(os.environ.get("BSOD_PING_PARALLEL", "16")),
     }
+
+
+def get_ldap_parallel() -> int:
+    """Workers paralelos no lookup LDAP do enrich."""
+    try:
+        return max(1, int(os.environ.get("BSOD_LDAP_PARALLEL", "16")))
+    except ValueError:
+        return 16

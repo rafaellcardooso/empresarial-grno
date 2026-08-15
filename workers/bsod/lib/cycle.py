@@ -7,7 +7,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from lib import db, nocclaro, snmp_bsod, xpertrak
-from lib.ldap_modem import lookup_modem_ldap
+from lib.config import get_ldap_parallel
+from lib.ldap_modem import prefetch_ldap_by_macs
 from lib.ping_tiebreaker import apply_ping_tiebreaker
 from lib.profiles import resolve_produto
 from lib.util import (
@@ -33,12 +34,14 @@ def _sweep_xpertrak(city: dict[str, Any]) -> dict[str, int]:
     networks = build_pme_networks(city.get("cmts") or {})
     inventory_macs = {normalize_mac(m) or m for m in db.list_inventory_macs(ope)}
     nodes = xpertrak.list_nodes(city)
-    logger.info("[%s] Xpertrak nodes=%d", ope, len(nodes))
+    parallel = max(1, int(city.get("modems_parallel") or 6))
+    logger.info("[%s] Xpertrak nodes=%d parallel=%d", ope, len(nodes), parallel)
 
     sampled_at = db.now_local()
     cables_total = 0
     monitor_total = 0
-    parallel = max(1, int(city.get("modems_parallel") or 6))
+    done_nodes = 0
+    total_nodes = len(nodes)
 
     def work(node: dict[str, Any]) -> tuple[int, int]:
         modems = xpertrak.fetch_modems_raw(city, node["node_id"])
@@ -93,7 +96,16 @@ def _sweep_xpertrak(city: dict[str, Any]) -> dict[str, int]:
                     node.get("node_id"),
                     exc,
                 )
+            done_nodes += 1
+            if done_nodes == total_nodes or done_nodes % 200 == 0:
+                logger.info("[%s] Xpertrak progresso %d/%d", ope, done_nodes, total_nodes)
 
+    logger.info(
+        "[%s] Xpertrak OK cables=%d monitor=%d",
+        ope,
+        cables_total,
+        monitor_total,
+    )
     return {"nodes": len(nodes), "cables": cables_total, "monitor": monitor_total}
 
 
@@ -223,28 +235,43 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
     ddd = city["ddd"]
     networks = build_pme_networks(city.get("cmts") or {})
     cables = db.list_cables_for_ope(ope)
+    logger.info("[%s] enrich SNMP L2VPN iniciando", ope)
     maps = snmp_bsod.collect_all_bsod_vlan_maps(city)
     flat = snmp_bsod.flatten_bsod_maps(maps)
     vlan_by_mac = {mac: vlan for mac, (_cmts, _orig, vlan) in flat.items()}
+    logger.info("[%s] enrich SNMP OK vlans=%d", ope, len(flat))
     crm_by_contrato = db.list_crm_by_contrato(ope)
     crm_by_cvlan = db.list_crm_by_cvlan(ope)
     existing_by_mac = db.list_inventory_client_fields(ope)
 
-    ldap_cache: dict[str, dict[str, Any]] = {}
     keep_macs: set[str] = set()
     inventory_rows: list[dict[str, Any]] = []
+    pme_cables: list[dict[str, Any]] = []
+    ldap_macs: set[str] = set()
+
+    for cable in cables:
+        if not ip_in_pme_range(networks, cable.get("hostname_cmts") or "", cable.get("ip_ger") or ""):
+            continue
+        mac_raw = str(cable.get("mac") or "")
+        mac_norm = normalize_mac(mac_raw) or mac_raw.lower()
+        keep_macs.add(mac_norm)
+        ldap_macs.add(mac_raw or mac_norm)
+        pme_cables.append(cable)
+
+    cables_by_mac: dict[str, dict[str, Any]] = {}
+    for cable in cables:
+        key = normalize_mac(cable.get("mac")) or str(cable.get("mac") or "").lower()
+        cables_by_mac[key] = cable
+
+    for mac_key, (_cmts_name, mac_orig, _vlan) in flat.items():
+        keep_macs.add(mac_key)
+        ldap_macs.add(mac_orig or mac_key)
+
+    ldap_cache = prefetch_ldap_by_macs(city, ldap_macs, parallel=get_ldap_parallel())
 
     def ldap_fields(mac: str) -> dict[str, Any]:
         key = normalize_mac(mac) or mac.strip().lower()
-        if key in ldap_cache:
-            return ldap_cache[key]
-        result = lookup_modem_ldap(city, mac) or {
-            "contrato": "",
-            "profile": "",
-            "found": False,
-        }
-        ldap_cache[key] = result
-        return result
+        return ldap_cache.get(key) or {"contrato": "", "profile": "", "found": False}
 
     def build_row(
         *,
@@ -294,11 +321,8 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
         }
 
     pme_ip_count = 0
-    for cable in cables:
-        if not ip_in_pme_range(networks, cable.get("hostname_cmts") or "", cable.get("ip_ger") or ""):
-            continue
+    for cable in pme_cables:
         mac_norm = normalize_mac(cable.get("mac")) or str(cable.get("mac") or "").lower()
-        keep_macs.add(mac_norm)
         ldap = ldap_fields(str(cable.get("mac") or ""))
         vlan = int(vlan_by_mac.get(mac_norm, 0) or 0)
         contrato = ldap.get("contrato") or ""
@@ -319,14 +343,8 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
         )
         pme_ip_count += 1
 
-    cables_by_mac = {}
-    for cable in cables:
-        key = normalize_mac(cable.get("mac")) or str(cable.get("mac") or "").lower()
-        cables_by_mac[key] = cable
-
     bsod_count = 0
     for mac_key, (cmts_name, mac_orig, vlan) in flat.items():
-        keep_macs.add(mac_key)
         cable = cables_by_mac.get(mac_key)
         ldap = ldap_fields(mac_orig)
         contrato = ldap.get("contrato") or ""
@@ -347,6 +365,7 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
         )
         bsod_count += 1
 
+    logger.info("[%s] enrich ping desempate", ope)
     monitor_by_mac = db.list_latest_monitor_by_mac(ope)
     ping_stats = apply_ping_tiebreaker(inventory_rows, cables_by_mac, monitor_by_mac)
 
