@@ -186,6 +186,17 @@ def _parse_snmp_int_token(raw: str) -> int | None:
         return None
 
 
+def normalize_numeric_oid(oid: str) -> str:
+    """Normaliza OID textual (iso./MIB::) para forma numérica pontilhada."""
+    text = (oid or "").strip().replace('"', "")
+    if text.startswith("iso."):
+        text = "1." + text[4:]
+    match = _OID_SUFFIX_RE.search(text)
+    if not match:
+        return text
+    return match.group(1)
+
+
 def snmp_get_int(
     host: str,
     oid: str,
@@ -205,6 +216,7 @@ def snmp_get_int(
             [
                 cmd_path,
                 "-v2c",
+                "-On",
                 "-c",
                 community,
                 "-t",
@@ -235,7 +247,7 @@ def snmp_get_int_batch(
     timeout: int | None = None,
     batch_size: int = 24,
 ) -> dict[str, int | None]:
-    """Executa snmpget em lotes; mapa OID completo → valor."""
+    """Executa snmpget em lotes; mapa OID numérico → valor."""
     cmd_path = _snmpget_path()
     if not cmd_path or not oids:
         return {}
@@ -250,6 +262,7 @@ def snmp_get_int_batch(
                 [
                     cmd_path,
                     "-v2c",
+                    "-On",
                     "-c",
                     community,
                     "-t",
@@ -267,17 +280,19 @@ def snmp_get_int_batch(
         except subprocess.TimeoutExpired:
             logger.warning("snmpget batch timeout host=%s oids=%d", host, len(chunk))
             for oid in chunk:
-                out[oid] = None
+                out[normalize_numeric_oid(oid)] = None
             continue
+        by_norm: dict[str, int | None] = {}
         for line in result.stdout.splitlines():
             text = line.strip()
             if not text or "=" not in text:
                 continue
             left, _, right = text.partition("=")
-            oid_key = left.strip()
-            out[oid_key] = _parse_snmp_int_token(right)
+            by_norm[normalize_numeric_oid(left)] = _parse_snmp_int_token(right)
         for oid in chunk:
-            out.setdefault(oid, None)
+            key = normalize_numeric_oid(oid)
+            out[key] = by_norm.get(key)
+            out.setdefault(oid, out[key])
     return out
 
 

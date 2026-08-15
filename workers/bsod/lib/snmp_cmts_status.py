@@ -9,14 +9,13 @@ from typing import Any
 
 from lib.snmp_bsod import (
     OID_CM_MAC,
-    OID_CM_PTR,
     OID_CM_STATUS_VALUE,
     _collect_casa_cm_index_map,
     _oid_suffix_from_line,
     _parse_hex_string_payload,
     collect_cm_index_hints,
     learn_if_indexes_from_cm_indexes,
-    resolve_cm_ptr_by_mac,
+    normalize_numeric_oid,
     resolve_cm_status_suffix_map_by_macs,
     resolve_mac_suffix_map_by_cm_indexes,
     snmp_get_int_batch,
@@ -29,6 +28,7 @@ logger = logging.getLogger(__name__)
 CMTS_REG_OPERATIONAL = 8
 
 REG_STATUS_LABELS: dict[int, str] = {
+    0: "other/offline",
     1: "other",
     2: "ranging",
     3: "rangingAborted",
@@ -238,7 +238,10 @@ def _fetch_reg_status_values(
     values = snmp_get_int_batch(host, status_oids, community, timeout=timeout)
     result: dict[str, int] = {}
     for index, mac in mac_by_suffix.items():
-        status = values.get(_status_oid_for_index(index))
+        oid = _status_oid_for_index(index)
+        status = values.get(oid)
+        if status is None:
+            status = values.get(normalize_numeric_oid(oid))
         if status is not None:
             result[mac] = status
     return result
@@ -256,24 +259,26 @@ def collect_cmts_reg_status_map(
     timeout = _cmts_reg_snmp_timeout()
     deadline = _cmts_reg_walk_deadline()
     hints = set(cm_index_hints or set())
-    if_candidates = _if_index_candidates(host, community, vendor, hints, timeout)
+    if_candidates = _default_if_index_candidates()
 
-    mac_by_suffix = _resolve_via_index_hints(
-        host, community, vendor, hints, timeout, if_candidates,
-    )
-    mac_by_suffix = _filter_suffix_map(mac_by_suffix, needed_macs)
+    mac_by_suffix: dict[tuple[int, ...], str] = {}
+    pending: set[str] = set(needed_macs) if needed_macs is not None else set()
 
-    pending: set[str] = set()
-    if needed_macs is not None:
-        found = set(mac_by_suffix.values())
-        pending = {mac for mac in needed_macs if mac not in found}
-
+    # Preferência: docsIfCmtsCmPtr por MAC (rápido; id_cable Xpertrak ≠ cmStatusIndex no ARRIS)
     if pending:
-        mac_by_suffix = _merge_suffix_maps(
-            mac_by_suffix,
-            _resolve_via_mac_ptr(host, community, pending, if_candidates, timeout),
-        )
+        mac_by_suffix = _resolve_via_mac_ptr(host, community, pending, if_candidates, timeout)
         pending = {mac for mac in pending if mac not in set(mac_by_suffix.values())}
+
+    if pending or needed_macs is None:
+        if_candidates = _if_index_candidates(host, community, vendor, hints, timeout)
+        hint_map = _resolve_via_index_hints(
+            host, community, vendor, hints, timeout, if_candidates,
+        )
+        if needed_macs is not None:
+            hint_map = _filter_suffix_map(hint_map, pending or needed_macs)
+        mac_by_suffix = _merge_suffix_maps(mac_by_suffix, hint_map)
+        if needed_macs is not None:
+            pending = {mac for mac in needed_macs if mac not in set(mac_by_suffix.values())}
 
     if pending and _allow_targeted_mac_walk(len(pending)):
         mac_by_suffix = _merge_suffix_maps(
@@ -282,7 +287,7 @@ def collect_cmts_reg_status_map(
         )
     elif pending:
         logger.info(
-            "CMTS reg status host=%s pendentes=%d (walk desabilitado; id_cable/ifIndex ou BSOD_CMTS_REG_TARGETED_WALK)",
+            "CMTS reg status host=%s pendentes=%d (walk desabilitado; cmPtr/id_cable ou BSOD_CMTS_REG_TARGETED_WALK)",
             host,
             len(pending),
         )
