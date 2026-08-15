@@ -218,21 +218,53 @@ def _resolve_client_fields(
     }
 
 
+def _needed_macs_by_cmts(
+    cables: list[dict[str, Any]],
+    flat: dict[str, tuple[str, str, int]],
+    networks: dict[str, Any],
+) -> dict[str, set[str]]:
+    """Agrupa MACs do inventário por CMTS para coleta SNMP targeted."""
+    by_cmts: dict[str, set[str]] = {}
+
+    def add(cmts: str, mac: str) -> None:
+        cmts_key = (cmts or "").strip().upper()
+        if not cmts_key:
+            return
+        mac_key = normalize_mac(mac) or str(mac).lower()
+        if mac_key:
+            by_cmts.setdefault(cmts_key, set()).add(mac_key)
+
+    for cable in cables:
+        cmts = str(cable.get("hostname_cmts") or "")
+        mac = str(cable.get("mac") or "")
+        mac_norm = normalize_mac(mac) or mac.lower()
+        is_bsod = mac_norm in flat
+        is_pme = ip_in_pme_range(networks, cmts, str(cable.get("ip_ger") or ""))
+        if is_bsod or is_pme:
+            add(cmts, mac)
+
+    for mac_key, (cmts_name, mac_orig, _vlan) in flat.items():
+        add(cmts_name, mac_orig or mac_key)
+
+    return by_cmts
+
+
 def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
     """SNMP + LDAP → bsod_inventory (PME por IP + BSoD) + CRM por contrato/VLAN."""
     ope = city["ope"]
     ddd = city["ddd"]
     networks = build_pme_networks(city.get("cmts") or {})
+    cables = db.list_cables_for_ope(ope)
     maps = snmp_bsod.collect_all_bsod_vlan_maps(city)
     flat = snmp_bsod.flatten_bsod_maps(maps)
     vlan_by_mac = {mac: vlan for mac, (_cmts, _orig, vlan) in flat.items()}
-    reg_maps = collect_all_cmts_reg_status_maps(city)
+    needed_by_cmts = _needed_macs_by_cmts(cables, flat, networks)
+    reg_maps = collect_all_cmts_reg_status_maps(city, needed_by_cmts)
     cmts_status_at = db.now_local()
     crm_by_contrato = db.list_crm_by_contrato(ope)
     crm_by_cvlan = db.list_crm_by_cvlan(ope)
     existing_by_mac = db.list_inventory_client_fields(ope)
 
-    cables = db.list_cables_for_ope(ope)
     ldap_cache: dict[str, dict[str, Any]] = {}
     keep_macs: set[str] = set()
     inventory_rows: list[dict[str, Any]] = []

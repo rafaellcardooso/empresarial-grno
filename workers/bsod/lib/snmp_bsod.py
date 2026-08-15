@@ -7,7 +7,8 @@ import os
 import re
 import shutil
 import subprocess
-from typing import Any
+import time
+from typing import Any, Iterator
 
 from lib.util import normalize_mac
 
@@ -17,7 +18,9 @@ logger = logging.getLogger(__name__)
 OID_NSI_ENCAP = "1.3.6.1.4.1.4491.2.1.8.1.9.1.2"
 # DOCS-L2VPN-MIB — docsL2vpnVpnCmCMIM; índice docsL2vpnIdx.docsIfCmtsCmStatusIndex (CASA multipoint)
 OID_CASA_VPN_CM = "1.3.6.1.4.1.4491.2.1.8.1.4.1.1"
-# DOCS-IF-MIB — docsIfCmtsCmStatusValue (MAC do CM)
+# DOCS-IF-MIB — docsIfCmtsCmStatusValue (registration state)
+OID_CM_STATUS_VALUE = "1.3.6.1.2.1.10.127.1.3.3.1.6"
+# DOCS-IF-MIB — docsIfCmtsCmStatusMac
 OID_CM_MAC = "1.3.6.1.2.1.10.127.1.3.3.1.2"
 # Q-BRIDGE-MIB — dot1qTpFdbPort; índice dot1qFdbId (VLAN) + MAC
 OID_DOT1Q_TP_FDB_PORT = "1.3.6.1.2.1.17.7.1.2.2.1.2"
@@ -36,6 +39,13 @@ def _snmpwalk_path() -> str | None:
     if os.path.exists(configured):
         return configured
     return shutil.which("snmpwalk")
+
+
+def _snmpget_path() -> str | None:
+    configured = os.getenv("SNMPGET_PATH", "/usr/bin/snmpget")
+    if os.path.exists(configured):
+        return configured
+    return shutil.which("snmpget")
 
 
 def parse_vlan_encap(hex_bytes: bytes, vendor: str) -> int:
@@ -91,12 +101,100 @@ def _snmp_parallel() -> int:
         return 8
 
 
-def snmp_walk_lines(host: str, oid: str, community: str, timeout: int | None = None) -> list[str]:
+def snmp_walk_lines(
+    host: str,
+    oid: str,
+    community: str,
+    timeout: int | None = None,
+    deadline_sec: int | None = None,
+) -> list[str]:
     """Executa snmpwalk -v2c e devolve linhas stdout."""
+    return list(
+        snmp_walk_iter(host, oid, community, timeout=timeout, deadline_sec=deadline_sec),
+    )
+
+
+def snmp_walk_iter(
+    host: str,
+    oid: str,
+    community: str,
+    timeout: int | None = None,
+    deadline_sec: int | None = None,
+) -> Iterator[str]:
+    """Itera linhas do snmpwalk com deadline opcional (early exit)."""
     cmd_path = _snmpwalk_path()
     if not cmd_path:
         logger.error("snmpwalk não encontrado")
-        return []
+        return
+    t_sec = _snmp_timeout_sec() if timeout is None else max(1, int(timeout))
+    retries = _snmp_retries()
+    proc_deadline = deadline_sec if deadline_sec is not None else t_sec * (retries + 1) + 5
+    started = time.monotonic()
+    proc = subprocess.Popen(
+        [
+            cmd_path,
+            "-v2c",
+            "-c",
+            community,
+            "-t",
+            str(t_sec),
+            "-r",
+            str(retries),
+            host,
+            oid,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            if time.monotonic() - started > proc_deadline:
+                logger.warning(
+                    "snmpwalk timeout host=%s oid=%s deadline=%ss",
+                    host,
+                    oid,
+                    proc_deadline,
+                )
+                proc.kill()
+                break
+            text = line.strip()
+            if text:
+                yield text
+    finally:
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=5)
+
+
+def _parse_snmp_int_token(raw: str) -> int | None:
+    """Extrai inteiro de valor snmpget/snmpwalk."""
+    value = raw.strip()
+    if not value:
+        return None
+    if ":" in value:
+        value = value.rsplit(":", 1)[-1].strip()
+    token = value.split()[0]
+    try:
+        return int(token)
+    except ValueError:
+        return None
+
+
+def snmp_get_int(
+    host: str,
+    oid: str,
+    community: str,
+    timeout: int | None = None,
+) -> int | None:
+    """Executa snmpget -v2c e devolve INTEGER ou None."""
+    cmd_path = _snmpget_path()
+    if not cmd_path:
+        logger.error("snmpget não encontrado")
+        return None
     t_sec = _snmp_timeout_sec() if timeout is None else max(1, int(timeout))
     retries = _snmp_retries()
     proc_deadline = t_sec * (retries + 1) + 5
@@ -120,21 +218,65 @@ def snmp_walk_lines(host: str, oid: str, community: str, timeout: int | None = N
             check=False,
         )
     except subprocess.TimeoutExpired:
-        logger.warning("snmpwalk timeout host=%s oid=%s deadline=%ss", host, oid, proc_deadline)
-        return []
-    except Exception as exc:
-        logger.warning("snmpwalk falhou host=%s oid=%s: %s", host, oid, exc)
-        return []
+        logger.warning("snmpget timeout host=%s oid=%s", host, oid)
+        return None
     if result.returncode != 0 and not result.stdout.strip():
-        logger.warning(
-            "snmpwalk rc=%s host=%s oid=%s err=%s",
-            result.returncode,
-            host,
-            oid,
-            (result.stderr or "").strip(),
-        )
-        return []
-    return [line for line in result.stdout.splitlines() if line.strip()]
+        return None
+    line = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
+    return _parse_snmp_int_token(line.partition("=")[2])
+
+
+def snmp_get_int_batch(
+    host: str,
+    oids: list[str],
+    community: str,
+    timeout: int | None = None,
+    batch_size: int = 24,
+) -> dict[str, int | None]:
+    """Executa snmpget em lotes; mapa OID completo → valor."""
+    cmd_path = _snmpget_path()
+    if not cmd_path or not oids:
+        return {}
+    t_sec = _snmp_timeout_sec() if timeout is None else max(1, int(timeout))
+    retries = _snmp_retries()
+    proc_deadline = t_sec * (retries + 1) + 5
+    out: dict[str, int | None] = {}
+    for offset in range(0, len(oids), batch_size):
+        chunk = oids[offset : offset + batch_size]
+        try:
+            result = subprocess.run(
+                [
+                    cmd_path,
+                    "-v2c",
+                    "-c",
+                    community,
+                    "-t",
+                    str(t_sec),
+                    "-r",
+                    str(retries),
+                    host,
+                    *chunk,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=proc_deadline,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            logger.warning("snmpget batch timeout host=%s oids=%d", host, len(chunk))
+            for oid in chunk:
+                out[oid] = None
+            continue
+        for line in result.stdout.splitlines():
+            text = line.strip()
+            if not text or "=" not in text:
+                continue
+            left, _, right = text.partition("=")
+            oid_key = left.strip()
+            out[oid_key] = _parse_snmp_int_token(right)
+        for oid in chunk:
+            out.setdefault(oid, None)
+    return out
 
 
 def _oid_suffix_from_line(line: str, base_oid: str) -> list[int]:

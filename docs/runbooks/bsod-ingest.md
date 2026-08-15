@@ -144,6 +144,8 @@ Regra efetiva (interna, transparente na UI):
 
 Env worker: `BSOD_PING_ATTEMPTS=3`, `BSOD_PING_TIMEOUT_SEC=2`, `BSOD_PING_PARALLEL=16`, `BSOD_PING_ENABLED=1`.
 
+CMTS reg status (MNS/CMTS grandes): `BSOD_CMTS_REG_PARALLEL=2`, `BSOD_CMTS_REG_SNMP_TIMEOUT=15`, `BSOD_CMTS_REG_WALK_DEADLINE_SEC=180`. Coleta só MACs do inventário (early-exit) + snmpget por índice — evita timeout em walk completo de `.1.6`.
+
 - Alarmes `/bsod` e KPI **Offline** usam status efetivo; o operador vê apenas online/offline.
 - Tratativa BSOD só inicia para modem offline (status efetivo).
 - Log do worker: `false_offline`, `ping_checked`, `ping_ok`, `ping_fail` (métricas internas).

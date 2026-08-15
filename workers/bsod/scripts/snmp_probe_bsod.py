@@ -14,10 +14,10 @@ if str(WORKER_ROOT) not in sys.path:
 from lib.config import load_worker_env  # noqa: E402
 from lib.snmp_cmts_status import (  # noqa: E402
     CMTS_REG_OPERATIONAL,
-    OID_CM_STATUS_VALUE,
     collect_cmts_reg_status_map,
 )
 from lib.snmp_bsod import (  # noqa: E402
+    OID_CM_STATUS_VALUE,
     OID_CASA_CM_STATUS_INDEX,
     OID_CASA_VPN_CM,
     OID_CM_MAC,
