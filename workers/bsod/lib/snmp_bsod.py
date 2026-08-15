@@ -22,6 +22,8 @@ OID_CASA_VPN_CM = "1.3.6.1.4.1.4491.2.1.8.1.4.1.1"
 OID_CM_STATUS_VALUE = "1.3.6.1.2.1.10.127.1.3.3.1.6"
 # DOCS-IF-MIB — docsIfCmtsCmStatusMac
 OID_CM_MAC = "1.3.6.1.2.1.10.127.1.3.3.1.2"
+# DOCS-IF-MIB — docsIfCmtsCmPtr (MAC decimal → docsIfCmtsCmStatusIndex)
+OID_CM_PTR = "1.3.6.1.2.1.10.127.1.3.7.1.2"
 # Q-BRIDGE-MIB — dot1qTpFdbPort; índice dot1qFdbId (VLAN) + MAC
 OID_DOT1Q_TP_FDB_PORT = "1.3.6.1.2.1.17.7.1.2.2.1.2"
 # CASA-CABLE-CMCPE-MIB — casaCmtsCmCpeCmStatusIndex; índice MAC
@@ -373,6 +375,83 @@ def resolve_mac_suffix_map_by_cm_indexes(
                     break
             if found:
                 break
+    return result
+
+
+def mac_to_snmp_decimal_suffix(mac: str) -> str | None:
+    """Sufixo OID decimal dos 6 octetos MAC (docsIfCmtsMacToCmTable)."""
+    norm = normalize_mac(mac)
+    if not norm:
+        return None
+    parts = norm.split(":")
+    if len(parts) != 6:
+        return None
+    try:
+        return ".".join(str(int(part, 16)) for part in parts)
+    except ValueError:
+        return None
+
+
+def resolve_cm_ptr_by_mac(
+    host: str,
+    community: str,
+    mac: str,
+    timeout: int | None = None,
+) -> int | None:
+    """Consulta docsIfCmtsCmPtr para obter cmStatusIndex a partir do MAC."""
+    suffix = mac_to_snmp_decimal_suffix(mac)
+    if not suffix:
+        return None
+    ptr = snmp_get_int(host, f"{OID_CM_PTR}.{suffix}", community, timeout=timeout)
+    if ptr is None or ptr <= 0:
+        return None
+    return ptr
+
+
+def resolve_cm_status_suffix_by_mac(
+    host: str,
+    community: str,
+    mac: str,
+    if_index_candidates: set[int] | None = None,
+    timeout: int | None = None,
+) -> tuple[int, ...] | None:
+    """Resolve sufixo docsIfCmtsCmStatusTable via docsIfCmtsCmPtr (lookup por MAC)."""
+    ptr = resolve_cm_ptr_by_mac(host, community, mac, timeout=timeout)
+    if ptr is None:
+        return None
+    if_candidates = if_index_candidates or set()
+    if snmp_get_int(host, f"{OID_CM_STATUS_VALUE}.{ptr}", community, timeout=timeout) is not None:
+        return (ptr,)
+    for if_idx in sorted(if_candidates):
+        if if_idx <= 0:
+            continue
+        if (
+            snmp_get_int(host, f"{OID_CM_STATUS_VALUE}.{if_idx}.{ptr}", community, timeout=timeout)
+            is not None
+        ):
+            return (if_idx, ptr)
+    return (ptr,)
+
+
+def resolve_cm_status_suffix_map_by_macs(
+    host: str,
+    community: str,
+    macs: set[str],
+    if_index_candidates: set[int] | None = None,
+    timeout: int | None = None,
+) -> dict[tuple[int, ...], str]:
+    """Mapa sufixo DOCS-IF → MAC via docsIfCmtsCmPtr (O(1) por modem)."""
+    result: dict[tuple[int, ...], str] = {}
+    for mac in macs:
+        suffix = resolve_cm_status_suffix_by_mac(
+            host,
+            community,
+            mac,
+            if_index_candidates=if_index_candidates,
+            timeout=timeout,
+        )
+        if suffix:
+            result[suffix] = normalize_mac(mac) or mac.lower()
     return result
 
 

@@ -9,12 +9,15 @@ from typing import Any
 
 from lib.snmp_bsod import (
     OID_CM_MAC,
+    OID_CM_PTR,
     OID_CM_STATUS_VALUE,
     _collect_casa_cm_index_map,
     _oid_suffix_from_line,
     _parse_hex_string_payload,
     collect_cm_index_hints,
     learn_if_indexes_from_cm_indexes,
+    resolve_cm_ptr_by_mac,
+    resolve_cm_status_suffix_map_by_macs,
     resolve_mac_suffix_map_by_cm_indexes,
     snmp_get_int_batch,
     snmp_walk_iter,
@@ -118,12 +121,47 @@ def _default_if_index_candidates() -> set[int]:
     return set(range(1, 9))
 
 
+def _if_index_candidates(
+    host: str,
+    community: str,
+    vendor: str,
+    cm_index_hints: set[int],
+    timeout: int,
+) -> set[int]:
+    """Candidatos ifIndex: NSI/L2VPN aprendidos + faixa 1–8."""
+    snmp_indexes = collect_cm_index_hints(host, vendor, community)
+    indexes = set(cm_index_hints)
+    indexes.update(snmp_indexes)
+    learned_if = learn_if_indexes_from_cm_indexes(host, community, snmp_indexes, timeout=timeout)
+    return learned_if | _default_if_index_candidates()
+
+
+def _resolve_via_mac_ptr(
+    host: str,
+    community: str,
+    pending_macs: set[str],
+    if_candidates: set[int],
+    timeout: int,
+) -> dict[tuple[int, ...], str]:
+    """Resolve MAC→sufix via docsIfCmtsCmPtr (lookup direto por MAC)."""
+    if not pending_macs:
+        return {}
+    return resolve_cm_status_suffix_map_by_macs(
+        host,
+        community,
+        pending_macs,
+        if_index_candidates=if_candidates,
+        timeout=timeout,
+    )
+
+
 def _resolve_via_index_hints(
     host: str,
     community: str,
     vendor: str,
     cm_index_hints: set[int],
     timeout: int,
+    if_candidates: set[int],
 ) -> dict[tuple[int, ...], str]:
     """Resolve MAC→sufix via NSI/CASA/id_cable (walk curto por índice)."""
     snmp_indexes = collect_cm_index_hints(host, vendor, community)
@@ -132,8 +170,6 @@ def _resolve_via_index_hints(
     if not indexes:
         return {}
 
-    learned_if = learn_if_indexes_from_cm_indexes(host, community, snmp_indexes, timeout=timeout)
-    if_candidates = learned_if | _default_if_index_candidates()
     suffix_map = resolve_mac_suffix_map_by_cm_indexes(
         host,
         community,
@@ -220,14 +256,24 @@ def collect_cmts_reg_status_map(
     timeout = _cmts_reg_snmp_timeout()
     deadline = _cmts_reg_walk_deadline()
     hints = set(cm_index_hints or set())
+    if_candidates = _if_index_candidates(host, community, vendor, hints, timeout)
 
-    mac_by_suffix = _resolve_via_index_hints(host, community, vendor, hints, timeout)
+    mac_by_suffix = _resolve_via_index_hints(
+        host, community, vendor, hints, timeout, if_candidates,
+    )
     mac_by_suffix = _filter_suffix_map(mac_by_suffix, needed_macs)
 
     pending: set[str] = set()
     if needed_macs is not None:
         found = set(mac_by_suffix.values())
         pending = {mac for mac in needed_macs if mac not in found}
+
+    if pending:
+        mac_by_suffix = _merge_suffix_maps(
+            mac_by_suffix,
+            _resolve_via_mac_ptr(host, community, pending, if_candidates, timeout),
+        )
+        pending = {mac for mac in pending if mac not in set(mac_by_suffix.values())}
 
     if pending and _allow_targeted_mac_walk(len(pending)):
         mac_by_suffix = _merge_suffix_maps(
