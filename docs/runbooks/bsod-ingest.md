@@ -105,7 +105,7 @@ PY
 
 ## Habilitar AM (MNS) / PA (BLM)
 
-1. Preencher `BSOD_MNS_*` / `BSOD_BLM_*` no `.env` (Xpertrak MNS: `http://200.160.100.6/pathtrak/api`).
+1. Preencher `BSOD_MNS_*` / `BSOD_BLM_*` no `.env` (Xpertrak MNS: `http://200.160.100.6/pathtrak/api`; LDAP MNS: `200.189.88.189,200.189.88.196`).
 2. Preencher `ip` de cada CMTS em `config/cities/mns.json` ou `blm.json` (`vendor` + `pme_cidr` já cadastrados para MNS). **CASA:** DOCS-L2VPN-MIB + fallback `dot1qTpFdb`; validar com `scripts/snmp_probe_bsod.py --host IP --vendor CASA`.
 3. `"enabled": true` no JSON (`uf` já é `AM` / `PA` para o CRM).
 4. Testar: `venv/bin/python run_bsod_cycle.py --ope mns --force` (ou `blm`).
