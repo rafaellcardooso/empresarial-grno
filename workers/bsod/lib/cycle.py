@@ -249,6 +249,26 @@ def _needed_macs_by_cmts(
     return by_cmts
 
 
+def _id_cable_hints_by_cmts(
+    cables: list[dict[str, Any]],
+    needed_by_cmts: dict[str, set[str]],
+) -> dict[str, set[int]]:
+    """Extrai id_cable Xpertrak como cmStatusIndex candidato por CMTS."""
+    by_cmts: dict[str, set[int]] = {}
+    for cable in cables:
+        cmts_key = str(cable.get("hostname_cmts") or "").strip().upper()
+        if not cmts_key:
+            continue
+        mac_key = normalize_mac(cable.get("mac")) or str(cable.get("mac") or "").lower()
+        needed = needed_by_cmts.get(cmts_key)
+        if needed is not None and mac_key not in needed:
+            continue
+        id_raw = str(cable.get("id_cable") or "").strip()
+        if id_raw.isdigit():
+            by_cmts.setdefault(cmts_key, set()).add(int(id_raw))
+    return by_cmts
+
+
 def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
     """SNMP + LDAP → bsod_inventory (PME por IP + BSoD) + CRM por contrato/VLAN."""
     ope = city["ope"]
@@ -259,7 +279,8 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
     flat = snmp_bsod.flatten_bsod_maps(maps)
     vlan_by_mac = {mac: vlan for mac, (_cmts, _orig, vlan) in flat.items()}
     needed_by_cmts = _needed_macs_by_cmts(cables, flat, networks)
-    reg_maps = collect_all_cmts_reg_status_maps(city, needed_by_cmts)
+    index_hints_by_cmts = _id_cable_hints_by_cmts(cables, needed_by_cmts)
+    reg_maps = collect_all_cmts_reg_status_maps(city, needed_by_cmts, index_hints_by_cmts)
     cmts_status_at = db.now_local()
     crm_by_contrato = db.list_crm_by_contrato(ope)
     crm_by_cvlan = db.list_crm_by_cvlan(ope)

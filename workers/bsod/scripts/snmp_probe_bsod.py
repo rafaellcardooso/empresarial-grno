@@ -103,7 +103,7 @@ def main() -> int:
     casa_idx = _collect_casa_cm_index_map(host, community)
     print(f"CASA cmStatusIndex→MAC: {len(casa_idx)}")
 
-    reg_map = collect_cmts_reg_status_map(host, community)
+    reg_map = collect_cmts_reg_status_map(host, community, vendor=vendor)
     operational = sum(1 for value in reg_map.values() if value == CMTS_REG_OPERATIONAL)
     print(f"DOCS-IF MAC→regStatus: {len(reg_map)} (operational={operational})")
     if reg_map:

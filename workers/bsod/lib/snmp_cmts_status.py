@@ -10,8 +10,11 @@ from typing import Any
 from lib.snmp_bsod import (
     OID_CM_MAC,
     OID_CM_STATUS_VALUE,
+    _collect_casa_cm_index_map,
     _oid_suffix_from_line,
     _parse_hex_string_payload,
+    collect_cm_index_hints,
+    resolve_mac_suffix_map_by_cm_indexes,
     snmp_get_int_batch,
     snmp_walk_iter,
 )
@@ -20,6 +23,28 @@ from lib.util import normalize_mac
 logger = logging.getLogger(__name__)
 
 CMTS_REG_OPERATIONAL = 8
+
+REG_STATUS_LABELS: dict[int, str] = {
+    1: "other",
+    2: "ranging",
+    3: "rangingAborted",
+    4: "rangingComplete",
+    5: "ipComplete",
+    6: "registrationComplete",
+    7: "eioeReceived",
+    8: "operational",
+    9: "registeredBPIInitializing",
+    10: "registeredBPIReady",
+    11: "registeredBPIFailed",
+    12: "registeredBPIKekInvalid",
+}
+
+
+def reg_status_label(status: int | None) -> str:
+    """Rótulo docsIfCmtsCmStatusValue para logs de sonda."""
+    if status is None:
+        return "sem leitura"
+    return REG_STATUS_LABELS.get(status, f"status-{status}")
 
 
 def _cmts_reg_snmp_timeout() -> int:
@@ -43,22 +68,66 @@ def _cmts_reg_parallel() -> int:
         return 2
 
 
+def _allow_full_mac_walk() -> bool:
+    raw = (os.getenv("BSOD_CMTS_REG_ALLOW_FULL_WALK") or "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 def _status_oid_for_index(index_suffix: tuple[int, ...]) -> str:
     suffix = ".".join(str(part) for part in index_suffix)
     return f"{OID_CM_STATUS_VALUE}.{suffix}"
 
 
-def collect_cmts_reg_status_map(
+def _merge_suffix_maps(*maps: dict[tuple[int, ...], str]) -> dict[tuple[int, ...], str]:
+    merged: dict[tuple[int, ...], str] = {}
+    for item in maps:
+        merged.update(item)
+    return merged
+
+
+def _filter_suffix_map(
+    mac_by_suffix: dict[tuple[int, ...], str],
+    needed_macs: set[str] | None,
+) -> dict[tuple[int, ...], str]:
+    if needed_macs is None:
+        return mac_by_suffix
+    return {suffix: mac for suffix, mac in mac_by_suffix.items() if mac in needed_macs}
+
+
+def _resolve_via_index_hints(
     host: str,
     community: str,
-    needed_macs: set[str] | None = None,
-) -> dict[str, int]:
-    """Mapa MAC normalizado → docsIfCmtsCmStatusValue para um CMTS."""
-    timeout = _cmts_reg_snmp_timeout()
-    deadline = _cmts_reg_walk_deadline()
-    pending = set(needed_macs) if needed_macs else None
-    mac_by_index: dict[tuple[int, ...], str] = {}
+    vendor: str,
+    cm_index_hints: set[int],
+    timeout: int,
+) -> dict[tuple[int, ...], str]:
+    """Resolve MAC→sufix via NSI/CASA/id_cable (walk curto por índice)."""
+    indexes = set(cm_index_hints)
+    indexes.update(collect_cm_index_hints(host, vendor, community))
+    if not indexes:
+        return {}
 
+    suffix_map = resolve_mac_suffix_map_by_cm_indexes(host, community, indexes, timeout=timeout)
+    casa_map = _collect_casa_cm_index_map(host, community)
+    for cm_index, mac in casa_map.items():
+        if cm_index not in indexes:
+            continue
+        if not any(mac == existing for existing in suffix_map.values()):
+            suffix_map.setdefault((cm_index,), mac)
+    return suffix_map
+
+
+def _resolve_via_full_mac_walk(
+    host: str,
+    community: str,
+    pending: set[str],
+    timeout: int,
+    deadline: int,
+) -> dict[tuple[int, ...], str]:
+    """Fallback: walk completo docsIfCmtsCmStatusMac com early-exit."""
+    if not pending:
+        return {}
+    mac_by_suffix: dict[tuple[int, ...], str] = {}
     for line in snmp_walk_iter(
         host,
         OID_CM_MAC,
@@ -73,42 +142,85 @@ def collect_cmts_reg_status_map(
         if raw is None:
             continue
         mac = normalize_mac(" ".join(f"{b:02x}" for b in raw))
-        if not mac:
+        if not mac or mac not in pending:
             continue
-        if pending is not None and mac not in pending:
-            continue
-        mac_by_index[suffix] = mac
-        if pending is not None:
-            pending.discard(mac)
-            if not pending:
-                logger.info(
-                    "CMTS reg status host=%s MAC walk early-exit found=%d",
-                    host,
-                    len(mac_by_index),
-                )
-                break
+        mac_by_suffix[suffix] = mac
+        pending.discard(mac)
+        if not pending:
+            logger.info(
+                "CMTS reg status host=%s MAC walk early-exit found=%d",
+                host,
+                len(mac_by_suffix),
+            )
+            break
+    return mac_by_suffix
 
-    if not mac_by_index:
+
+def _fetch_reg_status_values(
+    host: str,
+    community: str,
+    mac_by_suffix: dict[tuple[int, ...], str],
+    timeout: int,
+) -> dict[str, int]:
+    """Consulta docsIfCmtsCmStatusValue por sufixo já resolvido."""
+    if not mac_by_suffix:
         return {}
-
-    status_oids = [_status_oid_for_index(index) for index in mac_by_index]
+    status_oids = [_status_oid_for_index(index) for index in mac_by_suffix]
     values = snmp_get_int_batch(host, status_oids, community, timeout=timeout)
     result: dict[str, int] = {}
-    for index, mac in mac_by_index.items():
+    for index, mac in mac_by_suffix.items():
         status = values.get(_status_oid_for_index(index))
         if status is not None:
             result[mac] = status
     return result
 
 
+def collect_cmts_reg_status_map(
+    host: str,
+    community: str,
+    needed_macs: set[str] | None = None,
+    *,
+    vendor: str = "CISCO",
+    cm_index_hints: set[int] | None = None,
+) -> dict[str, int]:
+    """Mapa MAC normalizado → docsIfCmtsCmStatusValue para um CMTS."""
+    timeout = _cmts_reg_snmp_timeout()
+    deadline = _cmts_reg_walk_deadline()
+    hints = set(cm_index_hints or set())
+
+    mac_by_suffix = _resolve_via_index_hints(host, community, vendor, hints, timeout)
+    mac_by_suffix = _filter_suffix_map(mac_by_suffix, needed_macs)
+
+    pending: set[str] = set()
+    if needed_macs is not None:
+        found = set(mac_by_suffix.values())
+        pending = {mac for mac in needed_macs if mac not in found}
+
+    if pending and _allow_full_mac_walk():
+        mac_by_suffix = _merge_suffix_maps(
+            mac_by_suffix,
+            _resolve_via_full_mac_walk(host, community, pending, timeout, deadline),
+        )
+    elif pending:
+        logger.info(
+            "CMTS reg status host=%s pendentes=%d (walk completo desabilitado; use id_cable ou BSOD_CMTS_REG_ALLOW_FULL_WALK=1)",
+            host,
+            len(pending),
+        )
+
+    return _fetch_reg_status_values(host, community, mac_by_suffix, timeout)
+
+
 def collect_all_cmts_reg_status_maps(
     city: dict[str, Any],
     needed_by_cmts: dict[str, set[str]] | None = None,
+    index_hints_by_cmts: dict[str, set[int]] | None = None,
 ) -> dict[str, dict[str, int]]:
     """Coleta mapas MAC→status de registro dos CMTS da cidade."""
     community = city.get("snmp_community") or "public"
-    jobs: list[tuple[str, str, set[str] | None]] = []
-    for cmts_name, meta in (city.get("cmts") or {}).items():
+    cmts_meta = city.get("cmts") or {}
+    jobs: list[tuple[str, str, str, set[str] | None, set[int]]] = []
+    for cmts_name, meta in cmts_meta.items():
         if not isinstance(meta, dict):
             continue
         ip = (meta.get("ip") or "").strip()
@@ -118,7 +230,9 @@ def collect_all_cmts_reg_status_maps(
         needed = (needed_by_cmts or {}).get(name)
         if needed is not None and len(needed) == 0:
             continue
-        jobs.append((name, ip, needed))
+        vendor = str(meta.get("vendor") or "CISCO")
+        hints = set((index_hints_by_cmts or {}).get(name) or set())
+        jobs.append((name, ip, vendor, needed, hints))
 
     if not jobs:
         return {}
@@ -126,19 +240,25 @@ def collect_all_cmts_reg_status_maps(
     maps: dict[str, dict[str, int]] = {}
     workers = min(_cmts_reg_parallel(), len(jobs))
     logger.info(
-        "[%s] SNMP CMTS reg status cmts=%d parallel=%d timeout=%ss deadline=%ss",
+        "[%s] SNMP CMTS reg status cmts=%d parallel=%d timeout=%ss full_walk=%s",
         city.get("ope"),
         len(jobs),
         workers,
         _cmts_reg_snmp_timeout(),
-        _cmts_reg_walk_deadline(),
+        _allow_full_mac_walk(),
     )
 
-    def work(item: tuple[str, str, set[str] | None]) -> tuple[str, dict[str, int], int | None]:
-        name, ip, needed = item
+    def work(item: tuple[str, str, str, set[str] | None, set[int]]) -> tuple[str, dict[str, int], int | None]:
+        name, ip, vendor, needed, hints = item
         try:
             needed_count = len(needed) if needed is not None else None
-            status_map = collect_cmts_reg_status_map(ip, community, needed)
+            status_map = collect_cmts_reg_status_map(
+                ip,
+                community,
+                needed,
+                vendor=vendor,
+                cm_index_hints=hints,
+            )
             return name, status_map, needed_count
         except Exception as exc:
             logger.exception("[%s] falha coleta reg status CMTS %s: %s", name, ip, exc)

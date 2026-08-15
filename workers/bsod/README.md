@@ -26,7 +26,7 @@ venv/bin/python run_bsod_cycle.py --ope sls
 
 Cidades em `config/cities/*.json` (`uf`: MA/AM/PA). `enabled: true` só em SLS por padrão; MNS/BLM exigem `cmts` (`ip`, `vendor`, `pme_cidr`) + credenciais Xpertrak/LDAP/SNMP.
 
-Manaus (MNS): Xpertrak `http://200.160.100.6/pathtrak/api`, 19 CMTS em `config/cities/mns.json`. **CASA:** L2VPN via SNMP em `docsL2vpnVpnCmTable` (`1.3.6.1.4.1.4491.2.1.8.1.4.1.1`); a tabela NSI (`1.9.1.2`) costuma estar vazia. Sonda: `scripts/snmp_probe_bsod.py`.
+Manaus (MNS): Xpertrak `http://200.160.100.6/pathtrak/api`, 19 CMTS em `config/cities/mns.json`. **CASA:** L2VPN via SNMP em `docsL2vpnVpnCmTable` (`1.3.6.1.4.1.4491.2.1.8.1.4.1.1`); a tabela NSI (`1.9.1.2`) costuma estar vazia. Sondas: `scripts/snmp_probe_bsod.py` (VLAN), `scripts/snmp_probe_cmts_reg.py` (reg status).
 
 ## Comportamento
 

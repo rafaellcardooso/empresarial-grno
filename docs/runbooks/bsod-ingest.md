@@ -144,7 +144,19 @@ Regra efetiva (interna, transparente na UI):
 
 Env worker: `BSOD_PING_ATTEMPTS=3`, `BSOD_PING_TIMEOUT_SEC=2`, `BSOD_PING_PARALLEL=16`, `BSOD_PING_ENABLED=1`.
 
-CMTS reg status (MNS/CMTS grandes): `BSOD_CMTS_REG_PARALLEL=2`, `BSOD_CMTS_REG_SNMP_TIMEOUT=15`, `BSOD_CMTS_REG_WALK_DEADLINE_SEC=180`. Coleta só MACs do inventário (early-exit) + snmpget por índice — evita timeout em walk completo de `.1.6`.
+CMTS reg status (MNS/CMTS grandes): `BSOD_CMTS_REG_PARALLEL=2`, `BSOD_CMTS_REG_SNMP_TIMEOUT=15`, `BSOD_CMTS_REG_WALK_DEADLINE_SEC=180`, `BSOD_CMTS_REG_ALLOW_FULL_WALK=0`. Coleta via **id_cable** (cmIndex Xpertrak) + índices NSI/CASA — **sem walk completo** por padrão.
+
+Sonda antes do ciclo (no host com rede até os CMTS):
+
+```bash
+cd /usr/local/empresarial/workers/bsod
+# sysUpTime + índices + reg status dos MACs já no banco (pós Xpertrak)
+venv/bin/python scripts/snmp_probe_cmts_reg.py --ope mns --cmts MNSNSGCMT01 --from-db
+# testar id_cable isolado (valor do Xpertrak)
+venv/bin/python scripts/snmp_probe_cmts_reg.py --ope mns --cmts MNSNSGCMT01 --id-cable 12345
+# MAC específico
+venv/bin/python scripts/snmp_probe_cmts_reg.py --ope mns --cmts MNSNSGCMT02 --mac aa:bb:cc:dd:ee:ff
+```
 
 - Alarmes `/bsod` e KPI **Offline** usam status efetivo; o operador vê apenas online/offline.
 - Tratativa BSOD só inicia para modem offline (status efetivo).

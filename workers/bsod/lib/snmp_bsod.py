@@ -333,18 +333,46 @@ def _collect_nsi_encap_map(host: str, vendor: str, community: str) -> dict[int, 
 
 
 def _resolve_mac_by_cm_index(host: str, community: str, cm_indexes: set[int]) -> dict[int, str]:
-    """Mapa cmStatusIndex → MAC via GET docsIfCmtsCmStatusValue."""
-    mac_by_index: dict[int, str] = {}
+    """Mapa cmStatusIndex → MAC via walk curto em docsIfCmtsCmStatusMac.{index}."""
+    suffix_map = resolve_mac_suffix_map_by_cm_indexes(host, community, cm_indexes)
+    result: dict[int, str] = {}
+    for suffix, mac in suffix_map.items():
+        if suffix:
+            result[suffix[-1]] = mac
+    return result
+
+
+def resolve_mac_suffix_map_by_cm_indexes(
+    host: str,
+    community: str,
+    cm_indexes: set[int],
+    timeout: int | None = None,
+) -> dict[tuple[int, ...], str]:
+    """Mapa sufixo DOCS-IF → MAC resolvido por cmIndex (sem walk completo)."""
+    result: dict[tuple[int, ...], str] = {}
     for cm_index in cm_indexes:
-        for line in snmp_walk_lines(host, f"{OID_CM_MAC}.{cm_index}", community):
+        if cm_index <= 0:
+            continue
+        for line in snmp_walk_lines(host, f"{OID_CM_MAC}.{cm_index}", community, timeout=timeout):
+            suffix = tuple(_oid_suffix_from_line(line, OID_CM_MAC))
             raw = _parse_hex_string_payload(line)
-            if raw is None:
+            if not suffix or raw is None:
                 continue
             mac = normalize_mac(" ".join(f"{b:02x}" for b in raw))
             if mac:
-                mac_by_index[cm_index] = mac
+                result[suffix] = mac
                 break
-    return mac_by_index
+    return result
+
+
+def collect_cm_index_hints(host: str, vendor: str, community: str) -> set[int]:
+    """Reúne cmStatusIndex conhecidos via NSI/CASA (mesma base da coleta VLAN)."""
+    vendor_key = (vendor or "CISCO").strip().upper()
+    indexes: set[int] = set()
+    indexes.update(_collect_nsi_encap_map(host, vendor_key, community))
+    indexes.update(_collect_casa_vpn_cm_vlan_by_index(host, community))
+    indexes.update(_collect_casa_cm_index_map(host, community))
+    return {index for index in indexes if index > 0}
 
 
 def _collect_dot1q_fdb_map(host: str, community: str) -> dict[str, int]:
