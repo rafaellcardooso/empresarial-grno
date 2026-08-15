@@ -14,6 +14,7 @@ if str(WORKER_ROOT) not in sys.path:
 
 from lib.config import load_city_config, load_worker_env  # noqa: E402
 from lib import db  # noqa: E402
+from lib.inventory_scope import id_cable_hints_by_cmts, needed_macs_by_cmts  # noqa: E402
 from lib.snmp_bsod import (  # noqa: E402
     OID_CM_STATUS_VALUE,
     OID_SYS_UPTIME,
@@ -27,7 +28,7 @@ from lib.snmp_cmts_status import (  # noqa: E402
     collect_cmts_reg_status_map,
     reg_status_label,
 )
-from lib.util import normalize_mac  # noqa: E402
+from lib.util import build_pme_networks, normalize_mac  # noqa: E402
 
 
 def _resolve_cmts_from_city(city: dict, cmts_name: str) -> tuple[str, str, str]:
@@ -42,34 +43,12 @@ def _resolve_cmts_from_city(city: dict, cmts_name: str) -> tuple[str, str, str]:
     return key, ip, vendor
 
 
-def _macs_from_db(ope: str, cmts_name: str) -> set[str]:
-    """Carrega MACs dos cables persistidos para o CMTS."""
-    ope_key = ope.strip().lower()
-    cmts_key = cmts_name.strip().upper()
-    macs: set[str] = set()
-    for cable in db.list_cables_for_ope(ope_key):
-        if str(cable.get("hostname_cmts") or "").strip().upper() != cmts_key:
-            continue
-        mac = normalize_mac(cable.get("mac")) or str(cable.get("mac") or "").lower()
-        if mac:
-            macs.add(mac)
-    return macs
-
-
-def _id_cable_hints_from_db(ope: str, cmts_name: str, needed: set[str]) -> set[int]:
-    hints: set[int] = set()
-    ope_key = ope.strip().lower()
-    cmts_key = cmts_name.strip().upper()
-    for cable in db.list_cables_for_ope(ope_key):
-        if str(cable.get("hostname_cmts") or "").strip().upper() != cmts_key:
-            continue
-        mac = normalize_mac(cable.get("mac")) or str(cable.get("mac") or "").lower()
-        if needed and mac not in needed:
-            continue
-        id_raw = str(cable.get("id_cable") or "").strip()
-        if id_raw.isdigit():
-            hints.add(int(id_raw))
-    return hints
+def _needed_macs_for_cmts(city: dict, cmts_name: str) -> set[str]:
+    """MACs PME/BSoD do CMTS (faixa IP + inventário), não todos os cables."""
+    cables = db.list_cables_for_ope(city["ope"])
+    networks = build_pme_networks(city.get("cmts") or {})
+    by_cmts = needed_macs_by_cmts(cables, {}, networks)
+    return set(by_cmts.get(cmts_name.strip().upper(), set()))
 
 
 def _print_mac_table(status_map: dict[str, int], needed: set[str]) -> None:
@@ -94,7 +73,7 @@ def main() -> int:
     parser.add_argument(
         "--from-db",
         action="store_true",
-        help="Usa MACs do bsod_cables persistidos para o CMTS",
+        help="MACs PME/BSoD do bsod_cables (faixa IP do JSON, não todos os modems)",
     )
     parser.add_argument(
         "--id-cable",
@@ -124,11 +103,15 @@ def main() -> int:
             mac = normalize_mac(raw) or raw.strip().lower()
             if mac:
                 needed.add(mac)
+    cables: list[dict] = []
     if args.from_db:
-        needed.update(_macs_from_db(city["ope"], cmts_name))
+        cables = db.list_cables_for_ope(city["ope"])
+        needed.update(_needed_macs_for_cmts(city, cmts_name))
 
     print(f"ope={city['ope']} cmts={cmts_name} host={host} vendor={vendor}")
     print(f"community={'*' * len(community)}")
+    if needed:
+        print(f"escopo PME/BSoD: {len(needed)} MAC(s)")
     print()
 
     uptime = snmp_walk_lines(host, OID_SYS_UPTIME, community)
@@ -138,10 +121,17 @@ def main() -> int:
         print("[1/4] SNMP FALHOU (sysUpTime vazio)")
         return 1
 
-    hints = collect_cm_index_hints(host, vendor, community)
-    db_hints = _id_cable_hints_from_db(city["ope"], cmts_name, needed) if needed else set()
-    all_hints = hints | db_hints
-    print(f"[2/4] Índices NSI/CASA/id_cable: snmp={len(hints)} db={len(db_hints)} total={len(all_hints)}")
+    snmp_hints = collect_cm_index_hints(host, vendor, community)
+    db_hints: set[int] = set()
+    if needed:
+        if not cables:
+            cables = db.list_cables_for_ope(city["ope"])
+        db_hints = id_cable_hints_by_cmts(cables, {cmts_name: needed}).get(cmts_name, set())
+    index_hints = snmp_hints | db_hints
+    print(
+        f"[2/4] Índices: snmp_l2vpn={len(snmp_hints)} id_cable_pme={len(db_hints)} "
+        f"total={len(index_hints)}",
+    )
 
     if args.id_cable:
         index = int(args.id_cable)
@@ -168,7 +158,7 @@ def main() -> int:
         community,
         needed if needed else None,
         vendor=vendor,
-        cm_index_hints=all_hints,
+        cm_index_hints=index_hints,
     )
     elapsed = time.monotonic() - started
     operational = sum(1 for value in status_map.values() if value == CMTS_REG_OPERATIONAL)
