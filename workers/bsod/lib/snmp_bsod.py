@@ -347,22 +347,48 @@ def resolve_mac_suffix_map_by_cm_indexes(
     community: str,
     cm_indexes: set[int],
     timeout: int | None = None,
+    if_index_candidates: set[int] | None = None,
 ) -> dict[tuple[int, ...], str]:
     """Mapa sufixo DOCS-IF → MAC resolvido por cmIndex (sem walk completo)."""
     result: dict[tuple[int, ...], str] = {}
+    if_candidates = if_index_candidates or set()
     for cm_index in cm_indexes:
         if cm_index <= 0:
             continue
-        for line in snmp_walk_lines(host, f"{OID_CM_MAC}.{cm_index}", community, timeout=timeout):
-            suffix = tuple(_oid_suffix_from_line(line, OID_CM_MAC))
-            raw = _parse_hex_string_payload(line)
-            if not suffix or raw is None:
-                continue
-            mac = normalize_mac(" ".join(f"{b:02x}" for b in raw))
-            if mac:
-                result[suffix] = mac
+        oid_bases = [f"{OID_CM_MAC}.{cm_index}"]
+        for if_idx in sorted(if_candidates):
+            if if_idx > 0:
+                oid_bases.append(f"{OID_CM_MAC}.{if_idx}.{cm_index}")
+        found = False
+        for oid_base in oid_bases:
+            for line in snmp_walk_lines(host, oid_base, community, timeout=timeout):
+                suffix = tuple(_oid_suffix_from_line(line, OID_CM_MAC))
+                raw = _parse_hex_string_payload(line)
+                if not suffix or raw is None:
+                    continue
+                mac = normalize_mac(" ".join(f"{b:02x}" for b in raw))
+                if mac:
+                    result[suffix] = mac
+                    found = True
+                    break
+            if found:
                 break
     return result
+
+
+def learn_if_indexes_from_cm_indexes(
+    host: str,
+    community: str,
+    cm_indexes: set[int],
+    timeout: int | None = None,
+) -> set[int]:
+    """Descobre ifIndex usados no CMTS a partir de cmIndex conhecidos (NSI/L2VPN)."""
+    suffix_map = resolve_mac_suffix_map_by_cm_indexes(host, community, cm_indexes, timeout=timeout)
+    learned: set[int] = set()
+    for suffix in suffix_map:
+        if len(suffix) >= 2:
+            learned.add(suffix[0])
+    return learned
 
 
 def collect_cm_index_hints(host: str, vendor: str, community: str) -> set[int]:

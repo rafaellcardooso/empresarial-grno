@@ -38,6 +38,26 @@ def needed_macs_by_cmts(
     return by_cmts
 
 
+def id_cable_by_mac_for_cmts(
+    cables: list[dict[str, Any]],
+    cmts_name: str,
+    macs: set[str],
+) -> dict[str, str]:
+    """Mapa MAC normalizado → id_cable Xpertrak para um CMTS."""
+    cmts_key = cmts_name.strip().upper()
+    out: dict[str, str] = {}
+    for cable in cables:
+        if str(cable.get("hostname_cmts") or "").strip().upper() != cmts_key:
+            continue
+        mac_key = normalize_mac(cable.get("mac")) or str(cable.get("mac") or "").lower()
+        if mac_key not in macs:
+            continue
+        id_raw = str(cable.get("id_cable") or "").strip()
+        if id_raw:
+            out[mac_key] = id_raw
+    return out
+
+
 def id_cable_hints_by_cmts(
     cables: list[dict[str, Any]],
     needed_by_cmts: dict[str, set[str]],

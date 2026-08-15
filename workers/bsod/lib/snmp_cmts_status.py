@@ -14,6 +14,7 @@ from lib.snmp_bsod import (
     _oid_suffix_from_line,
     _parse_hex_string_payload,
     collect_cm_index_hints,
+    learn_if_indexes_from_cm_indexes,
     resolve_mac_suffix_map_by_cm_indexes,
     snmp_get_int_batch,
     snmp_walk_iter,
@@ -73,6 +74,25 @@ def _allow_full_mac_walk() -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
+def _targeted_walk_max_pending() -> int:
+    try:
+        return max(1, int(os.getenv("BSOD_CMTS_REG_TARGETED_WALK_MAX", "50")))
+    except ValueError:
+        return 50
+
+
+def _allow_targeted_mac_walk(pending_count: int) -> bool:
+    """Walk MAC com early-exit para poucos pendentes (PME sem id_cable/L2VPN)."""
+    if pending_count <= 0:
+        return False
+    if _allow_full_mac_walk():
+        return True
+    raw = (os.getenv("BSOD_CMTS_REG_TARGETED_WALK") or "1").strip().lower()
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return pending_count <= _targeted_walk_max_pending()
+
+
 def _status_oid_for_index(index_suffix: tuple[int, ...]) -> str:
     suffix = ".".join(str(part) for part in index_suffix)
     return f"{OID_CM_STATUS_VALUE}.{suffix}"
@@ -94,6 +114,10 @@ def _filter_suffix_map(
     return {suffix: mac for suffix, mac in mac_by_suffix.items() if mac in needed_macs}
 
 
+def _default_if_index_candidates() -> set[int]:
+    return set(range(1, 9))
+
+
 def _resolve_via_index_hints(
     host: str,
     community: str,
@@ -102,12 +126,21 @@ def _resolve_via_index_hints(
     timeout: int,
 ) -> dict[tuple[int, ...], str]:
     """Resolve MAC→sufix via NSI/CASA/id_cable (walk curto por índice)."""
+    snmp_indexes = collect_cm_index_hints(host, vendor, community)
     indexes = set(cm_index_hints)
-    indexes.update(collect_cm_index_hints(host, vendor, community))
+    indexes.update(snmp_indexes)
     if not indexes:
         return {}
 
-    suffix_map = resolve_mac_suffix_map_by_cm_indexes(host, community, indexes, timeout=timeout)
+    learned_if = learn_if_indexes_from_cm_indexes(host, community, snmp_indexes, timeout=timeout)
+    if_candidates = learned_if | _default_if_index_candidates()
+    suffix_map = resolve_mac_suffix_map_by_cm_indexes(
+        host,
+        community,
+        indexes,
+        timeout=timeout,
+        if_index_candidates=if_candidates,
+    )
     casa_map = _collect_casa_cm_index_map(host, community)
     for cm_index, mac in casa_map.items():
         if cm_index not in indexes:
@@ -196,14 +229,14 @@ def collect_cmts_reg_status_map(
         found = set(mac_by_suffix.values())
         pending = {mac for mac in needed_macs if mac not in found}
 
-    if pending and _allow_full_mac_walk():
+    if pending and _allow_targeted_mac_walk(len(pending)):
         mac_by_suffix = _merge_suffix_maps(
             mac_by_suffix,
             _resolve_via_full_mac_walk(host, community, pending, timeout, deadline),
         )
     elif pending:
         logger.info(
-            "CMTS reg status host=%s pendentes=%d (walk completo desabilitado; use id_cable ou BSOD_CMTS_REG_ALLOW_FULL_WALK=1)",
+            "CMTS reg status host=%s pendentes=%d (walk desabilitado; id_cable/ifIndex ou BSOD_CMTS_REG_TARGETED_WALK)",
             host,
             len(pending),
         )

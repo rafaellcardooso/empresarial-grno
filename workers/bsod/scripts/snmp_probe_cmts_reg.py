@@ -14,11 +14,17 @@ if str(WORKER_ROOT) not in sys.path:
 
 from lib.config import load_city_config, load_worker_env  # noqa: E402
 from lib import db  # noqa: E402
-from lib.inventory_scope import id_cable_hints_by_cmts, needed_macs_by_cmts  # noqa: E402
+from lib.inventory_scope import (  # noqa: E402
+    id_cable_by_mac_for_cmts,
+    id_cable_hints_by_cmts,
+    needed_macs_by_cmts,
+)
 from lib.snmp_bsod import (  # noqa: E402
+    OID_CM_MAC,
     OID_CM_STATUS_VALUE,
     OID_SYS_UPTIME,
     collect_cm_index_hints,
+    learn_if_indexes_from_cm_indexes,
     resolve_mac_suffix_map_by_cm_indexes,
     snmp_get_int,
     snmp_walk_lines,
@@ -49,6 +55,46 @@ def _needed_macs_for_cmts(city: dict, cmts_name: str) -> set[str]:
     networks = build_pme_networks(city.get("cmts") or {})
     by_cmts = needed_macs_by_cmts(cables, {}, networks)
     return set(by_cmts.get(cmts_name.strip().upper(), set()))
+
+
+def _if_index_candidates(host: str, community: str, snmp_hints: set[int]) -> set[int]:
+    """Candidatos ifIndex: aprendidos via L2VPN + faixa 1–8."""
+    learned = learn_if_indexes_from_cm_indexes(host, community, snmp_hints)
+    return learned | set(range(1, 9))
+
+
+def _diagnose_missing_macs(
+    host: str,
+    community: str,
+    cmts_name: str,
+    missing: list[str],
+    cables: list[dict],
+    if_candidates: set[int],
+) -> None:
+    """Testa id_cable de cada MAC faltante com variantes ifIndex."""
+    id_by_mac = id_cable_by_mac_for_cmts(cables, cmts_name, set(missing))
+    print("  Diagnóstico id_cable (ifIndex.cmIndex):")
+    for mac in missing:
+        id_raw = id_by_mac.get(mac, "—")
+        if not id_raw.isdigit():
+            print(f"    {mac}  id_cable={id_raw}  (sem id_cable numérico no DB)")
+            continue
+        cm_index = int(id_raw)
+        suffix_map = resolve_mac_suffix_map_by_cm_indexes(
+            host,
+            community,
+            {cm_index},
+            if_index_candidates=if_candidates,
+        )
+        if not suffix_map:
+            tried = [f"{OID_CM_MAC}.{cm_index}"] + [
+                f"{OID_CM_MAC}.{if_idx}.{cm_index}" for if_idx in sorted(if_candidates)
+            ]
+            print(f"    {mac}  id_cable={cm_index}  sem MAC em {len(tried)} OID(s)")
+            continue
+        for suffix, resolved_mac in suffix_map.items():
+            match = "OK" if resolved_mac == mac else f"MAC={resolved_mac}"
+            print(f"    {mac}  id_cable={cm_index}  suffix={suffix}  {match}")
 
 
 def _print_mac_table(status_map: dict[str, int], needed: set[str]) -> None:
@@ -128,16 +174,22 @@ def main() -> int:
             cables = db.list_cables_for_ope(city["ope"])
         db_hints = id_cable_hints_by_cmts(cables, {cmts_name: needed}).get(cmts_name, set())
     index_hints = snmp_hints | db_hints
+    if_candidates = _if_index_candidates(host, community, snmp_hints)
     print(
         f"[2/4] Índices: snmp_l2vpn={len(snmp_hints)} id_cable_pme={len(db_hints)} "
-        f"total={len(index_hints)}",
+        f"total={len(index_hints)} ifIndex={sorted(if_candidates)}",
     )
 
     if args.id_cable:
         index = int(args.id_cable)
-        print(f"[3/4] Teste id_cable/cmIndex={index}")
+        print(f"[3/4] Teste id_cable/cmIndex={index} (ifIndex 1–8 + aprendidos)")
         started = time.monotonic()
-        suffix_map = resolve_mac_suffix_map_by_cm_indexes(host, community, {index})
+        suffix_map = resolve_mac_suffix_map_by_cm_indexes(
+            host,
+            community,
+            {index},
+            if_index_candidates=if_candidates,
+        )
         elapsed = time.monotonic() - started
         if not suffix_map:
             print(f"  id_cable {index}: MAC não resolvido ({elapsed:.1f}s)")
@@ -151,7 +203,7 @@ def main() -> int:
                 )
         print()
 
-    print("[4/4] Coleta reg status (índices + id_cable; walk completo só com --full-walk)")
+    print("[4/4] Coleta reg status (id_cable/ifIndex + walk early-exit se pendentes)")
     started = time.monotonic()
     status_map = collect_cmts_reg_status_map(
         host,
@@ -178,9 +230,14 @@ def main() -> int:
             if len(missing) > 20:
                 print(f"    ... +{len(missing) - 20}")
             print()
+            if not cables:
+                cables = db.list_cables_for_ope(city["ope"])
+            _diagnose_missing_macs(host, community, cmts_name, missing, cables, if_candidates)
+            print()
             print("  Dicas:")
             print("    - Confira id_cable no Xpertrak: --id-cable N")
-            print("    - MAC PME sem L2VPN pode exigir --full-walk (lento)")
+            print("    - Walk early-exit ativo até 50 MACs (BSOD_CMTS_REG_TARGETED_WALK=1)")
+            print("    - Walk completo forçado: --full-walk (lento)")
             return 1
 
     return 0 if status_map else 1
