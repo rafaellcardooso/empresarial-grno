@@ -44,6 +44,7 @@ flowchart LR
 | [runbooks/](runbooks/production-release.md)        | Procedimentos copy-paste (install, release, migrations, workers) |
 | [reference/](reference/configuration.md)           | Env, rotas/APIs, dados, layout                                   |
 | [changes/](changes/README.md)                      | Notas históricas de rollout                                      |
+| [plans/](plans/README.md)                          | Planos de evolução (ex.: Zabbix BSOD/GPON)                       |
 
 Co-localizado:
 
