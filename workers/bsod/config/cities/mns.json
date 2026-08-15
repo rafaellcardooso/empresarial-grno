@@ -3,7 +3,7 @@
   "ddd": "92",
   "uf": "AM",
   "city": "MANAUS",
-  "enabled": false,
+  "enabled": true,
   "env_prefix": "BSOD_MNS",
   "ldap_base_dn": "dc=virtua_mns_docsis",
   "xpertrak_url_default": "http://200.160.100.6/pathtrak/api",
