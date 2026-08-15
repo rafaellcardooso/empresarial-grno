@@ -1,22 +1,25 @@
-/** Segunda validação BSOD: PathTrak offline confirmado/desmentido por ping ICMP. */
+/** Segunda validação BSOD: cruzamento PathTrak × status DOCS-IF no CMTS. */
 
-/** Calcula saúde efetiva cruzando PathTrak e ping ICMP (desempate interno). */
+/** docsIfCmtsCmStatusValue operational — modem registrado e operacional no CMTS. */
+export const CMTS_REG_OPERATIONAL = 8;
+
+/** Calcula saúde efetiva cruzando PathTrak e status de registro no CMTS. */
 export function deriveEffectiveMonitorStatus(
   xpertrakStatus: number | null,
-  pingReachable: number | null = null,
+  cmtsRegStatus: number | null = null,
 ): number | null {
   if (xpertrakStatus === 1) return 1;
   if (xpertrakStatus === 0) {
-    if (pingReachable === 1) return 1;
+    if (cmtsRegStatus === CMTS_REG_OPERATIONAL) return 1;
     return 0;
   }
   return xpertrakStatus;
 }
 
-/** Indica PathTrak offline tratado como online (ping OK; uso interno / logs). */
+/** Indica PathTrak offline tratado como online (CMTS operational; uso interno / logs). */
 export function isFalseOffline(
   xpertrakStatus: number | null,
-  pingReachable: number | null = null,
+  cmtsRegStatus: number | null = null,
 ): boolean {
-  return xpertrakStatus === 0 && pingReachable === 1;
+  return xpertrakStatus === 0 && cmtsRegStatus === CMTS_REG_OPERATIONAL;
 }
