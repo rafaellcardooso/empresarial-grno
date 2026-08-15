@@ -8,7 +8,7 @@ from typing import Any
 
 from lib import db, nocclaro, snmp_bsod, xpertrak
 from lib.ldap_modem import lookup_modem_ldap
-from lib.inventory_scope import id_cable_hints_by_cmts, needed_macs_by_cmts
+from lib.inventory_scope import id_cable_by_mac_for_cmts, id_cable_hints_by_cmts, needed_macs_by_cmts
 from lib.ping_tiebreaker import apply_ping_tiebreaker
 from lib.profiles import resolve_produto
 from lib.snmp_cmts_status import CMTS_REG_OPERATIONAL, collect_all_cmts_reg_status_maps
@@ -230,7 +230,15 @@ def _enrich_inventory(city: dict[str, Any]) -> dict[str, int]:
     vlan_by_mac = {mac: vlan for mac, (_cmts, _orig, vlan) in flat.items()}
     needed_by_cmts = needed_macs_by_cmts(cables, flat, networks)
     index_hints_by_cmts = id_cable_hints_by_cmts(cables, needed_by_cmts)
-    reg_maps = collect_all_cmts_reg_status_maps(city, needed_by_cmts, index_hints_by_cmts)
+    id_cable_by_cmts: dict[str, dict[str, int]] = {}
+    for cmts_name, macs in needed_by_cmts.items():
+        raw = id_cable_by_mac_for_cmts(cables, cmts_name, macs)
+        id_cable_by_cmts[cmts_name] = {
+            mac: int(value) for mac, value in raw.items() if value.isdigit()
+        }
+    reg_maps = collect_all_cmts_reg_status_maps(
+        city, needed_by_cmts, index_hints_by_cmts, id_cable_by_cmts,
+    )
     cmts_status_at = db.now_local()
     crm_by_contrato = db.list_crm_by_contrato(ope)
     crm_by_cvlan = db.list_crm_by_cvlan(ope)

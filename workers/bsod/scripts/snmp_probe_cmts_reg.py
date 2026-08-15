@@ -22,6 +22,7 @@ from lib.inventory_scope import (  # noqa: E402
 from lib.snmp_bsod import (  # noqa: E402
     OID_CM_MAC,
     OID_CM_PTR,
+    OID_CM_REG_STATUS_IF3,
     OID_CM_STATUS_VALUE,
     OID_SYS_UPTIME,
     collect_cm_index_hints,
@@ -65,47 +66,46 @@ def _if_index_candidates(host: str, community: str, snmp_hints: set[int]) -> tup
     return learned, learned | set(range(1, 9))
 
 
-def _diagnose_missing_macs(
+def _id_cable_ints(cables: list[dict], cmts_name: str, macs: set[str]) -> dict[str, int]:
+    """MAC → id_cable numérico do Xpertrak."""
+    raw = id_cable_by_mac_for_cmts(cables, cmts_name, macs)
+    out: dict[str, int] = {}
+    for mac, value in raw.items():
+        if value.isdigit():
+            out[mac] = int(value)
+    return out
+
+
+def _print_if3_vs_legacy(
     host: str,
     community: str,
-    cmts_name: str,
-    missing: list[str],
+    macs: set[str],
     cables: list[dict],
-    if_candidates: set[int],
+    cmts_name: str,
 ) -> None:
-    """Testa id_cable e docsIfCmtsCmPtr por MAC faltante."""
-    id_by_mac = id_cable_by_mac_for_cmts(cables, cmts_name, set(missing))
-    print("  Diagnóstico por MAC (docsIfCmtsCmPtr vs id_cable Xpertrak):")
-    for mac in missing:
-        id_raw = id_by_mac.get(mac, "—")
+    """Compara IF3 vs legado e cmPtr vs id_cable para cada MAC."""
+    id_by_mac = id_cable_by_mac_for_cmts(cables, cmts_name, macs)
+    print("  IF3 vs legado (cmPtr / id_cable):")
+    for mac in sorted(macs):
         ptr = resolve_cm_ptr_by_mac(host, community, mac)
-        ptr_label = str(ptr) if ptr is not None else "—"
-        id_match = " (=id_cable)" if id_raw.isdigit() and ptr is not None and str(ptr) == id_raw else ""
-        print(f"    {mac}  cmPtr={ptr_label}{id_match}  id_cable={id_raw}")
-        if ptr is None:
+        id_raw = id_by_mac.get(mac, "—")
+        indexes: list[tuple[str, int]] = []
+        if ptr is not None:
+            indexes.append(("cmPtr", ptr))
+        if id_raw.isdigit() and (ptr is None or int(id_raw) != ptr):
+            indexes.append(("id_cable", int(id_raw)))
+        if not indexes:
+            print(f"    {mac}  sem cmPtr/id_cable")
             continue
-        suffix_map = resolve_mac_suffix_map_by_cm_indexes(
-            host,
-            community,
-            {ptr},
-            if_index_candidates=if_candidates,
-        )
-        if suffix_map:
-            for suffix, resolved_mac in suffix_map.items():
-                match = "OK" if resolved_mac == mac else f"MAC={resolved_mac}"
-                print(f"      ptr→suffix={suffix} {match}")
-            continue
-        status = snmp_get_int(host, f"{OID_CM_STATUS_VALUE}.{ptr}", community)
-        if status is not None:
-            print(f"      status@{ptr}={status} ({reg_status_label(status)})")
-            continue
-        for if_idx in sorted(if_candidates):
-            status = snmp_get_int(host, f"{OID_CM_STATUS_VALUE}.{if_idx}.{ptr}", community)
-            if status is not None:
-                print(f"      status@{if_idx}.{ptr}={status} ({reg_status_label(status)})")
-                break
-        else:
-            print(f"      ptr={ptr} sem docsIfCmtsCmStatusValue legível")
+        parts: list[str] = []
+        for label, index in indexes:
+            if3 = snmp_get_int(host, f"{OID_CM_REG_STATUS_IF3}.{index}", community)
+            legacy = snmp_get_int(host, f"{OID_CM_STATUS_VALUE}.{index}", community)
+            parts.append(
+                f"{label}={index} if3={if3}({reg_status_label(if3)}) "
+                f"legacy={legacy}({reg_status_label(legacy)})",
+            )
+        print(f"    {mac}  " + " | ".join(parts))
 
 
 def _print_mac_table(status_map: dict[str, int], needed: set[str]) -> None:
@@ -215,7 +215,8 @@ def main() -> int:
                 )
         print()
 
-    print("[4/4] Coleta reg status (cmPtr/id_cable + walk early-exit se pendentes)")
+    print("[4/4] Coleta reg status (IF3 preferido + cmPtr; walk early-exit se pendentes)")
+    id_by_mac_ints = _id_cable_ints(cables, cmts_name, needed) if needed else {}
     started = time.monotonic()
     status_map = collect_cmts_reg_status_map(
         host,
@@ -223,6 +224,7 @@ def main() -> int:
         needed if needed else None,
         vendor=vendor,
         cm_index_hints=index_hints,
+        id_cable_by_mac=id_by_mac_ints or None,
     )
     elapsed = time.monotonic() - started
     operational = sum(1 for value in status_map.values() if value == CMTS_REG_OPERATIONAL)
@@ -231,6 +233,12 @@ def main() -> int:
         f"needed={len(needed) if needed else 'all'} elapsed={elapsed:.1f}s",
     )
     _print_mac_table(status_map, needed)
+
+    if needed and (not status_map or operational < len(needed)):
+        print()
+        if not cables:
+            cables = db.list_cables_for_ope(city["ope"])
+        _print_if3_vs_legacy(host, community, needed, cables, cmts_name)
 
     if needed:
         missing = sorted(needed - set(status_map))
@@ -242,14 +250,9 @@ def main() -> int:
             if len(missing) > 20:
                 print(f"    ... +{len(missing) - 20}")
             print()
-            if not cables:
-                cables = db.list_cables_for_ope(city["ope"])
-            _diagnose_missing_macs(host, community, cmts_name, missing, cables, if_candidates)
-            print()
             print("  Dicas:")
-            print("    - cmPtr via MAC: snmpget … {OID_CM_PTR}.<octetos MAC em decimal>")
-            print("    - Confira id_cable no Xpertrak: --id-cable N")
-            print("    - Walk early-exit: BSOD_CMTS_REG_TARGETED_WALK=1 (até 50 MACs)")
+            print(f"    - IF3: snmpget … {OID_CM_REG_STATUS_IF3}.{{cmPtr}}")
+            print(f"    - legado: snmpget … {OID_CM_STATUS_VALUE}.{{cmPtr}}")
             print("    - Walk completo forçado: --full-walk (lento)")
             return 1
 

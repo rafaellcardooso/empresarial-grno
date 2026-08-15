@@ -9,6 +9,7 @@ from typing import Any
 
 from lib.snmp_bsod import (
     OID_CM_MAC,
+    OID_CM_REG_STATUS_IF3,
     OID_CM_STATUS_VALUE,
     _collect_casa_cm_index_map,
     _oid_suffix_from_line,
@@ -41,6 +42,12 @@ REG_STATUS_LABELS: dict[int, str] = {
     10: "registeredBPIReady",
     11: "registeredBPIFailed",
     12: "registeredBPIKekInvalid",
+    13: "dhcpv6Complete",
+    14: "startConfigFileDownload",
+    15: "configFileDownloadComplete",
+    16: "startRegistration",
+    17: "forwardingDisabled",
+    18: "rfMuteAll",
 }
 
 
@@ -96,9 +103,77 @@ def _allow_targeted_mac_walk(pending_count: int) -> bool:
     return pending_count <= _targeted_walk_max_pending()
 
 
-def _status_oid_for_index(index_suffix: tuple[int, ...]) -> str:
+def _status_oids_for_index(index_suffix: tuple[int, ...]) -> list[str]:
+    """OIDs de status: IF3 (D3.0/D3.1) primeiro, legado DOCS-IF depois."""
     suffix = ".".join(str(part) for part in index_suffix)
-    return f"{OID_CM_STATUS_VALUE}.{suffix}"
+    return [
+        f"{OID_CM_REG_STATUS_IF3}.{suffix}",
+        f"{OID_CM_STATUS_VALUE}.{suffix}",
+    ]
+
+
+def _pick_reg_status(if3: int | None, legacy: int | None) -> int | None:
+    """Prefere docsIf3 quando válido; legado só se IF3 ausente ou 0."""
+    if if3 is not None and if3 > 0:
+        return if3
+    if legacy is not None and legacy > 0:
+        return legacy
+    if if3 is not None:
+        return if3
+    return legacy
+
+
+def _lookup_batch_value(values: dict[str, int | None], oid: str) -> int | None:
+    status = values.get(oid)
+    if status is None:
+        status = values.get(normalize_numeric_oid(oid))
+    return status
+
+
+def _fetch_reg_status_values(
+    host: str,
+    community: str,
+    mac_by_suffix: dict[tuple[int, ...], str],
+    timeout: int,
+) -> dict[str, int]:
+    """Consulta status IF3 + legado por sufixo já resolvido."""
+    if not mac_by_suffix:
+        return {}
+    status_oids: list[str] = []
+    for index in mac_by_suffix:
+        status_oids.extend(_status_oids_for_index(index))
+    values = snmp_get_int_batch(host, status_oids, community, timeout=timeout)
+    result: dict[str, int] = {}
+    for index, mac in mac_by_suffix.items():
+        if3_oid, legacy_oid = _status_oids_for_index(index)
+        status = _pick_reg_status(
+            _lookup_batch_value(values, if3_oid),
+            _lookup_batch_value(values, legacy_oid),
+        )
+        if status is not None:
+            result[mac] = status
+    return result
+
+
+def _resolve_via_mac_ptr(
+    host: str,
+    community: str,
+    pending_macs: set[str],
+    if_candidates: set[int],
+    timeout: int,
+    id_cable_by_mac: dict[str, int] | None = None,
+) -> dict[tuple[int, ...], str]:
+    """Resolve MAC→sufix via docsIfCmtsCmPtr (lookup direto por MAC)."""
+    if not pending_macs:
+        return {}
+    return resolve_cm_status_suffix_map_by_macs(
+        host,
+        community,
+        pending_macs,
+        if_index_candidates=if_candidates,
+        timeout=timeout,
+        id_cable_by_mac=id_cable_by_mac,
+    )
 
 
 def _merge_suffix_maps(*maps: dict[tuple[int, ...], str]) -> dict[tuple[int, ...], str]:
@@ -134,25 +209,6 @@ def _if_index_candidates(
     indexes.update(snmp_indexes)
     learned_if = learn_if_indexes_from_cm_indexes(host, community, snmp_indexes, timeout=timeout)
     return learned_if | _default_if_index_candidates()
-
-
-def _resolve_via_mac_ptr(
-    host: str,
-    community: str,
-    pending_macs: set[str],
-    if_candidates: set[int],
-    timeout: int,
-) -> dict[tuple[int, ...], str]:
-    """Resolve MAC→sufix via docsIfCmtsCmPtr (lookup direto por MAC)."""
-    if not pending_macs:
-        return {}
-    return resolve_cm_status_suffix_map_by_macs(
-        host,
-        community,
-        pending_macs,
-        if_index_candidates=if_candidates,
-        timeout=timeout,
-    )
 
 
 def _resolve_via_index_hints(
@@ -225,28 +281,6 @@ def _resolve_via_full_mac_walk(
     return mac_by_suffix
 
 
-def _fetch_reg_status_values(
-    host: str,
-    community: str,
-    mac_by_suffix: dict[tuple[int, ...], str],
-    timeout: int,
-) -> dict[str, int]:
-    """Consulta docsIfCmtsCmStatusValue por sufixo já resolvido."""
-    if not mac_by_suffix:
-        return {}
-    status_oids = [_status_oid_for_index(index) for index in mac_by_suffix]
-    values = snmp_get_int_batch(host, status_oids, community, timeout=timeout)
-    result: dict[str, int] = {}
-    for index, mac in mac_by_suffix.items():
-        oid = _status_oid_for_index(index)
-        status = values.get(oid)
-        if status is None:
-            status = values.get(normalize_numeric_oid(oid))
-        if status is not None:
-            result[mac] = status
-    return result
-
-
 def collect_cmts_reg_status_map(
     host: str,
     community: str,
@@ -254,8 +288,9 @@ def collect_cmts_reg_status_map(
     *,
     vendor: str = "CISCO",
     cm_index_hints: set[int] | None = None,
+    id_cable_by_mac: dict[str, int] | None = None,
 ) -> dict[str, int]:
-    """Mapa MAC normalizado → docsIfCmtsCmStatusValue para um CMTS."""
+    """Mapa MAC normalizado → status de registro (IF3 preferido) para um CMTS."""
     timeout = _cmts_reg_snmp_timeout()
     deadline = _cmts_reg_walk_deadline()
     hints = set(cm_index_hints or set())
@@ -266,7 +301,9 @@ def collect_cmts_reg_status_map(
 
     # Preferência: docsIfCmtsCmPtr por MAC (rápido; id_cable Xpertrak ≠ cmStatusIndex no ARRIS)
     if pending:
-        mac_by_suffix = _resolve_via_mac_ptr(host, community, pending, if_candidates, timeout)
+        mac_by_suffix = _resolve_via_mac_ptr(
+            host, community, pending, if_candidates, timeout, id_cable_by_mac,
+        )
         pending = {mac for mac in pending if mac not in set(mac_by_suffix.values())}
 
     if pending or needed_macs is None:
@@ -299,11 +336,12 @@ def collect_all_cmts_reg_status_maps(
     city: dict[str, Any],
     needed_by_cmts: dict[str, set[str]] | None = None,
     index_hints_by_cmts: dict[str, set[int]] | None = None,
+    id_cable_by_cmts: dict[str, dict[str, int]] | None = None,
 ) -> dict[str, dict[str, int]]:
     """Coleta mapas MAC→status de registro dos CMTS da cidade."""
     community = city.get("snmp_community") or "public"
     cmts_meta = city.get("cmts") or {}
-    jobs: list[tuple[str, str, str, set[str] | None, set[int]]] = []
+    jobs: list[tuple[str, str, str, set[str] | None, set[int], dict[str, int] | None]] = []
     for cmts_name, meta in cmts_meta.items():
         if not isinstance(meta, dict):
             continue
@@ -316,7 +354,8 @@ def collect_all_cmts_reg_status_maps(
             continue
         vendor = str(meta.get("vendor") or "CISCO")
         hints = set((index_hints_by_cmts or {}).get(name) or set())
-        jobs.append((name, ip, vendor, needed, hints))
+        id_map = (id_cable_by_cmts or {}).get(name)
+        jobs.append((name, ip, vendor, needed, hints, id_map))
 
     if not jobs:
         return {}
@@ -332,8 +371,10 @@ def collect_all_cmts_reg_status_maps(
         _allow_full_mac_walk(),
     )
 
-    def work(item: tuple[str, str, str, set[str] | None, set[int]]) -> tuple[str, dict[str, int], int | None]:
-        name, ip, vendor, needed, hints = item
+    def work(
+        item: tuple[str, str, str, set[str] | None, set[int], dict[str, int] | None],
+    ) -> tuple[str, dict[str, int], int | None]:
+        name, ip, vendor, needed, hints, id_map = item
         try:
             needed_count = len(needed) if needed is not None else None
             status_map = collect_cmts_reg_status_map(
@@ -342,6 +383,7 @@ def collect_all_cmts_reg_status_maps(
                 needed,
                 vendor=vendor,
                 cm_index_hints=hints,
+                id_cable_by_mac=id_map,
             )
             return name, status_map, needed_count
         except Exception as exc:

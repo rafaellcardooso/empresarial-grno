@@ -18,8 +18,10 @@ logger = logging.getLogger(__name__)
 OID_NSI_ENCAP = "1.3.6.1.4.1.4491.2.1.8.1.9.1.2"
 # DOCS-L2VPN-MIB — docsL2vpnVpnCmCMIM; índice docsL2vpnIdx.docsIfCmtsCmStatusIndex (CASA multipoint)
 OID_CASA_VPN_CM = "1.3.6.1.4.1.4491.2.1.8.1.4.1.1"
-# DOCS-IF-MIB — docsIfCmtsCmStatusValue (registration state)
+# DOCS-IF-MIB — docsIfCmtsCmStatusValue (registration state; legado D2.0)
 OID_CM_STATUS_VALUE = "1.3.6.1.2.1.10.127.1.3.3.1.6"
+# DOCS-IF3-MIB — docsIf3CmtsCmRegStatusValue (D3.0/D3.1; operational=8)
+OID_CM_REG_STATUS_IF3 = "1.3.6.1.4.1.4491.2.1.20.1.3.1.6"
 # DOCS-IF-MIB — docsIfCmtsCmStatusMac
 OID_CM_MAC = "1.3.6.1.2.1.10.127.1.3.3.1.2"
 # DOCS-IF-MIB — docsIfCmtsCmPtr (MAC decimal → docsIfCmtsCmStatusIndex)
@@ -429,23 +431,41 @@ def resolve_cm_status_suffix_by_mac(
     mac: str,
     if_index_candidates: set[int] | None = None,
     timeout: int | None = None,
+    alt_indexes: set[int] | None = None,
 ) -> tuple[int, ...] | None:
     """Resolve sufixo docsIfCmtsCmStatusTable via docsIfCmtsCmPtr (lookup por MAC)."""
+    candidates: list[int] = []
     ptr = resolve_cm_ptr_by_mac(host, community, mac, timeout=timeout)
-    if ptr is None:
+    if ptr is not None:
+        candidates.append(ptr)
+    for alt in sorted(alt_indexes or set()):
+        if alt > 0 and alt not in candidates:
+            candidates.append(alt)
+    if not candidates:
         return None
+
     if_candidates = if_index_candidates or set()
-    if snmp_get_int(host, f"{OID_CM_STATUS_VALUE}.{ptr}", community, timeout=timeout) is not None:
-        return (ptr,)
-    for if_idx in sorted(if_candidates):
-        if if_idx <= 0:
-            continue
-        if (
-            snmp_get_int(host, f"{OID_CM_STATUS_VALUE}.{if_idx}.{ptr}", community, timeout=timeout)
-            is not None
-        ):
-            return (if_idx, ptr)
-    return (ptr,)
+
+    def probe(index: int) -> tuple[int, ...] | None:
+        for base in (OID_CM_REG_STATUS_IF3, OID_CM_STATUS_VALUE):
+            if snmp_get_int(host, f"{base}.{index}", community, timeout=timeout) is not None:
+                return (index,)
+        for if_idx in sorted(if_candidates):
+            if if_idx <= 0:
+                continue
+            for base in (OID_CM_REG_STATUS_IF3, OID_CM_STATUS_VALUE):
+                if (
+                    snmp_get_int(host, f"{base}.{if_idx}.{index}", community, timeout=timeout)
+                    is not None
+                ):
+                    return (if_idx, index)
+        return None
+
+    for index in candidates:
+        found = probe(index)
+        if found:
+            return found
+    return (candidates[0],)
 
 
 def resolve_cm_status_suffix_map_by_macs(
@@ -454,19 +474,25 @@ def resolve_cm_status_suffix_map_by_macs(
     macs: set[str],
     if_index_candidates: set[int] | None = None,
     timeout: int | None = None,
+    id_cable_by_mac: dict[str, int] | None = None,
 ) -> dict[tuple[int, ...], str]:
     """Mapa sufixo DOCS-IF → MAC via docsIfCmtsCmPtr (O(1) por modem)."""
     result: dict[tuple[int, ...], str] = {}
     for mac in macs:
+        mac_key = normalize_mac(mac) or mac.lower()
+        alt: set[int] = set()
+        if id_cable_by_mac and mac_key in id_cable_by_mac:
+            alt.add(id_cable_by_mac[mac_key])
         suffix = resolve_cm_status_suffix_by_mac(
             host,
             community,
             mac,
             if_index_candidates=if_index_candidates,
             timeout=timeout,
+            alt_indexes=alt,
         )
         if suffix:
-            result[suffix] = normalize_mac(mac) or mac.lower()
+            result[suffix] = mac_key
     return result
 
 
