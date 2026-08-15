@@ -13,10 +13,22 @@ from lib.util import normalize_mac
 
 logger = logging.getLogger(__name__)
 
+# DOCS-L2VPN-MIB — docsL2vpnCmNsiEncapValue; índice l2vpnIdx.cmStatusIndex (Cisco/Arris)
 OID_NSI_ENCAP = "1.3.6.1.4.1.4491.2.1.8.1.9.1.2"
+# DOCS-L2VPN-MIB — docsL2vpnVpnCmCMIM; índice docsL2vpnIdx.docsIfCmtsCmStatusIndex (CASA multipoint)
+OID_CASA_VPN_CM = "1.3.6.1.4.1.4491.2.1.8.1.4.1.1"
+# DOCS-IF-MIB — docsIfCmtsCmStatusValue (MAC do CM)
 OID_CM_MAC = "1.3.6.1.2.1.10.127.1.3.3.1.2"
+# Q-BRIDGE-MIB — dot1qTpFdbPort; índice dot1qFdbId (VLAN) + MAC
+OID_DOT1Q_TP_FDB_PORT = "1.3.6.1.2.1.17.7.1.2.2.1.2"
+# CASA-CABLE-CMCPE-MIB — casaCmtsCmCpeCmStatusIndex; índice MAC
+OID_CASA_CM_STATUS_INDEX = "1.3.6.1.4.1.20858.10.12.1.3.1.6"
+OID_SYS_UPTIME = "1.3.6.1.2.1.1.3.0"
+OID_DOCS_L2VPN_MIB = "1.3.6.1.4.1.4491.2.1.8"
+
 _HEX_PAIR_RE = re.compile(r"([0-9A-Fa-f]{2})")
 _INDEX_RE = re.compile(r"\.(\d+)$")
+_OID_SUFFIX_RE = re.compile(r"(\d+(?:\.\d+)*)")
 
 
 def _snmpwalk_path() -> str | None:
@@ -29,10 +41,8 @@ def _snmpwalk_path() -> str | None:
 def parse_vlan_encap(hex_bytes: bytes, vendor: str) -> int:
     """Extrai VLAN do Hex-STRING NSI conforme vendor.
 
-    Cisco costuma devolver 2 bytes (VLAN nos 12 bits baixos).
+    Cisco/CASA costumam devolver 2 bytes (VLAN nos 12 bits baixos).
     Arris devolve 4 bytes (`00 XX X0 00` → VLAN = value >> 12).
-    Se o perfil CISCO zerar com payload de 4 bytes, tenta a regra Arris
-    (CMTS reclassificados ou JSON desatualizado).
     """
     if not hex_bytes:
         return 0
@@ -89,7 +99,6 @@ def snmp_walk_lines(host: str, oid: str, community: str, timeout: int | None = N
         return []
     t_sec = _snmp_timeout_sec() if timeout is None else max(1, int(timeout))
     retries = _snmp_retries()
-    # Worst case: (retries+1) * timeout + folga do subprocess.
     proc_deadline = t_sec * (retries + 1) + 5
     try:
         result = subprocess.run(
@@ -128,34 +137,63 @@ def snmp_walk_lines(host: str, oid: str, community: str, timeout: int | None = N
     return [line for line in result.stdout.splitlines() if line.strip()]
 
 
-def collect_bsod_vlan_map_for_cmts(
-    cmts_name: str,
-    host: str,
-    vendor: str,
-    community: str,
-) -> dict[str, int]:
-    """Coleta dict mac_normalizado -> vlan_id para um CMTS."""
-    name = (cmts_name or "").strip().upper()
+def _oid_suffix_from_line(line: str, base_oid: str) -> list[int]:
+    """Extrai sufixo numérico do OID após base_oid na linha snmpwalk."""
+    left = line.partition("=")[0].strip().replace('"', "")
+    match = _OID_SUFFIX_RE.search(left)
+    if not match:
+        return []
+    suffix = match.group(1)
+    base_parts = [p for p in base_oid.strip(".").split(".") if p]
+    suffix_parts = [int(p) for p in suffix.split(".") if p.isdigit()]
+    if len(suffix_parts) <= len(base_parts):
+        return []
+    if suffix_parts[: len(base_parts)] != [int(p) for p in base_parts]:
+        return suffix_parts
+    return suffix_parts[len(base_parts) :]
+
+
+def _cm_index_from_oid_suffix(suffix: list[int]) -> int | None:
+    """Último componente do índice composto DOCS (cmStatusIndex)."""
+    if not suffix:
+        return None
+    return suffix[-1]
+
+
+def _mac_from_index_suffix(suffix: list[int]) -> str:
+    """Monta MAC a partir dos últimos 6 sub-ids do índice SNMP."""
+    if len(suffix) < 6:
+        return ""
+    mac_bytes = suffix[-6:]
+    if any(b < 0 or b > 255 for b in mac_bytes):
+        return ""
+    return normalize_mac(":".join(f"{b:02x}" for b in mac_bytes))
+
+
+def _collect_nsi_encap_map(host: str, vendor: str, community: str) -> dict[int, int]:
+    """Mapa cmStatusIndex → VLAN via docsL2vpnCmNsiEncapValue."""
     encap_by_index: dict[int, int] = {}
     for line in snmp_walk_lines(host, OID_NSI_ENCAP, community):
-        left = line.partition("=")[0].strip()
-        match = _INDEX_RE.search(left.replace('"', ""))
-        if not match:
-            continue
-        cm_index = int(match.group(1))
+        suffix = _oid_suffix_from_line(line, OID_NSI_ENCAP)
+        cm_index = _cm_index_from_oid_suffix(suffix)
+        if cm_index is None:
+            match = _INDEX_RE.search(line.partition("=")[0].replace('"', ""))
+            if not match:
+                continue
+            cm_index = int(match.group(1))
         raw = _parse_hex_string_payload(line)
         if raw is None:
             continue
         vlan = parse_vlan_encap(raw, vendor)
         if vlan > 0:
             encap_by_index[cm_index] = vlan
+    return encap_by_index
 
-    if not encap_by_index:
-        logger.info("[%s] nenhum encap L2VPN em %s", name, host)
-        return {}
 
+def _resolve_mac_by_cm_index(host: str, community: str, cm_indexes: set[int]) -> dict[int, str]:
+    """Mapa cmStatusIndex → MAC via GET docsIfCmtsCmStatusValue."""
     mac_by_index: dict[int, str] = {}
-    for cm_index in encap_by_index:
+    for cm_index in cm_indexes:
         for line in snmp_walk_lines(host, f"{OID_CM_MAC}.{cm_index}", community):
             raw = _parse_hex_string_payload(line)
             if raw is None:
@@ -163,14 +201,127 @@ def collect_bsod_vlan_map_for_cmts(
             mac = normalize_mac(" ".join(f"{b:02x}" for b in raw))
             if mac:
                 mac_by_index[cm_index] = mac
+                break
+    return mac_by_index
 
-    result = {}
+
+def _collect_dot1q_fdb_map(host: str, community: str) -> dict[str, int]:
+    """Mapa MAC → VLAN via Q-BRIDGE dot1qTpFdb (modo multipoint CASA)."""
+    result: dict[str, int] = {}
+    for line in snmp_walk_lines(host, OID_DOT1Q_TP_FDB_PORT, community):
+        suffix = _oid_suffix_from_line(line, OID_DOT1Q_TP_FDB_PORT)
+        if len(suffix) < 7:
+            continue
+        vlan = suffix[0]
+        if vlan <= 0:
+            continue
+        mac = _mac_from_index_suffix(suffix[1:])
+        if mac:
+            result[mac] = vlan
+    return result
+
+
+def _collect_casa_cm_index_map(host: str, community: str) -> dict[int, str]:
+    """Mapa cmStatusIndex → MAC via CASA-CABLE-CMCPE-MIB (fallback)."""
+    index_to_mac: dict[int, str] = {}
+    for line in snmp_walk_lines(host, OID_CASA_CM_STATUS_INDEX, community):
+        suffix = _oid_suffix_from_line(line, OID_CASA_CM_STATUS_INDEX)
+        mac = _mac_from_index_suffix(suffix)
+        if not mac:
+            continue
+        value = line.partition("=")[2].strip()
+        try:
+            cm_index = int(value.split()[0])
+        except ValueError:
+            continue
+        if cm_index > 0:
+            index_to_mac[cm_index] = mac
+    return index_to_mac
+
+
+def _merge_encap_to_mac(
+    encap_by_index: dict[int, int],
+    mac_by_index: dict[int, str],
+) -> dict[str, int]:
+    """Combina índices cmStatusIndex em mapa MAC → VLAN."""
+    result: dict[str, int] = {}
     for cm_index, vlan in encap_by_index.items():
         mac = mac_by_index.get(cm_index)
         if mac:
             result[mac] = vlan
-    logger.info("[%s] BSoD SNMP vendor=%s host=%s vlans=%d", name, vendor, host, len(result))
     return result
+
+
+def _collect_casa_vpn_cm_vlan_by_index(host: str, community: str) -> dict[int, int]:
+    """Mapa cmStatusIndex → vid via docsL2vpnVpnCmTable (CASA Encapsulation)."""
+    vlan_by_cm: dict[int, int] = {}
+    for line in snmp_walk_lines(host, OID_CASA_VPN_CM, community):
+        suffix = _oid_suffix_from_line(line, OID_CASA_VPN_CM)
+        if len(suffix) < 2:
+            continue
+        vid = int(suffix[-2])
+        cm_index = int(suffix[-1])
+        if vid > 0 and cm_index > 0:
+            vlan_by_cm[cm_index] = vid
+    return vlan_by_cm
+
+
+def _collect_casa_vpn_cm_snmp_map(host: str, community: str) -> dict[str, int]:
+    """Monta MAC→VLAN CASA via docsL2vpnVpnCmTable + docsIfCmtsCmStatusMac."""
+    vlan_by_cm = _collect_casa_vpn_cm_vlan_by_index(host, community)
+    if not vlan_by_cm:
+        return {}
+    mac_by_index = _resolve_mac_by_cm_index(host, community, set(vlan_by_cm))
+    if len(mac_by_index) < len(vlan_by_cm):
+        casa_map = _collect_casa_cm_index_map(host, community)
+        for cm_index in vlan_by_cm:
+            if cm_index not in mac_by_index and cm_index in casa_map:
+                mac_by_index[cm_index] = casa_map[cm_index]
+    result: dict[str, int] = {}
+    for cm_index, vlan in vlan_by_cm.items():
+        mac = mac_by_index.get(cm_index)
+        if mac:
+            result[mac] = vlan
+    return result
+
+
+def collect_bsod_vlan_map_for_cmts(
+    cmts_name: str,
+    host: str,
+    vendor: str,
+    community: str,
+) -> dict[str, int]:
+    """Coleta dict mac_normalizado → vlan_id para um CMTS."""
+    name = (cmts_name or "").strip().upper()
+    vendor_key = (vendor or "CISCO").strip().upper()
+
+    if vendor_key == "CASA":
+        casa_snmp = _collect_casa_vpn_cm_snmp_map(host, community)
+        if casa_snmp:
+            logger.info("[%s] BSoD SNMP vpnCm host=%s vlans=%d", name, host, len(casa_snmp))
+            return casa_snmp
+
+    encap_by_index = _collect_nsi_encap_map(host, vendor_key, community)
+    if encap_by_index:
+        mac_by_index = _resolve_mac_by_cm_index(host, community, set(encap_by_index))
+        if vendor_key == "CASA" and len(mac_by_index) < len(encap_by_index):
+            casa_map = _collect_casa_cm_index_map(host, community)
+            for cm_index in encap_by_index:
+                if cm_index not in mac_by_index and cm_index in casa_map:
+                    mac_by_index[cm_index] = casa_map[cm_index]
+        result = _merge_encap_to_mac(encap_by_index, mac_by_index)
+        if result:
+            logger.info("[%s] BSoD SNMP NSI vendor=%s host=%s vlans=%d", name, vendor_key, host, len(result))
+            return result
+
+    if vendor_key == "CASA":
+        dot1q = _collect_dot1q_fdb_map(host, community)
+        if dot1q:
+            logger.info("[%s] BSoD SNMP dot1qFdb host=%s vlans=%d", name, host, len(dot1q))
+            return dot1q
+
+    logger.info("[%s] nenhum L2VPN/VLAN BSoD via SNMP em %s vendor=%s", name, host, vendor_key)
+    return {}
 
 
 def collect_all_bsod_vlan_maps(city: dict[str, Any]) -> dict[str, dict[str, int]]:
