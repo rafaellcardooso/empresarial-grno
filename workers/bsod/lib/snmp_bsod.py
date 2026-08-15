@@ -199,13 +199,13 @@ def normalize_numeric_oid(oid: str) -> str:
     return match.group(1)
 
 
-def snmp_get_int(
+def snmp_get_line(
     host: str,
     oid: str,
     community: str,
     timeout: int | None = None,
-) -> int | None:
-    """Executa snmpget -v2c e devolve INTEGER ou None."""
+) -> str | None:
+    """Executa snmpget -v2c -On e devolve a primeira linha stdout."""
     cmd_path = _snmpget_path()
     if not cmd_path:
         logger.error("snmpget não encontrado")
@@ -239,7 +239,36 @@ def snmp_get_int(
     if result.returncode != 0 and not result.stdout.strip():
         return None
     line = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
+    return line or None
+
+
+def snmp_get_int(
+    host: str,
+    oid: str,
+    community: str,
+    timeout: int | None = None,
+) -> int | None:
+    """Executa snmpget -v2c e devolve INTEGER ou None."""
+    line = snmp_get_line(host, oid, community, timeout=timeout)
+    if not line:
+        return None
     return _parse_snmp_int_token(line.partition("=")[2])
+
+
+def snmp_get_mac(
+    host: str,
+    oid: str,
+    community: str,
+    timeout: int | None = None,
+) -> str | None:
+    """Executa snmpget e devolve MAC de payload Hex-STRING."""
+    line = snmp_get_line(host, oid, community, timeout=timeout)
+    if not line:
+        return None
+    raw = _parse_hex_string_payload(line)
+    if raw is None:
+        return None
+    return normalize_mac(" ".join(f"{b:02x}" for b in raw)) or None
 
 
 def snmp_get_int_batch(
@@ -301,6 +330,8 @@ def snmp_get_int_batch(
 def _oid_suffix_from_line(line: str, base_oid: str) -> list[int]:
     """Extrai sufixo numérico do OID após base_oid na linha snmpwalk."""
     left = line.partition("=")[0].strip().replace('"', "")
+    if left.startswith("iso."):
+        left = "1." + left[4:]
     match = _OID_SUFFIX_RE.search(left)
     if not match:
         return []
@@ -310,6 +341,14 @@ def _oid_suffix_from_line(line: str, base_oid: str) -> list[int]:
     if len(suffix_parts) <= len(base_parts):
         return []
     if suffix_parts[: len(base_parts)] != [int(p) for p in base_parts]:
+        # Fallback: sufixo após o último componente do base (iso./MIB:: truncados)
+        base_tail = [int(p) for p in base_parts]
+        for start in range(len(suffix_parts)):
+            window = suffix_parts[start:]
+            if len(window) <= len(base_tail):
+                break
+            if window[: len(base_tail)] == base_tail:
+                return window[len(base_tail) :]
         return suffix_parts
     return suffix_parts[len(base_parts) :]
 
@@ -352,12 +391,27 @@ def _collect_nsi_encap_map(host: str, vendor: str, community: str) -> dict[int, 
 
 
 def _resolve_mac_by_cm_index(host: str, community: str, cm_indexes: set[int]) -> dict[int, str]:
-    """Mapa cmStatusIndex → MAC via walk curto em docsIfCmtsCmStatusMac.{index}."""
-    suffix_map = resolve_mac_suffix_map_by_cm_indexes(host, community, cm_indexes)
+    """Mapa cmStatusIndex → MAC via snmpget exato em docsIfCmtsCmStatusMac.{index}."""
     result: dict[int, str] = {}
-    for suffix, mac in suffix_map.items():
-        if suffix:
-            result[suffix[-1]] = mac
+    for cm_index in cm_indexes:
+        if cm_index <= 0:
+            continue
+        mac = snmp_get_mac(host, f"{OID_CM_MAC}.{cm_index}", community)
+        if mac:
+            result[cm_index] = mac
+            continue
+        # Fallback curto: walk só aceita se o sufixo terminar no cm_index pedido
+        for line in snmp_walk_lines(host, f"{OID_CM_MAC}.{cm_index}", community):
+            suffix = _oid_suffix_from_line(line, OID_CM_MAC)
+            if not suffix or suffix[-1] != cm_index:
+                continue
+            raw = _parse_hex_string_payload(line)
+            if raw is None:
+                continue
+            mac = normalize_mac(" ".join(f"{b:02x}" for b in raw))
+            if mac:
+                result[cm_index] = mac
+                break
     return result
 
 
@@ -384,6 +438,8 @@ def resolve_mac_suffix_map_by_cm_indexes(
                 suffix = tuple(_oid_suffix_from_line(line, OID_CM_MAC))
                 raw = _parse_hex_string_payload(line)
                 if not suffix or raw is None:
+                    continue
+                if suffix[-1] != cm_index:
                     continue
                 mac = normalize_mac(" ".join(f"{b:02x}" for b in raw))
                 if mac:
@@ -538,9 +594,12 @@ def _collect_dot1q_fdb_map(host: str, community: str) -> dict[str, int]:
 
 
 def _collect_casa_cm_index_map(host: str, community: str) -> dict[int, str]:
-    """Mapa cmStatusIndex → MAC via CASA-CABLE-CMCPE-MIB (fallback)."""
+    """Mapa cmStatusIndex → MAC via CASA-CABLE-CMCPE-MIB (fallback; pode ser lento)."""
+    raw = (os.getenv("BSOD_CASA_CM_INDEX_WALK") or "0").strip().lower()
+    if raw not in {"1", "true", "yes", "on"}:
+        return {}
     index_to_mac: dict[int, str] = {}
-    for line in snmp_walk_lines(host, OID_CASA_CM_STATUS_INDEX, community):
+    for line in snmp_walk_lines(host, OID_CASA_CM_STATUS_INDEX, community, deadline_sec=20):
         suffix = _oid_suffix_from_line(line, OID_CASA_CM_STATUS_INDEX)
         mac = _mac_from_index_suffix(suffix)
         if not mac:
@@ -598,6 +657,13 @@ def _collect_casa_vpn_cm_snmp_map(host: str, community: str) -> dict[str, int]:
         mac = mac_by_index.get(cm_index)
         if mac:
             result[mac] = vlan
+    if not result:
+        logger.warning(
+            "CASA vpnCm indexes=%d MAC resolvido=%d (merge vazio) host=%s",
+            len(vlan_by_cm),
+            len(mac_by_index),
+            host,
+        )
     return result
 
 
@@ -629,6 +695,13 @@ def collect_bsod_vlan_map_for_cmts(
         if result:
             logger.info("[%s] BSoD SNMP NSI vendor=%s host=%s vlans=%d", name, vendor_key, host, len(result))
             return result
+        logger.warning(
+            "[%s] L2VPN NSI indexes=%d mas MAC resolvido=%d (merge vazio) host=%s",
+            name,
+            len(encap_by_index),
+            len(mac_by_index),
+            host,
+        )
 
     if vendor_key == "CASA":
         dot1q = _collect_dot1q_fdb_map(host, community)
