@@ -62,11 +62,11 @@ curl -s http://127.0.0.1:4001/empresarial/api/rals | jq '.status, .total_registr
 
 ## Decisão
 
-| Resultado                     | Próximo passo                                                                            |
-| ----------------------------- | ---------------------------------------------------------------------------------------- |
-| Host vazio / sem units        | [production-install.md](production-install.md)                                           |
-| Código antigo, units ok       | [production-release.md](production-release.md) + migrations faltantes                    |
-| Só DDL faltando               | [database-migrations.md](database-migrations.md)                                         |
+| Resultado                     | Próximo passo                                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Host vazio / sem units        | [production-install.md](production-install.md)                                                                     |
+| Código antigo, units ok       | [production-release.md](production-release.md) + migrations faltantes                                              |
+| Só DDL faltando               | [database-migrations.md](database-migrations.md)                                                                   |
 | Só TMIP/Telegram/BSOD ausente | [tmip-sdh-ingest.md](tmip-sdh-ingest.md) / [telegram-bots.md](telegram-bots.md) / [bsod-ingest.md](bsod-ingest.md) |
 
 Registre o resultado operacionalmente (issue, ticket, nota de mudança) — **não** edite histórico em `docs/changes/` como se fosse status live.

@@ -17,7 +17,7 @@ Validação: `npm run env:check` (paridade example ↔ local Next/SIR/TMIP; **BS
 | BSOD SNMP tuning    | `SNMP_TIMEOUT`, `SNMP_RETRIES`, `BSOD_SNMP_PARALLEL` (opcional)                                                     | Coleta L2VPN           |
 | MySQL HFC (legado)  | `HFC_DB_*` (opcional)                                                                                               | Não usado pelo `/bsod` |
 | TMIP SFTP           | `SFTP_HOST`, `SFTP_PORT`, `SFTP_USER`, `SFTP_PASSWORD`, `SFTP_REMOTE_PATH`, `SFTP_LOCAL_PATH`, `SFTP_MAX_AGE_HOURS` | Worker TMIP            |
-| App                 | `PORT`, `HOSTNAME`, `NEXT_PUBLIC_BASE_PATH`, `APP_PUBLIC_URL`                                                        | Next (+ Nginx)         |
+| App                 | `PORT`, `HOSTNAME`, `NEXT_PUBLIC_BASE_PATH`, `APP_PUBLIC_URL`                                                       | Next (+ Nginx)         |
 | GRB                 | `GRB_BASE_URL`, `GRB_TELNET_USERNAME`, `GRB_TELNET_PASSWORD`, opcional `GRB_TELNET_ARG0`                            | Proxy telnet           |
 | Critel              | `CRITEL_BASE_URL`                                                                                                   | Gráficos               |
 | Auth                | `AUTH_SECRET`, `AUTH_SESSION_DAYS`, `AUTH_SESSION_REMEMBER_DAYS`, `APP_TOUR_VERSION`, opcional `AUTH_COOKIE_SECURE` | Sessão                 |

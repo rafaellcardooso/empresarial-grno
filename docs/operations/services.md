@@ -6,15 +6,15 @@ Inventário canônico das units. Instalação e restart: runbooks. Troubleshooti
 
 ## Produção (`User=datacenter`)
 
-| Unit                      | Processo               | Efeito                              |
-| ------------------------- | ---------------------- | ----------------------------------- |
+| Unit                      | Processo               | Efeito                               |
+| ------------------------- | ---------------------- | ------------------------------------ |
 | `empresarial-next`        | `npm run start`        | Next 15 na **4001** (`/empresarial`) |
-| `sir-ingest-ral`          | `AlertasRalRede.js`    | Grava `rals`                        |
-| `sir-ingest-rec`          | `AlertasRecRede.js`    | Grava `recs` (offset 90s)           |
-| `sir-telegram-ops`        | `main-ops-bot.py`      | Bot operacional + dashboard         |
-| `sir-telegram-datacenter` | `notify-datacenter.py` | Push CF datacenter                  |
-| `tmip-ingest.timer`       | dispara oneshot        | SFTP → `sdh_alarms` a cada 10 min   |
-| `bsod-ingest.timer`       | dispara oneshot        | CRM + Xpertrak/SNMP/LDAP → `bsod_*` |
+| `sir-ingest-ral`          | `AlertasRalRede.js`    | Grava `rals`                         |
+| `sir-ingest-rec`          | `AlertasRecRede.js`    | Grava `recs` (offset 90s)            |
+| `sir-telegram-ops`        | `main-ops-bot.py`      | Bot operacional + dashboard          |
+| `sir-telegram-datacenter` | `notify-datacenter.py` | Push CF datacenter                   |
+| `tmip-ingest.timer`       | dispara oneshot        | SFTP → `sdh_alarms` a cada 10 min    |
+| `bsod-ingest.timer`       | dispara oneshot        | CRM + Xpertrak/SNMP/LDAP → `bsod_*`  |
 
 Arquivos:
 

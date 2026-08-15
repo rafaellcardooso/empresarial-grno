@@ -23,10 +23,7 @@ export function appHref(path: string): string {
   if (!path.startsWith("/") || path.startsWith("//")) {
     return withBasePath("/");
   }
-  if (
-    APP_BASE_PATH &&
-    (path === APP_BASE_PATH || path.startsWith(`${APP_BASE_PATH}/`))
-  ) {
+  if (APP_BASE_PATH && (path === APP_BASE_PATH || path.startsWith(`${APP_BASE_PATH}/`))) {
     return path;
   }
   return withBasePath(path);

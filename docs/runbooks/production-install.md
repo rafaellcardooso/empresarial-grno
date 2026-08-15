@@ -12,13 +12,13 @@ Lab: [../getting-started/development.md](../getting-started/development.md). Rel
 
 ## 1. Pré-requisitos
 
-| Item                 | Notas                                                                  |
-| -------------------- | ---------------------------------------------------------------------- |
-| Node.js 20+          | `node -v` / `npm -v`                                                   |
-| MariaDB/MySQL        | Banco SIR + leitura HFC                                                |
-| Git                  | Clone em `/usr/local/empresarial`                                      |
-| Usuário `datacenter` | Dono do repo, units e Playwright                                       |
-| `snmpwalk`           | Pacote `snmp` — necessário ao ingest BSOD                              |
+| Item                 | Notas                                                                    |
+| -------------------- | ------------------------------------------------------------------------ |
+| Node.js 20+          | `node -v` / `npm -v`                                                     |
+| MariaDB/MySQL        | Banco SIR + leitura HFC                                                  |
+| Git                  | Clone em `/usr/local/empresarial`                                        |
+| Usuário `datacenter` | Dono do repo, units e Playwright                                         |
+| `snmpwalk`           | Pacote `snmp` — necessário ao ingest BSOD                                |
 | Rede                 | GRB/Critel, portal SIR, SFTP TMIP, HFC, Xpertrak/CMTS/LDAP/nocclaro BSOD |
 
 ```bash
