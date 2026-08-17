@@ -55,8 +55,7 @@ function buildRecTitle(
   ddd?: string,
   q?: string,
 ): string {
-  const parts = [METRIC_LABELS.sir.rec, statusLabel];
-  if (tipoLabel) parts.push(tipoLabel);
+  const parts = [tipoLabel ?? METRIC_LABELS.sir.recScope, statusLabel];
   if (ddd) parts.push(operationalDddLabel(ddd));
   if (cf) parts.push(cf);
   if (q) parts.push(`“${q}”`);
@@ -141,7 +140,7 @@ export function RecPanel({
       <SirRecordsTable
         columns={REC_TABLE_COLUMNS}
         rows={rows}
-        recordLabel="REC"
+        domain="REC"
         tratativasByKey={tratativasByKey}
         empty={recEmptyMessage(activeStatus, tipoLabel, activeCf, activeDdd, activeQ)}
       />

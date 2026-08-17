@@ -141,7 +141,7 @@ export function RalPanel({
       <SirRecordsTable
         columns={RAL_TABLE_COLUMNS}
         rows={rows}
-        recordLabel="RAL"
+        domain="RAL"
         tratativasByKey={tratativasByKey}
         empty={ralEmptyMessage(activeStatus, tipoLabel, activeCf, activeDdd, activeQ)}
       />

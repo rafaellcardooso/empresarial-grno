@@ -137,21 +137,31 @@ async function countByCf(
   table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs,
   status: SirStatusFilter = "ativo",
   ddd?: string,
+  tipo?: string,
 ) {
-  const { sql, params } = buildStatusClause(status);
+  const statusClause = buildStatusClause(status);
   const dddClause = buildSirDddClause(ddd);
-  const recTipoSql =
-    table === SIR_TABLES.recs
-      ? " AND (num_recup LIKE 'REC-%' OR num_recup LIKE 'DSR-%' OR num_recup LIKE 'TCQ-%')"
-      : "";
+  const params: unknown[] = [...statusClause.params];
+  let recTipoSql = "";
+  if (table === SIR_TABLES.recs) {
+    const tipoPrefix = recTipoPrefixFromParam(tipo);
+    if (tipoPrefix) {
+      recTipoSql = " AND num_recup LIKE ?";
+      params.push(recTipoLikePrefix(tipoPrefix));
+    } else {
+      recTipoSql =
+        " AND (num_recup LIKE 'REC-%' OR num_recup LIKE 'DSR-%' OR num_recup LIKE 'TCQ-%')";
+    }
+  }
+  params.push(...dddClause.params);
   const rows = await sirQuery<RowDataPacket[]>(
     `SELECT cf_executante, COUNT(num_recup) AS total
      FROM ${table}
      WHERE cf_executante IS NOT NULL
-       AND TRIM(cf_executante) <> ''${recTipoSql}${sql}${dddClause.sql}
+       AND TRIM(cf_executante) <> ''${statusClause.sql}${recTipoSql}${dddClause.sql}
      GROUP BY cf_executante
      ORDER BY total DESC`,
-    [...params, ...dddClause.params],
+    params,
   );
 
   return rows.map((row) => ({
@@ -552,8 +562,10 @@ export async function countRalsByCf(status: SirStatusFilter = "ativo", ddd?: str
 }
 
 /** Retorna contagem de RECs agrupadas por CF executante. */
-export async function countRecsByCf(status: SirStatusFilter = "ativo", ddd?: string) {
-  return countByCf(SIR_TABLES.recs, status, ddd);
+export async function countRecsByCf(
+  options: Pick<SirRecQueryOptions, "status" | "ddd" | "tipo"> = {},
+) {
+  return countByCf(SIR_TABLES.recs, options.status ?? "ativo", options.ddd, options.tipo);
 }
 
 /** Agrupa contagens de CF por DDD operacional. */

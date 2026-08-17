@@ -52,6 +52,11 @@ export function recTipoFilterLabel(param?: string): string | undefined {
   return REC_TIPO_BY_KEY.get(param)?.label;
 }
 
+/** Rótulo de página/escopo conforme filtro de tipo (ou todos). */
+export function recScopePageLabel(tipo?: RecTipoKey): string {
+  return recTipoFilterLabel(tipo) ?? "REC/DSR/TCQ";
+}
+
 /** Classifica num_recup ativo em REC, DSR ou TCQ. */
 export function recTipoKeyFromNumRecup(numRecup: string): RecTipoKey | null {
   const prefix = numRecup.split("-")[0]?.toUpperCase();
@@ -59,6 +64,16 @@ export function recTipoKeyFromNumRecup(numRecup: string): RecTipoKey | null {
   if (prefix === "DSR") return "dsr";
   if (prefix === "TCQ") return "tcq";
   return null;
+}
+
+/** Rótulo de exibição do registro no grupo recs (REC, DSR ou TCQ). */
+export function recGroupDisplayLabel(numRecup: string): string {
+  const key = recTipoKeyFromNumRecup(numRecup);
+  if (key === "dsr") return "DSR";
+  if (key === "tcq") return "TCQ";
+  if (key === "rec") return "REC";
+  const prefix = numRecup.split("-")[0]?.trim().toUpperCase();
+  return prefix || "REC";
 }
 
 /** Monta cláusula SQL LIKE para filtro de tipo REC. */

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { recGroupDisplayLabel } from "@/lib/config/rec-types";
 import type { AcionamentoContext } from "@/lib/models/acionamento";
 
 type AcionamentoContextCardProps = {
@@ -65,8 +66,13 @@ export function AcionamentoContextCard({ context }: AcionamentoContextCardProps)
     { label: "Reclamante", value: context.reclamante },
   ];
 
+  const sirLabel =
+    context.recordKind === "RAL"
+      ? "RAL"
+      : recGroupDisplayLabel(context.numRecup || context.recordKey);
+
   return (
-    <ContextCardShell title={`Registro ${context.recordKind}`}>
+    <ContextCardShell title={`Registro ${sirLabel}`}>
       {items.map(({ label, value }) => (
         <ContextItem key={label} label={label} value={value} />
       ))}

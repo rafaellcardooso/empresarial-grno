@@ -199,7 +199,7 @@ export default async function Page({ searchParams }: PageProps) {
         })}
       />
       <SirNormalizedTreatments
-        recordLabel="RAL"
+        domain="RAL"
         rows={normalizedRows}
         tratativasByKey={normalizedTratativasByKey}
         total={normalizedTotal}

@@ -14,7 +14,7 @@ import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 
 type SirNormalizedTreatmentsProps = {
-  recordLabel: "RAL" | "REC";
+  domain: "RAL" | "REC";
   rows: Record<string, unknown>[];
   tratativasByKey: Record<string, TratativaPublic>;
   total: number;
@@ -25,7 +25,7 @@ type SirNormalizedTreatmentsProps = {
 
 /** Exibe registros encerrados na fonte com tratativa ainda ativa. */
 export function SirNormalizedTreatments({
-  recordLabel,
+  domain,
   rows,
   tratativasByKey,
   total,
@@ -35,15 +35,15 @@ export function SirNormalizedTreatments({
 }: SirNormalizedTreatmentsProps) {
   if (total === 0) return null;
 
-  const basePath = recordLabel === "RAL" ? "/sir/rals" : "/sir/recs";
-  const columns = recordLabel === "RAL" ? RAL_TABLE_COLUMNS : REC_TABLE_COLUMNS;
+  const basePath = domain === "RAL" ? "/sir/rals" : "/sir/recs";
+  const columns = domain === "RAL" ? RAL_TABLE_COLUMNS : REC_TABLE_COLUMNS;
 
   function buildHref(normalizedPage: number): string {
     const next = {
       ...listFilters,
       normalizedPage: normalizedPage <= 1 ? undefined : normalizedPage,
     };
-    return recordLabel === "RAL"
+    return domain === "RAL"
       ? buildSirFilterHref(basePath, next as SirCfFilterParams)
       : buildRecFilterHref(basePath, next as SirRecFilterParams);
   }
@@ -55,7 +55,7 @@ export function SirNormalizedTreatments({
         <SirRecordsTable
           columns={columns}
           rows={rows}
-          recordLabel={recordLabel}
+          domain={domain}
           tratativasByKey={tratativasByKey}
           variant="normalized"
           empty={UI_COPY.normalizedAwaitingSirEmpty}

@@ -11,42 +11,49 @@ import { SirTreatmentKpis } from "@/components/sir/SirTreatmentKpis";
 import { TablePagination } from "@/components/ui/TablePagination";
 import { RAL_TABLE_COLUMNS, REC_TABLE_COLUMNS } from "@/lib/config/sir-tables";
 import { METRIC_LABELS } from "@/lib/config/metric-labels";
-import type { SirTreatmentFilter } from "@/lib/config/sir-filters";
+import { REC_TIPOS, type RecTipoKey } from "@/lib/config/rec-types";
+import { buildRecFilterHref, type SirTreatmentFilter } from "@/lib/config/sir-filters";
 import type { TratativaPublic } from "@/lib/models/tratativa";
+
+export type SirRecOverviewSection = {
+  tipo: RecTipoKey;
+  rows: Record<string, unknown>[];
+  tratativasByKey: Record<string, TratativaPublic>;
+  total: number;
+  exportHref: string;
+};
 
 type SirPanelProps = {
   rals: Record<string, unknown>[];
-  recs: Record<string, unknown>[];
   ralTratativasByKey: Record<string, TratativaPublic>;
-  recTratativasByKey: Record<string, TratativaPublic>;
   ralOpenCount: number;
-  recOpenCount: number;
   ralTotal: number;
-  recTotal: number;
+  ralExportHref: string;
+  recSections: SirRecOverviewSection[];
+  recOpenCount: number;
   activeTreatmentCount: number;
   activeTreatment?: SirTreatmentFilter;
   pageSize: number;
-  ralExportHref: string;
-  recExportHref: string;
 };
 
-/** Painel SIR com KPIs consolidados de tratativa e tabelas RAL/REC. */
+/** Painel SIR com KPIs consolidados e tabelas RAL/REC/DSR/TCQ. */
 export function SirPanel({
   rals,
-  recs,
   ralTratativasByKey,
-  recTratativasByKey,
   ralOpenCount,
-  recOpenCount,
   ralTotal,
-  recTotal,
+  ralExportHref,
+  recSections,
+  recOpenCount,
   activeTreatmentCount,
   activeTreatment,
   pageSize,
-  ralExportHref,
-  recExportHref,
 }: SirPanelProps) {
   const activeRecordCount = ralOpenCount + recOpenCount;
+  const tipoLabel = Object.fromEntries(REC_TIPOS.map((tipo) => [tipo.key, tipo.label])) as Record<
+    RecTipoKey,
+    string
+  >;
 
   return (
     <>
@@ -65,9 +72,7 @@ export function SirPanel({
           headerAside={
             <CardHeaderActions>
               {ralTotal > pageSize ? (
-                <CardHeaderLink href={sirDomainHref("/sir/rals", activeTreatment)}>
-                  Ver todas
-                </CardHeaderLink>
+                <CardHeaderLink href={sirRalHref(activeTreatment)}>Ver todas</CardHeaderLink>
               ) : null}
               <ExportCsvLink href={ralExportHref} />
             </CardHeaderActions>
@@ -76,7 +81,7 @@ export function SirPanel({
           <SirRecordsTable
             columns={RAL_TABLE_COLUMNS}
             rows={rals}
-            recordLabel="RAL"
+            domain="RAL"
             tratativasByKey={ralTratativasByKey}
             empty="Nenhuma RAL aberta."
           />
@@ -84,51 +89,60 @@ export function SirPanel({
             currentPage={1}
             pageSize={pageSize}
             totalItems={ralTotal}
-            buildPageHref={(page) => sirDomainHref("/sir/rals", activeTreatment, page)}
+            buildPageHref={(page) => sirRalHref(activeTreatment, page)}
           />
         </ContentCard>
       </div>
 
-      <ContentCard
-        title={`${METRIC_LABELS.sir.recScope} — ABERTOS (${recTotal})`}
-        headerAside={
-          <CardHeaderActions>
-            {recTotal > pageSize ? (
-              <CardHeaderLink href={sirDomainHref("/sir/recs", activeTreatment)}>
-                Ver todos
-              </CardHeaderLink>
-            ) : null}
-            <ExportCsvLink href={recExportHref} />
-          </CardHeaderActions>
-        }
-      >
-        <SirRecordsTable
-          columns={REC_TABLE_COLUMNS}
-          rows={recs}
-          recordLabel="REC"
-          tratativasByKey={recTratativasByKey}
-          empty="Nenhum registro aberto."
-        />
-        <TablePagination
-          currentPage={1}
-          pageSize={pageSize}
-          totalItems={recTotal}
-          buildPageHref={(page) => sirDomainHref("/sir/recs", activeTreatment, page)}
-        />
-      </ContentCard>
+      {recSections.map((section) => (
+        <div key={section.tipo} className="mb-3">
+          <ContentCard
+            title={`${tipoLabel[section.tipo]} — ABERTOS (${section.total})`}
+            headerAside={
+              <CardHeaderActions>
+                {section.total > pageSize ? (
+                  <CardHeaderLink href={sirRecHref(section.tipo, activeTreatment)}>
+                    Ver todos
+                  </CardHeaderLink>
+                ) : null}
+                <ExportCsvLink href={section.exportHref} />
+              </CardHeaderActions>
+            }
+          >
+            <SirRecordsTable
+              columns={REC_TABLE_COLUMNS}
+              rows={section.rows}
+              domain="REC"
+              tratativasByKey={section.tratativasByKey}
+              empty={`Nenhum ${tipoLabel[section.tipo]} aberto.`}
+            />
+            <TablePagination
+              currentPage={1}
+              pageSize={pageSize}
+              totalItems={section.total}
+              buildPageHref={(page) => sirRecHref(section.tipo, activeTreatment, page)}
+            />
+          </ContentCard>
+        </div>
+      ))}
     </>
   );
 }
 
-/** Monta link do domínio preservando o filtro consolidado de tratativa. */
-function sirDomainHref(
-  basePath: "/sir/rals" | "/sir/recs",
-  treatment?: SirTreatmentFilter,
-  page = 1,
-): string {
+/** Monta link da listagem RAL preservando filtro de tratativa. */
+function sirRalHref(treatment?: SirTreatmentFilter, page = 1): string {
   const params = new URLSearchParams();
   if (treatment) params.set("tratativa", treatment);
   if (page > 1) params.set("page", String(page));
   const query = params.toString();
-  return query ? `${basePath}?${query}` : basePath;
+  return query ? `/sir/rals?${query}` : "/sir/rals";
+}
+
+/** Monta link da listagem REC/DSR/TCQ preservando tipo e tratativa. */
+function sirRecHref(tipo: RecTipoKey, treatment?: SirTreatmentFilter, page = 1): string {
+  return buildRecFilterHref("/sir/recs", {
+    tipo,
+    tratativa: treatment,
+    page: page > 1 ? page : undefined,
+  });
 }

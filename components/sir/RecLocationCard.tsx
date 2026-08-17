@@ -3,14 +3,12 @@ import { SirFilterChip } from "@/components/sir/SirFilterToolbar";
 import { operationalDddLabel } from "@/lib/config/locations";
 import type { RecTipoKey } from "@/lib/config/rec-types";
 import { buildRecFilterHref, type SirTreatmentFilter } from "@/lib/config/sir-filters";
-import type { SirStatusFilter } from "@/lib/config/sir-status";
 import type { CfCount, SirDddCount } from "@/lib/queries/sir";
 
 type RecLocationCardProps = {
   totalAllDdds: number;
   cfItems: CfCount[];
   dddCounts: SirDddCount[];
-  activeStatus: SirStatusFilter;
   activeTipo?: RecTipoKey;
   activeCf?: string;
   activeDdd?: string;
@@ -18,18 +16,24 @@ type RecLocationCardProps = {
   activeQ?: string;
 };
 
-/** Exibe filtros REC por DDD operacional e CF executante. */
+/** Exibe filtros REC por DDD operacional e CF executante (somente abertos). */
 export function RecLocationCard({
   totalAllDdds,
   cfItems,
   dddCounts,
-  activeStatus,
   activeTipo,
   activeCf,
   activeDdd,
   activeTreatment,
   activeQ,
 }: RecLocationCardProps) {
+  const locationFilters = {
+    status: "ativo" as const,
+    tipo: activeTipo,
+    tratativa: activeTreatment,
+    q: activeQ,
+  };
+
   return (
     <div className="card shadow-sm h-100">
       <div className="card-header fw-semibold">Localização e execução</div>
@@ -41,11 +45,8 @@ export function RecLocationCard({
               label="Todos"
               count={totalAllDdds}
               href={buildRecFilterHref("/sir/recs", {
-                status: activeStatus,
-                tipo: activeTipo,
+                ...locationFilters,
                 cf: activeCf,
-                tratativa: activeTreatment,
-                q: activeQ,
               })}
               active={!activeDdd}
             />
@@ -55,12 +56,9 @@ export function RecLocationCard({
                 label={operationalDddLabel(item.ddd)}
                 count={item.total}
                 href={buildRecFilterHref("/sir/recs", {
-                  status: activeStatus,
-                  tipo: activeTipo,
+                  ...locationFilters,
                   cf: activeCf,
                   ddd: item.ddd,
-                  tratativa: activeTreatment,
-                  q: activeQ,
                 })}
                 active={activeDdd === item.ddd}
               />
@@ -75,11 +73,8 @@ export function RecLocationCard({
           basePath="/sir/recs"
           activeCf={activeCf}
           filterParams={{
-            tipo: activeTipo,
-            status: activeStatus,
+            ...locationFilters,
             ddd: activeDdd,
-            tratativa: activeTreatment,
-            q: activeQ,
           }}
         />
       </ul>

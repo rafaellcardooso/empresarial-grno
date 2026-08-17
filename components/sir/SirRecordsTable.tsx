@@ -11,14 +11,17 @@ import { TratativaTreatButton } from "@/components/tratativa/TratativaTreatButto
 import { formatDateTimeDisplay } from "@/components/ui/DateTimeStacked";
 import { SortableDataTable, type SortableColumn } from "@/components/ui/SortableDataTable";
 import { apiFetch } from "@/lib/config/base-path";
+import { recGroupDisplayLabel } from "@/lib/config/rec-types";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 import { normalizeTratativaKey } from "@/lib/tratativa/keys";
 
+type SirRecordDomain = "RAL" | "REC";
+
 type SirRecordsTableProps = {
   columns: SortableColumn[];
   rows: Record<string, unknown>[];
-  recordLabel: "RAL" | "REC";
+  domain: SirRecordDomain;
   tratativasByKey?: Record<string, TratativaPublic>;
   variant?: "default" | "normalized";
   empty?: string;
@@ -33,11 +36,16 @@ type SelectedDetalhes = {
 
 const DETALHES_KEYS = new Set(["detalhes", "detalhes_title"]);
 
+/** Rótulo visual do registro (RAL ou prefixo REC/DSR/TCQ). */
+function sirDisplayLabel(domain: SirRecordDomain, numRecup: string): string {
+  return domain === "RAL" ? "RAL" : recGroupDisplayLabel(numRecup);
+}
+
 /** Tabela SIR prioritária com painel unificado de tratativa. */
 export function SirRecordsTable({
   columns,
   rows,
-  recordLabel,
+  domain,
   tratativasByKey = {},
   variant = "default",
   empty,
@@ -61,7 +69,7 @@ export function SirRecordsTable({
       setSelected({ numRecup, row, text: "", loading: true });
 
       try {
-        const segment = recordLabel === "RAL" ? "rals" : "recs";
+        const segment = domain === "RAL" ? "rals" : "recs";
         const response = await apiFetch(`/api/sir/${segment}/${encodeURIComponent(numRecup)}`);
         const payload = (await response.json()) as {
           data?: Record<string, unknown>;
@@ -77,7 +85,7 @@ export function SirRecordsTable({
           return;
         }
         const text =
-          recordLabel === "RAL"
+          domain === "RAL"
             ? String(payload.data?.detalhes ?? "—")
             : String(payload.data?.detalhes_title ?? "—");
 
@@ -96,7 +104,7 @@ export function SirRecordsTable({
         });
       }
     },
-    [recordLabel],
+    [domain],
   );
 
   useEffect(() => {
@@ -111,6 +119,8 @@ export function SirRecordsTable({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [selected, treatKey]);
 
+  const selectedLabel = selected ? sirDisplayLabel(domain, selected.numRecup) : "";
+
   return (
     <>
       <SortableDataTable
@@ -119,22 +129,13 @@ export function SirRecordsTable({
         rows={rows}
         empty={empty}
         renderCell={(key, value, row) =>
-          renderSirCell(
-            key,
-            value,
-            row,
-            openDetalhes,
-            recordLabel,
-            tratativas,
-            setTreatKey,
-            variant,
-          )
+          renderSirCell(key, value, row, openDetalhes, domain, tratativas, setTreatKey, variant)
         }
       />
 
       <SirDetalhesPanel
         open={selected != null}
-        recordLabel={recordLabel}
+        recordLabel={selectedLabel}
         numRecup={selected?.numRecup ?? ""}
         row={selected?.row ?? null}
         text={selected?.loading ? "Carregando…" : (selected?.text ?? "")}
@@ -142,7 +143,7 @@ export function SirRecordsTable({
       />
       <TratativaPanel
         open={treatKey != null}
-        domain={recordLabel}
+        domain={domain}
         recordKey={treatKey}
         onClose={() => setTreatKey(null)}
         onChanged={handlePanelChanged}
@@ -156,13 +157,13 @@ function renderSirCell(
   value: unknown,
   row: Record<string, unknown>,
   onOpen: (numRecup: string, row: Record<string, unknown>) => void,
-  recordLabel: "RAL" | "REC",
+  domain: SirRecordDomain,
   tratativas: Record<string, TratativaPublic>,
   onTreat: (recordKey: string) => void,
   variant: "default" | "normalized",
 ) {
   const recordKey = String(row.num_recup ?? "");
-  const normalizedKey = normalizeTratativaKey(recordLabel, recordKey);
+  const normalizedKey = normalizeTratativaKey(domain, recordKey);
   const tratativa = tratativas[normalizedKey] ?? null;
   const isRecordOpen =
     String(row.status ?? "")

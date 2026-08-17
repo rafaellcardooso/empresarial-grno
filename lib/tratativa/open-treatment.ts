@@ -16,6 +16,7 @@ import {
 } from "@/lib/queries/sdh";
 import { getPmeBsodByMac } from "@/lib/queries/bsod";
 import { getRalByNum, getRecByNum } from "@/lib/queries/sir";
+import { recGroupDisplayLabel } from "@/lib/config/rec-types";
 import { normalizeTratativaKey } from "@/lib/tratativa/keys";
 import type { TreatmentDomain, TreatmentSession } from "@/lib/tratativa/treatment-types";
 import { enrichTratativasWorkflow } from "@/lib/queries/tratativa-workflow";
@@ -79,11 +80,12 @@ async function openSharedSession(
     tratativa = enriched[tratativa.recordKey] ?? tratativa;
   }
   const sirStatus = summary.find((item) => item.label === "Status SIR")?.value;
+  const displayLabel = input.domain === "REC" ? recGroupDisplayLabel(key) : input.domain;
 
   return {
     domain: input.domain,
     recordKey: key,
-    title: `${input.domain} · ${key}`,
+    title: `${displayLabel} · ${key}`,
     subtitle: summary.find((item) => item.label === "Designação" || item.label === "Contrato")
       ?.value,
     summary,
@@ -220,6 +222,7 @@ async function buildSharedSummary(
   const row = await getRecByNum(key);
   return [
     { label: "Número", value: row?.num_recup || key },
+    { label: "Tipo", value: recGroupDisplayLabel(row?.num_recup || key) },
     { label: "DDD", value: row?.ddd || "—" },
     { label: "Prioridade", value: row?.prioridade || "—" },
     { label: "Cliente", value: row?.cliente || "—" },

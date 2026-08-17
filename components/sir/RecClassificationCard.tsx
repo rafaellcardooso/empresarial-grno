@@ -4,20 +4,18 @@ import { buildRecFilterHref, type SirTreatmentFilter } from "@/lib/config/sir-fi
 import type { SirStatusFilter } from "@/lib/config/sir-status";
 
 type RecClassificationCardProps = {
-  totalAllTipos: number;
-  byTipo: Record<string, number>;
+  count: number;
   activeStatus: SirStatusFilter;
-  activeTipo?: RecTipoKey;
+  activeTipo: RecTipoKey;
   activeCf?: string;
   activeDdd?: string;
   activeTreatment?: SirTreatmentFilter;
   activeQ?: string;
 };
 
-/** Exibe filtros pelos tipos REC, DSR e TCQ. */
+/** Exibe o chip do tipo REC/DSR/TCQ ativo na listagem. */
 export function RecClassificationCard({
-  totalAllTipos,
-  byTipo,
+  count,
   activeStatus,
   activeTipo,
   activeCf,
@@ -25,37 +23,28 @@ export function RecClassificationCard({
   activeTreatment,
   activeQ,
 }: RecClassificationCardProps) {
-  const common = {
-    status: activeStatus,
-    cf: activeCf,
-    ddd: activeDdd,
-    tratativa: activeTreatment,
-    q: activeQ,
-  };
+  const tipo = REC_TIPOS.find((item) => item.key === activeTipo);
+  if (!tipo) return null;
 
   return (
     <div className="card shadow-sm h-100">
-      <div className="card-header fw-semibold">Classificação REC</div>
+      <div className="card-header fw-semibold">Classificação</div>
       <div className="card-body py-3">
         <div className="sir-filter-toolbar__chips">
           <SirFilterChip
-            label="Todos os tipos"
-            count={totalAllTipos}
-            href={buildRecFilterHref("/sir/recs", common)}
-            active={!activeTipo}
+            label={tipo.chipLabel}
+            count={count}
+            href={buildRecFilterHref("/sir/recs", {
+              status: activeStatus,
+              tipo: tipo.key,
+              cf: activeCf,
+              ddd: activeDdd,
+              tratativa: activeTreatment,
+              q: activeQ,
+            })}
+            active
+            accentClass={tipo.filterClass}
           />
-          {REC_TIPOS.filter(
-            (tipo) => (byTipo[tipo.prefix] ?? 0) > 0 || activeTipo === tipo.key,
-          ).map((tipo) => (
-            <SirFilterChip
-              key={tipo.key}
-              label={tipo.chipLabel}
-              count={byTipo[tipo.prefix] ?? 0}
-              href={buildRecFilterHref("/sir/recs", { ...common, tipo: tipo.key })}
-              active={activeTipo === tipo.key}
-              accentClass={tipo.filterClass}
-            />
-          ))}
         </div>
       </div>
     </div>

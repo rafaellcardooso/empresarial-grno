@@ -14,7 +14,7 @@ type SirDetalhesPanelProps = {
   onClose: () => void;
 };
 
-/** Painel lateral com metadados e texto completo de RAL/REC. */
+/** Painel lateral com metadados e texto completo de RAL/REC/DSR/TCQ. */
 export function SirDetalhesPanel({
   open,
   recordLabel,
