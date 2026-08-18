@@ -1,6 +1,6 @@
 # BSOD ingest (PME / BSoD)
 
-> Última revisão: **2026-08-11**
+> Última revisão: **2026-08-18**
 
 Coleta multi-cidade para `/bsod`. Worker: [`workers/bsod`](../../workers/bsod/README.md).
 
@@ -23,28 +23,46 @@ python3 -m venv venv
 venv/bin/pip install -r requirements.txt
 
 # lab
-sudo cp deploy/systemd/lab/bsod-ingest-lab.* /etc/systemd/system/
+sudo cp deploy/systemd/lab/bsod-ingest*.service deploy/systemd/lab/bsod-ingest*.timer /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now bsod-ingest-lab.timer
+sudo systemctl disable --now bsod-ingest-lab.timer 2>/dev/null || true
+sudo systemctl enable --now \
+  bsod-ingest-xpertrak-lab.timer bsod-ingest-snmp-lab.timer \
+  bsod-ingest-ldap-lab.timer bsod-ingest-crm-lab.timer
 
 # prod
-# sudo cp deploy/systemd/bsod-ingest.* /etc/systemd/system/
+# sudo cp deploy/systemd/bsod-ingest*.service deploy/systemd/bsod-ingest*.timer /etc/systemd/system/
 # sudo systemctl daemon-reload
-# sudo systemctl enable --now bsod-ingest.timer
+# sudo systemctl disable --now bsod-ingest.timer 2>/dev/null || true
+# sudo systemctl enable --now \
+#   bsod-ingest-xpertrak.timer bsod-ingest-snmp.timer \
+#   bsod-ingest-ldap.timer bsod-ingest-crm.timer
 ```
 
-Oneshot: `sudo systemctl start bsod-ingest.service` (lab: `bsod-ingest-lab.service`).
+Oneshot completo: `sudo systemctl start bsod-ingest.service` (lab: `bsod-ingest-lab.service`).  
+Oneshot por fase: `bsod-ingest-xpertrak.service`, `bsod-ingest-snmp.service`, `bsod-ingest-ldap.service`, `bsod-ingest-crm.service`.
 
-Após mudar o `.timer` no repo:
+Após mudar timers no repo:
 
 ```bash
-sudo cp workers/bsod/deploy/systemd/bsod-ingest.timer /etc/systemd/system/
+sudo cp workers/bsod/deploy/systemd/bsod-ingest*.service \
+  workers/bsod/deploy/systemd/bsod-ingest*.timer /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl restart bsod-ingest.timer
+sudo systemctl disable --now bsod-ingest.timer 2>/dev/null || true
+sudo systemctl restart \
+  bsod-ingest-xpertrak.timer bsod-ingest-snmp.timer \
+  bsod-ingest-ldap.timer bsod-ingest-crm.timer
 systemctl list-timers 'bsod-ingest*'
 ```
 
-Intervalo: **30 min** (`OnUnitActiveSec=30min`).
+| Coleta        | Unit                         | Intervalo                |
+| ------------- | ---------------------------- | ------------------------ |
+| Xpertrak      | `bsod-ingest-xpertrak.timer` | **10 min** (boot +2 min) |
+| SNMP VLAN/reg | `bsod-ingest-snmp.timer`     | **10 min** (boot +7 min) |
+| LDAP          | `bsod-ingest-ldap.timer`     | **3 h** (boot +12 min)   |
+| CRM nocclaro  | `bsod-ingest-crm.timer`      | **6 h** (boot +15 min)   |
+
+O timer combinado `bsod-ingest.timer` foi removido. `bsod-ingest.service` permanece só para ciclo manual completo. CLI: `run_bsod_cycle.py --phase xpertrak|snmp|ldap|crm` (`enrich` = snmp+ldap).
 
 ## Persistência (update vs insert)
 
@@ -57,13 +75,13 @@ Intervalo: **30 min** (`OnUnitActiveSec=30min`).
 
 ## Ciclo por cidade (`enabled: true`)
 
-1. **CRM** — login nocclaro → busca por `uf` do JSON → planilha → `bsod_crm_clients`
+1. **CRM** (6 h) — login nocclaro → busca por `uf` do JSON → planilha → `bsod_crm_clients`
    - linhas `STATUS=CANCELADO` são descartadas
    - falha de CRM **não** aborta Xpertrak/SNMP/LDAP
-2. **Xpertrak** — nodes/modems → `bsod_cables` + amostras `bsod_monitor`
-3. **SNMP** — VLAN L2VPN por CMTS → `bsod_vlan` / `vlan` no inventário
+2. **Xpertrak** (10 min) — nodes/modems → `bsod_cables` + amostras `bsod_monitor`
+3. **SNMP** (10 min) — VLAN L2VPN + `cmts_reg_status` → inventário (preserva contrato/profile; remove órfãos)
 4. **Ping PME** — 3 ICMP quando PathTrak offline + `ip_ger` → `ping_reachable` / `ping_checked_at`
-5. **LDAP** — contrato + profile → inventário; **produto** via `config/profiles.txt`
+5. **LDAP** (3 h) — contrato + profile → inventário; **produto** via `config/profiles.txt`
 6. **Enrich CRM** no inventário (ordem):
    1. contrato LDAP ↔ `contrato_netsms`
    2. se falhar: VLAN SNMP ↔ `cvlan` **única** e ≠ `0`

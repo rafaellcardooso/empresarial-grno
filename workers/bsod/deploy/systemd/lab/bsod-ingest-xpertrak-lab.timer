@@ -1,0 +1,12 @@
+[Unit]
+Description=Timer BSOD Xpertrak lab (10min)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Persistent=true
+Unit=bsod-ingest-xpertrak-lab.service
+
+[Install]
+WantedBy=timers.target

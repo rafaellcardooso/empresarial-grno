@@ -1,6 +1,6 @@
 # Runbook — release de produção
 
-> Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-18** · Índice: [../README.md](../README.md)
 
 Atualização rotineira quando o host **já** está instalado. Se o estado for desconhecido, rode antes [production-inventory.md](production-inventory.md).
 
@@ -29,15 +29,15 @@ Manter **devDependencies** no `npm ci` do host: `next build` depende delas.
 
 ## Restart seletivo
 
-| O que mudou                      | Ação                                                                                                       |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Só `app/`, `components/`, `lib/` | Build + restart **`empresarial-next`**                                                                     |
-| `workers/sir-ingest/` (scrape)   | `cd workers/sir-ingest && npm ci` (ou install) + restart **RAL/REC**                                       |
-| `workers/sir-ingest/telegram/`   | `venv/bin/pip install -r requirements.txt` + restart **sir-telegram-***                                    |
-| `workers/tmip/`                  | pip no venv se requirements mudou + `sudo systemctl restart tmip-ingest.timer`                             |
-| `workers/bsod/`                  | pip no venv se requirements mudou + alinhar `.env` CRM/cidade + `sudo systemctl start bsod-ingest.service` |
-| `migrations/sir/`                | `npm run db:migrate` **antes** do restart do Next                                                          |
-| `.env.example` (novas chaves)    | Atualizar três `.env*`; `npm run env:check`                                                                |
+| O que mudou                      | Ação                                                                                                                                                                                                 |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Só `app/`, `components/`, `lib/` | Build + restart **`empresarial-next`**                                                                                                                                                               |
+| `workers/sir-ingest/` (scrape)   | `cd workers/sir-ingest && npm ci` (ou install) + restart **RAL/REC**                                                                                                                                 |
+| `workers/sir-ingest/telegram/`   | `venv/bin/pip install -r requirements.txt` + restart **sir-telegram-***                                                                                                                              |
+| `workers/tmip/`                  | pip no venv se requirements mudou + `sudo systemctl restart tmip-ingest.timer`                                                                                                                       |
+| `workers/bsod/`                  | pip no venv se requirements mudou + alinhar `.env` + `sudo systemctl start` da fase alterada (`bsod-ingest-xpertrak.service`, `-snmp`, `-ldap`, `-crm`) ou `bsod-ingest.service` para ciclo completo |
+| `migrations/sir/`                | `npm run db:migrate` **antes** do restart do Next                                                                                                                                                    |
+| `.env.example` (novas chaves)    | Atualizar três `.env*`; `npm run env:check`                                                                                                                                                          |
 
 Evite o atalho que reinicia ingest em todo release — interrompe o ciclo de scrape.
 

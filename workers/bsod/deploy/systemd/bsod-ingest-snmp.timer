@@ -1,0 +1,12 @@
+[Unit]
+Description=Timer BSOD SNMP (10min)
+
+[Timer]
+OnBootSec=7min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Persistent=true
+Unit=bsod-ingest-snmp.service
+
+[Install]
+WantedBy=timers.target

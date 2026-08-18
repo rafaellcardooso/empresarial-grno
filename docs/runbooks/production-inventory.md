@@ -1,6 +1,6 @@
 # Runbook — inventário de produção
 
-> Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-18** · Índice: [../README.md](../README.md)
 
 Use quando o estado do host for **desconhecido**. A documentação **não** afirma “pendente” ou “aplicado” sem evidência deste inventário.
 
@@ -35,7 +35,9 @@ Compare com arquivos em `migrations/sir/` (inclui BSOD `015`–`023`). Liste o q
 
 ```bash
 systemctl is-enabled empresarial-next sir-ingest-ral sir-ingest-rec \
-  sir-telegram-ops sir-telegram-datacenter tmip-ingest.timer bsod-ingest.timer 2>/dev/null
+  sir-telegram-ops sir-telegram-datacenter tmip-ingest.timer \
+  bsod-ingest-xpertrak.timer bsod-ingest-snmp.timer \
+  bsod-ingest-ldap.timer bsod-ingest-crm.timer 2>/dev/null
 systemctl is-active empresarial-next sir-ingest-ral sir-ingest-rec \
   sir-telegram-ops sir-telegram-datacenter 2>/dev/null
 systemctl list-timers 'tmip-ingest*' 'bsod-ingest*' --no-pager

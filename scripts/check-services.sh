@@ -58,7 +58,10 @@ LAB_DETECT=(
   sir-telegram-ops-lab
   sir-telegram-datacenter-lab
   tmip-ingest-lab.timer
-  bsod-ingest-lab.timer
+  bsod-ingest-xpertrak-lab.timer
+  bsod-ingest-snmp-lab.timer
+  bsod-ingest-ldap-lab.timer
+  bsod-ingest-crm-lab.timer
 )
 PROD_DETECT=(
   empresarial-next
@@ -67,7 +70,10 @@ PROD_DETECT=(
   sir-telegram-ops
   sir-telegram-datacenter
   tmip-ingest.timer
-  bsod-ingest.timer
+  bsod-ingest-xpertrak.timer
+  bsod-ingest-snmp.timer
+  bsod-ingest-ldap.timer
+  bsod-ingest-crm.timer
 )
 
 detect_profile() {
@@ -107,7 +113,10 @@ EXPECTED_LAB=(
   "sir-telegram-ops-lab|svc|Bot Telegram ops"
   "sir-telegram-datacenter-lab|svc|Bot Telegram datacenter"
   "tmip-ingest-lab.timer|timer|TMIP/SDH a cada ~10 min"
-  "bsod-ingest-lab.timer|timer|BSOD/PME → SIR"
+  "bsod-ingest-xpertrak-lab.timer|timer|BSOD Xpertrak a cada 10 min"
+  "bsod-ingest-snmp-lab.timer|timer|BSOD SNMP a cada 10 min"
+  "bsod-ingest-ldap-lab.timer|timer|BSOD LDAP a cada 3 h"
+  "bsod-ingest-crm-lab.timer|timer|BSOD CRM a cada 6 h"
 )
 
 EXPECTED_PROD=(
@@ -117,11 +126,14 @@ EXPECTED_PROD=(
   "sir-telegram-ops|svc|Bot Telegram ops"
   "sir-telegram-datacenter|svc|Bot Telegram datacenter"
   "tmip-ingest.timer|timer|TMIP/SDH a cada ~10 min"
-  "bsod-ingest.timer|timer|BSOD/PME → SIR"
+  "bsod-ingest-xpertrak.timer|timer|BSOD Xpertrak a cada 10 min"
+  "bsod-ingest-snmp.timer|timer|BSOD SNMP a cada 10 min"
+  "bsod-ingest-ldap.timer|timer|BSOD LDAP a cada 3 h"
+  "bsod-ingest-crm.timer|timer|BSOD CRM a cada 6 h"
 )
 
-OTHER_PROFILE_LAB=(empresarial-next sir-ingest-ral sir-ingest-rec tmip-ingest.timer bsod-ingest.timer)
-OTHER_PROFILE_PROD=(empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab tmip-ingest-lab.timer bsod-ingest-lab.timer)
+OTHER_PROFILE_LAB=(empresarial-next sir-ingest-ral sir-ingest-rec tmip-ingest.timer bsod-ingest-xpertrak.timer bsod-ingest-snmp.timer bsod-ingest-ldap.timer bsod-ingest-crm.timer)
+OTHER_PROFILE_PROD=(empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab tmip-ingest-lab.timer bsod-ingest-xpertrak-lab.timer bsod-ingest-snmp-lab.timer bsod-ingest-ldap-lab.timer bsod-ingest-crm-lab.timer)
 
 timer_next() {
   systemctl list-timers --all --no-pager --no-legend 2>/dev/null \

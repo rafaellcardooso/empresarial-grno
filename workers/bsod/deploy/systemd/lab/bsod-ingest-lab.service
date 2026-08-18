@@ -1,5 +1,5 @@
 [Unit]
-Description=BSOD ingest lab — Xpertrak/SNMP/LDAP → SIR
+Description=BSOD ingest lab — ciclo completo (CRM + Xpertrak + SNMP + LDAP)
 After=network.target mariadb.service
 
 [Service]

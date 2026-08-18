@@ -1,6 +1,6 @@
 # Runbook — instalação de produção
 
-> Última revisão: **2026-08-11** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-08-18** · Índice: [../README.md](../README.md)
 
 Primeira instalação em host Debian/Linux. Usuário **`datacenter`**, path **`/usr/local/empresarial`**, Next na porta **4001** com `basePath` **`/empresarial`** (Nginx do portal).
 
@@ -149,11 +149,13 @@ sudo cp workers/sir-ingest/deploy/systemd/sir-telegram-ops.service /etc/systemd/
 sudo cp workers/sir-ingest/deploy/systemd/sir-telegram-datacenter.service /etc/systemd/system/
 sudo cp workers/tmip/deploy/systemd/tmip-ingest.service /etc/systemd/system/
 sudo cp workers/tmip/deploy/systemd/tmip-ingest.timer /etc/systemd/system/
-sudo cp workers/bsod/deploy/systemd/bsod-ingest.service /etc/systemd/system/
-sudo cp workers/bsod/deploy/systemd/bsod-ingest.timer /etc/systemd/system/
+sudo cp workers/bsod/deploy/systemd/bsod-ingest*.service /etc/systemd/system/
+sudo cp workers/bsod/deploy/systemd/bsod-ingest*.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable empresarial-next sir-ingest-ral sir-ingest-rec \
-  sir-telegram-ops sir-telegram-datacenter tmip-ingest.timer bsod-ingest.timer
+  sir-telegram-ops sir-telegram-datacenter tmip-ingest.timer \
+  bsod-ingest-xpertrak.timer bsod-ingest-snmp.timer \
+  bsod-ingest-ldap.timer bsod-ingest-crm.timer
 ```
 
 Inventário: [../operations/services.md](../operations/services.md).
@@ -169,7 +171,9 @@ sudo systemctl start empresarial-next
 # aguardar api/saude OK
 sudo systemctl start sir-ingest-ral sir-ingest-rec
 sudo systemctl start tmip-ingest.timer
-sudo systemctl start bsod-ingest.timer
+sudo systemctl start \
+  bsod-ingest-xpertrak.timer bsod-ingest-snmp.timer \
+  bsod-ingest-ldap.timer bsod-ingest-crm.timer
 sudo systemctl start sir-telegram-ops sir-telegram-datacenter
 ```
 
@@ -190,7 +194,7 @@ curl -s http://127.0.0.1:4001/empresarial/api/rals/contagem_por_cf | jq '.status
 
 sudo journalctl -u sir-ingest-ral -n 30 --no-pager
 sudo journalctl -u tmip-ingest -n 30 --no-pager
-sudo journalctl -u bsod-ingest -n 30 --no-pager
+sudo journalctl -u 'bsod-ingest*' -n 30 --no-pager
 ```
 
 UI autenticada: `/sir`, `/bsod`, `/sdh`, `/grb`, `/relatorios`.

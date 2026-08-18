@@ -202,19 +202,14 @@ def list_latest_monitor_by_mac(ope: str) -> dict[str, dict[str, Any]]:
         conn.close()
 
 
-def list_inventory_client_fields(ope: str) -> dict[str, dict[str, Any]]:
-    """Mapa MAC normalizado → cliente/override já persistidos no inventário."""
+def list_inventory_by_mac(ope: str) -> dict[str, dict[str, Any]]:
+    """Mapa MAC normalizado → linha atual de bsod_inventory."""
     ope_key = (ope or "").strip().lower()
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute(
-                """
-                SELECT mac, cliente, cadastro_responsavel, designacao, address, crm_cvlan,
-                       contato_cliente_nome_1, contato_cliente_telefone_1, manual_override
-                FROM bsod_inventory
-                WHERE ope = %s
-                """,
+                "SELECT * FROM bsod_inventory WHERE ope = %s",
                 (ope_key,),
             )
             out: dict[str, dict[str, Any]] = {}

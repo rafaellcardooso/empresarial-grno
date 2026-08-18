@@ -32,13 +32,13 @@ Manaus (MNS): Xpertrak `http://200.160.100.6/pathtrak/api`, 19 CMTS em `config/c
 
 1. Sync CRM por UF → `bsod_crm_clients` (ignora `STATUS=CANCELADO`; falha não aborta o ciclo).
 2. Xpertrak → `bsod_cables` + amostras `bsod_monitor`.
-3. SNMP L2VPN + **docsIfCmtsCmStatusValue** + LDAP → `bsod_inventory`:
-   - VLAN L2VPN por CMTS (`bsod_vlan`);
-   - status de registro CMTS (`cmts_reg_status`, `8`=operational) para desempate PathTrak offline;
-   - **produto** a partir de `profile` (`config/profiles.txt`);
-   - cliente/endereço/designação: CRM por **contrato**, senão **cvlan** única, senão override manual / endereço Xpertrak;
-   - cleanup de órfãos do `ope`.
-4. Timer systemd a cada **30 min** (`bsod-ingest.timer` / lab `bsod-ingest-lab.timer`).
+3. SNMP L2VPN + **docsIfCmtsCmStatusValue** → `bsod_inventory` (preserva contrato/profile);
+   LDAP (ciclo próprio) preenche contrato/profile/**produto** e o CRM casa por contrato (fallback VLAN).
+4. Timers systemd em cadências distintas:
+   - Xpertrak a cada **10 min** (`bsod-ingest-xpertrak.timer`);
+   - SNMP (VLAN + reg status) a cada **10 min** (`bsod-ingest-snmp.timer`);
+   - LDAP a cada **3 h** (`bsod-ingest-ldap.timer`);
+   - CRM nocclaro a cada **6 h** (`bsod-ingest-crm.timer`).
 
 CRM só sync: `venv/bin/python run_bsod_crm_sync.py --ope sls` (ou `--dry-run`).
 
@@ -49,7 +49,7 @@ Planilha local (`data/BSOD.xlsx`, colunas designação/razão social/endereço/c
 ## Estrutura
 
 ```
-run_bsod_cycle.py
+run_bsod_cycle.py        # --phase crm|xpertrak|snmp|ldap (default: todas)
 run_bsod_crm_sync.py
 config/cities/{sls,mns,blm}.json
 config/profiles.txt
@@ -57,6 +57,6 @@ lib/                 # cycle, db, nocclaro, snmp_bsod, ldap, …
 scripts/ldap_lookup_mac.py
 requirements.txt
 .env.example
-deploy/systemd/          # prod
+deploy/systemd/          # prod: xpertrak/snmp 10min, ldap 3h, crm 6h
 deploy/systemd/lab/      # lab
 ```

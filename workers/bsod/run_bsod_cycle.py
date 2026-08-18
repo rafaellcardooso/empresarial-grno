@@ -12,7 +12,7 @@ if str(WORKER_ROOT) not in sys.path:
     sys.path.insert(0, str(WORKER_ROOT))
 
 from lib.config import list_enabled_opes, load_city_config, load_worker_env  # noqa: E402
-from lib.cycle import run_city_cycle  # noqa: E402
+from lib.cycle import PHASE_CHOICES, expand_phases, run_city_cycle  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,6 +35,13 @@ def main() -> int:
         action="store_true",
         help="Executa mesmo se enabled=false no JSON da cidade.",
     )
+    parser.add_argument(
+        "--phase",
+        action="append",
+        dest="phases",
+        choices=PHASE_CHOICES,
+        help="Fase do ciclo (pode repetir). Default: crm + xpertrak + snmp + ldap. enrich = snmp+ldap.",
+    )
     args = parser.parse_args()
 
     load_worker_env()
@@ -43,13 +50,14 @@ def main() -> int:
         logger.error("Nenhuma cidade enabled e nenhum --ope informado")
         return 1
 
+    phases = expand_phases(tuple(args.phases) if args.phases else None)
     failures = 0
     for ope in opes:
         city = load_city_config(ope)
         if args.force:
             city["enabled"] = True
         try:
-            result = run_city_cycle(city)
+            result = run_city_cycle(city, phases=phases)
             if result.get("status") == "error":
                 failures += 1
         except Exception:

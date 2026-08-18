@@ -1,0 +1,12 @@
+[Unit]
+Description=Timer BSOD CRM sync (6h)
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=6h
+AccuracySec=1min
+Persistent=true
+Unit=bsod-ingest-crm.service
+
+[Install]
+WantedBy=timers.target

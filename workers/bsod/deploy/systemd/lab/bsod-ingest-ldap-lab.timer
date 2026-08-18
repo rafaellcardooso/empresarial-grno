@@ -1,0 +1,12 @@
+[Unit]
+Description=Timer BSOD LDAP lab (3h)
+
+[Timer]
+OnBootSec=12min
+OnUnitActiveSec=3h
+AccuracySec=1min
+Persistent=true
+Unit=bsod-ingest-ldap-lab.service
+
+[Install]
+WantedBy=timers.target

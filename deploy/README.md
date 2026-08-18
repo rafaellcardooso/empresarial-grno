@@ -20,7 +20,10 @@ Este arquivo **não** é o checklist de instalação. Use:
 | `sir-ingest-ral` / `rec`          | `workers/sir-ingest/deploy/systemd/`      |
 | `sir-telegram-ops` / `datacenter` | `workers/sir-ingest/deploy/systemd/`      |
 | `tmip-ingest.timer`               | `workers/tmip/deploy/systemd/`            |
-| `bsod-ingest.timer`               | `workers/bsod/deploy/systemd/`            |
+| `bsod-ingest-xpertrak.timer`      | `workers/bsod/deploy/systemd/`            |
+| `bsod-ingest-snmp.timer`          | `workers/bsod/deploy/systemd/`            |
+| `bsod-ingest-ldap.timer`          | `workers/bsod/deploy/systemd/`            |
+| `bsod-ingest-crm.timer`           | `workers/bsod/deploy/systemd/`            |
 
 ## Lab
 
