@@ -60,7 +60,7 @@ def main() -> int:
         dry_run=args.dry_run,
     )
     logger.info(
-        "[%s] concluído file=%s sheet=%d matched=%d updated=%d already_filled=%d no_match=%d%s",
+        "[%s] concluído file=%s sheet=%d matched=%d updated=%d already_filled=%d no_match=%d sheet_unmatched=%d cliente=%d designacao=%d vlan=%d%s",
         args.ope,
         sheet_path.name,
         stats["sheet_rows"],
@@ -68,6 +68,10 @@ def main() -> int:
         stats["inventory_updated"],
         stats["inventory_already_filled"],
         stats["inventory_no_match"],
+        stats.get("sheet_unmatched", 0),
+        stats.get("filled_cliente", 0),
+        stats.get("filled_designacao", 0),
+        stats.get("filled_vlan", 0),
         " (dry-run)" if args.dry_run else "",
     )
     return 0

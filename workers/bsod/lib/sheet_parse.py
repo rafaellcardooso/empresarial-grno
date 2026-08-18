@@ -1,4 +1,4 @@
-"""Parse de planilha local BSOD (designação, razão social, endereço, contrato)."""
+"""Parse de planilha local BSOD (cliente, designação, VLAN, contrato)."""
 
 from __future__ import annotations
 
@@ -12,13 +12,16 @@ from openpyxl import load_workbook
 from lib.util import as_str, normalize_contrato
 
 SHEET_FIELD_KEYS = (
+    "cliente",
     "designacao",
     "razao_social",
     "endereco",
     "contrato_netsms",
+    "vlan",
 )
 
 _HEADER_ALIASES = {
+    "cliente": "cliente",
     "designacao": "designacao",
     "designacao_": "designacao",
     "razao_social": "razao_social",
@@ -27,6 +30,9 @@ _HEADER_ALIASES = {
     "contrato": "contrato_netsms",
     "contrato_netsms": "contrato_netsms",
     "contrato_net_sms": "contrato_netsms",
+    "vlan": "vlan",
+    "cvlan": "vlan",
+    "c_vlan": "vlan",
 }
 
 
@@ -42,8 +48,13 @@ def _normalize_header(raw: Any) -> str:
 
 
 def _cell_text(value: Any) -> str:
+    """Converte célula da planilha para texto; inteiros sem sufixo .0."""
     if value is None:
         return ""
+    if isinstance(value, bool):
+        return as_str(value, max_len=255)
+    if isinstance(value, int):
+        return str(value)
     if isinstance(value, float) and value.is_integer():
         return str(int(value))
     return as_str(value, max_len=255)
@@ -60,6 +71,22 @@ def _row_from_values(headers: list[str], values: list[Any]) -> dict[str, str] | 
     if not mapped["contrato_netsms"]:
         return None
     return mapped
+
+
+def contrato_keys(raw: Any) -> list[str]:
+    """Extrai um ou mais contratos normalizados; trata par ``123 / 456``."""
+    text = as_str(raw, max_len=64)
+    if not text:
+        return []
+    if re.search(r"\d{6,}\s*/\s*\d{6,}", text):
+        keys: list[str] = []
+        for part in re.split(r"\s*/\s*", text):
+            key = normalize_contrato(part)
+            if key:
+                keys.append(key)
+        return keys
+    key = normalize_contrato(text)
+    return [key] if key else []
 
 
 def parse_local_sheet(path: Path) -> list[dict[str, str]]:
@@ -85,8 +112,14 @@ def dedupe_by_contrato(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     """Mantém uma linha por contrato normalizado (última ganha)."""
     by_contrato: dict[str, dict[str, str]] = {}
     for row in rows:
-        key = normalize_contrato(row.get("contrato_netsms"))
-        if not key:
+        for key in contrato_keys(row.get("contrato_netsms")):
+            by_contrato[key] = row
+    seen: set[int] = set()
+    unique: list[dict[str, str]] = []
+    for row in by_contrato.values():
+        marker = id(row)
+        if marker in seen:
             continue
-        by_contrato[key] = row
-    return list(by_contrato.values())
+        seen.add(marker)
+        unique.append(row)
+    return unique

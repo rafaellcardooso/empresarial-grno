@@ -16,6 +16,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 ### Changed
 
 - Ingest BSOD em cadências distintas: Xpertrak 10 min, SNMP 10 min, LDAP 3 h, CRM 6 h.
+- Planilha local BSOD preenche lacunas de cliente, designação e VLAN no inventário por contrato.
 - Documentação alinhada a fontes estáveis (sem monólitos datados como procedimento atual).
 - SDH permite observação/encerramento de alarme inativo com tratativa aberta; claim permanece só em ativo.
 - Deploy produção padronizado em `npm ci` + restart seletivo; TMIP incluído no install.

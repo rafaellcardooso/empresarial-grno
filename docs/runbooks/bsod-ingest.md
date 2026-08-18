@@ -131,6 +131,13 @@ PY
 
 CRM só sync: `venv/bin/python run_bsod_crm_sync.py --ope sls` (ou `--dry-run`).
 
+Planilha local (`data/BSOD.xlsx`) — match por contrato em `bsod_inventory` e preenche **somente lacunas** de cliente, designação e VLAN:
+
+```bash
+venv/bin/python run_bsod_sheet_enrich.py --ope sls --dry-run
+venv/bin/python run_bsod_sheet_enrich.py --ope sls
+```
+
 ## VLAN na UI
 
 | Label UI      | Coluna      | Origem                                                     |

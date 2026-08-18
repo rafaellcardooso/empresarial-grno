@@ -52,6 +52,15 @@ def _cmts_reg_status_for(
     return reg_maps.get(cmts_key, {}).get(mac_norm)
 
 
+def _keep_manual_vlan(snmp_vlan: int, existing: dict[str, Any] | None) -> int:
+    """Mantém VLAN preenchida à mão quando o SNMP não devolveu VID."""
+    if snmp_vlan > 0:
+        return snmp_vlan
+    if not existing or int(existing.get("manual_override") or 0) != 1:
+        return 0
+    return int(existing.get("bsod_vlan") or 0)
+
+
 def _collect_snmp_maps(
     city: dict[str, Any],
     cables: list[dict[str, Any]],
@@ -187,7 +196,8 @@ def _snmp_membership_rows(
         mac_norm = normalize_mac(cable.get("mac")) or str(cable.get("mac") or "").lower()
         keep_macs.add(mac_norm)
         contrato, profile = _ldap_from_existing(existing_by_mac, mac_norm)
-        vlan = int(vlan_by_mac.get(mac_norm, 0) or 0)
+        existing = existing_by_mac.get(mac_norm)
+        vlan = _keep_manual_vlan(int(vlan_by_mac.get(mac_norm, 0) or 0), existing)
         inventory_rows.append(
             _build_inventory_row(
                 ope=ope,
@@ -208,7 +218,7 @@ def _snmp_membership_rows(
                 cmts_status_at=status_at,
                 crm_by_contrato=crm_by_contrato,
                 crm_by_cvlan=crm_by_cvlan,
-                existing=existing_by_mac.get(mac_norm),
+                existing=existing,
             )
         )
 
@@ -216,7 +226,9 @@ def _snmp_membership_rows(
         keep_macs.add(mac_key)
         cable = cables_idx.get(mac_key)
         contrato, profile = _ldap_from_existing(existing_by_mac, mac_key)
+        existing = existing_by_mac.get(mac_key)
         cmts = (cable.get("hostname_cmts") if cable else cmts_name) or ""
+        vlan = _keep_manual_vlan(int(vlan), existing)
         inventory_rows.append(
             _build_inventory_row(
                 ope=ope,
@@ -229,13 +241,13 @@ def _snmp_membership_rows(
                 node=(cable.get("node") if cable else "") or "",
                 contrato=contrato,
                 profile=profile,
-                vlan=int(vlan),
-                vlan_text=normalize_vlan(vlan),
+                vlan=vlan,
+                vlan_text=normalize_vlan(vlan) if vlan else "",
                 cmts_reg_status=_cmts_reg_status_for(reg_maps, cmts, mac_key),
                 cmts_status_at=status_at,
                 crm_by_contrato=crm_by_contrato,
                 crm_by_cvlan=crm_by_cvlan,
-                existing=existing_by_mac.get(mac_key),
+                existing=existing,
             )
         )
 
