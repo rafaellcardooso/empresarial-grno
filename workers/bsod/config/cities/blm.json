@@ -3,9 +3,23 @@
   "ddd": "91",
   "uf": "PA",
   "city": "BELÉM",
-  "enabled": false,
+  "enabled": true,
   "env_prefix": "BSOD_BLM",
   "ldap_base_dn": "dc=virtua_blm_docsis",
-  "xpertrak_url_default": "http://xpertrak.blm.virtua.com.br/pathtrak/api",
-  "cmts": {}
+  "xpertrak_url_default": "http://187.122.251.98/pathtrak/api",
+  "cmts": {
+    "AIUDTCCMT01": { "ip": "187.122.253.22", "vendor": "CISCO", "pme_cidr": "10.10.128.0/22" },
+    "AIUDTCCMT03": { "ip": "187.122.253.26", "vendor": "ARRIS", "pme_cidr": "10.17.16.0/20" },
+    "BLMDTCCMT01": { "ip": "187.122.253.2", "vendor": "ARRIS", "pme_cidr": "10.10.136.0/22" },
+    "BLMDTCCMT02": { "ip": "187.122.253.6", "vendor": "ARRIS", "pme_cidr": "10.10.140.0/22" },
+    "BLMDTCCMT03": { "ip": "187.122.253.10", "vendor": "CISCO", "pme_cidr": "10.10.144.0/22" },
+    "BLMDTCCMT04": { "ip": "187.122.253.14", "vendor": "CISCO", "pme_cidr": "10.10.148.0/22" },
+    "BLMDTCCMT05": { "ip": "187.122.253.18", "vendor": "CASA", "pme_cidr": "10.10.152.0/22" },
+    "BLMDTCCMT06": { "ip": "187.122.253.54", "vendor": "CISCO", "pme_cidr": "10.10.156.0/22" },
+    "BLMDTCCMT09": { "ip": "187.122.253.30", "vendor": "CISCO", "pme_cidr": "10.10.160.0/22" },
+    "BLMDTCCMT10": { "ip": "187.122.253.34", "vendor": "CISCO", "pme_cidr": "10.10.164.0/22" },
+    "BLMDTCCMT12": { "ip": "187.122.253.42", "vendor": "ARRIS", "pme_cidr": "10.10.172.0/22" },
+    "BLMDTCCMT14": { "ip": "187.122.253.46", "vendor": "ARRIS", "pme_cidr": "10.10.176.0/22" },
+    "BLMDTCCMT16": { "ip": "187.122.253.50", "vendor": "CISCO", "pme_cidr": "10.10.180.0/22" }
+  }
 }
