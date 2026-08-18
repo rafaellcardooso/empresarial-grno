@@ -5,7 +5,7 @@
   "city": "BELÉM",
   "enabled": true,
   "env_prefix": "BSOD_BLM",
-  "ldap_base_dn": "dc=virtua_blm_docsis",
+  "ldap_base_dn": "dc=virtua_cluster-blm_docsis",
   "xpertrak_url_default": "http://187.122.251.98/pathtrak/api",
   "cmts": {
     "AIUDTCCMT01": { "ip": "187.122.253.22", "vendor": "CISCO", "pme_cidr": "10.10.128.0/22" },

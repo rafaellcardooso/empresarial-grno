@@ -42,7 +42,7 @@ def _ldap_search_params(city: dict[str, Any]) -> tuple[str, str, str]:
 
     bind_dn = (city.get("ldap_bind_dn") or "").strip()
     if not bind_dn:
-        bind_dn = f"uid=datacenter,dc=virtua,{base_dn}"
+        bind_dn = "uid=datacenter,dc=virtua"
 
     password = city.get("ldap_bind_password") or ""
     return base_dn, bind_dn, password
