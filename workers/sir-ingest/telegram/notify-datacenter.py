@@ -6,6 +6,7 @@ import logging
 import os
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 from dotenv import load_dotenv
 
@@ -37,7 +38,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 STATE_FILE = WORKER_ROOT / "states" / "telegram-datacenter-notify.json"
-NUM_PATTERN = re.compile(r"(\d+)")
 
 
 def poll_interval_ms() -> int:
@@ -64,7 +64,8 @@ def load_state() -> dict[str, list[str]]:
 
 def save_state(state: dict[str, list[str]]) -> None:
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    STATE_FILE.write_text(json.dumps(
+        state, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def filter_datacenter_records(records: list[dict]) -> list[dict]:
@@ -80,7 +81,7 @@ def record_id(record: dict) -> str:
 
 
 def extract_numeric_id(num_recup: str) -> str | None:
-    match = NUM_PATTERN.search(num_recup)
+    match = re.search(r"(\d+)", num_recup)
     return match.group(1) if match else None
 
 
@@ -100,16 +101,18 @@ async def maybe_send_detail(record_type: str, num_recup: str, detail_text: str) 
 
 
 async def notify_ral_changes(previous_ids: set[str], current_records: list[dict]) -> set[str]:
-    current_by_id = {record_id(record): record for record in current_records if record_id(record)}
+    current_by_id = {
+        record_id(record): record for record in current_records if record_id(record)}
     current_ids = set(current_by_id.keys())
 
     for num_recup in sorted(current_ids - previous_ids):
         record = current_by_id[num_recup]
         await send_datacenter_message(format_new_ral(record))
-        numeric_id = extract_numeric_id(num_recup)
+        numeric_id = quote(num_recup, safe="") if num_recup else None
         if numeric_id:
             detail = await fetch_ral_detail(numeric_id)
-            detail_text = detail_text_from_api("RAL", detail) if detail else None
+            detail_text = detail_text_from_api(
+                "RAL", detail) if detail else None
             if detail_text:
                 await maybe_send_detail(
                     "RAL",
@@ -119,7 +122,8 @@ async def notify_ral_changes(previous_ids: set[str], current_records: list[dict]
             elif detail:
                 logger.info("RAL %s sem detalhes na API", num_recup)
             else:
-                logger.warning("RAL %s — detalhe nao encontrado na API", num_recup)
+                logger.warning(
+                    "RAL %s — detalhe nao encontrado na API", num_recup)
 
     for num_recup in sorted(previous_ids - current_ids):
         await send_datacenter_message(format_closed("RAL", num_recup))
@@ -128,16 +132,18 @@ async def notify_ral_changes(previous_ids: set[str], current_records: list[dict]
 
 
 async def notify_rec_changes(previous_ids: set[str], current_records: list[dict]) -> set[str]:
-    current_by_id = {record_id(record): record for record in current_records if record_id(record)}
+    current_by_id = {
+        record_id(record): record for record in current_records if record_id(record)}
     current_ids = set(current_by_id.keys())
 
     for num_recup in sorted(current_ids - previous_ids):
         record = current_by_id[num_recup]
         await send_datacenter_message(format_new_rec(record))
-        numeric_id = extract_numeric_id(num_recup)
+        numeric_id = quote(num_recup, safe="") if num_recup else None
         if numeric_id:
             detail = await fetch_rec_detail(numeric_id)
-            detail_text = detail_text_from_api("REC", detail) if detail else None
+            detail_text = detail_text_from_api(
+                "REC", detail) if detail else None
             if detail_text:
                 await maybe_send_detail(
                     "REC",
@@ -147,7 +153,8 @@ async def notify_rec_changes(previous_ids: set[str], current_records: list[dict]
             elif detail:
                 logger.info("REC %s sem detalhes_title na API", num_recup)
             else:
-                logger.warning("REC %s — detalhe nao encontrado na API", num_recup)
+                logger.warning(
+                    "REC %s — detalhe nao encontrado na API", num_recup)
 
     for num_recup in sorted(previous_ids - current_ids):
         await send_datacenter_message(format_closed("REC", num_recup))
@@ -165,9 +172,12 @@ async def run_cycle() -> None:
     recs = filter_datacenter_records(await fetch_recs())
 
     if bootstrap:
-        current_rals = {record_id(record) for record in rals if record_id(record)}
-        current_recs = {record_id(record) for record in recs if record_id(record)}
-        save_state({"rals": sorted(current_rals), "recs": sorted(current_recs)})
+        current_rals = {record_id(record)
+                        for record in rals if record_id(record)}
+        current_recs = {record_id(record)
+                        for record in recs if record_id(record)}
+        save_state({"rals": sorted(current_rals),
+                   "recs": sorted(current_recs)})
         logger.info(
             "Bootstrap notify — %s RAL, %s REC datacenter (sem envio Telegram)",
             len(current_rals),
@@ -199,3 +209,4 @@ async def main_loop() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main_loop())
+
