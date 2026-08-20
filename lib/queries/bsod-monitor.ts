@@ -22,19 +22,13 @@ type BsodMonitorGlobal = typeof globalThis & {
 };
 
 /**
- * Última leitura RF por MAC do inventário BSOD (SIR).
- * Escopo em inventário + janela de 30 dias evita full scan do histórico.
+ * Última leitura RF por MAC (tabela materializada bsod_monitor_latest).
+ * Evita GROUP BY no histórico bsod_monitor a cada request da UI.
  */
 export const LATEST_MONITOR_FOR_INVENTORY_SQL = `
   SELECT m.mac, m.status, m.tx, m.rx, m.mer, m.sampled_at AS \`time\`
-  FROM bsod_monitor m
-  INNER JOIN (
-    SELECT mac, MAX(sampled_at) AS max_time
-    FROM bsod_monitor
-    WHERE mac IN (SELECT mac FROM bsod_inventory)
-      AND sampled_at >= (NOW() - INTERVAL 30 DAY)
-    GROUP BY mac
-  ) latest ON m.mac = latest.mac AND m.sampled_at = latest.max_time
+  FROM bsod_monitor_latest m
+  INNER JOIN bsod_inventory i ON i.ope = m.ope AND i.mac = m.mac
 `;
 
 /** Carrega mapa MAC → última leitura a partir do SIR. */

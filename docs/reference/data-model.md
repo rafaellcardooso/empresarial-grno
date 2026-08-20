@@ -14,12 +14,13 @@ Schema versionado em `migrations/sir/`. Fronteiras: [../architecture/data-and-wr
 
 ### BSOD (SIR — writer `workers/bsod`)
 
-| Tabela             | Notas                                                                                                                    |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `bsod_cables`      | Sweep Xpertrak (MAC, node, IP, endereço físico do PathTrak)                                                              |
-| `bsod_monitor`     | Amostras RF (TX/RX/MER/status)                                                                                           |
-| `bsod_crm_clients` | Catálogo portal nocclaro; sync por UF; sem linhas `CANCELADO`                                                            |
-| `bsod_inventory`   | Inventário PME/BSoD: LDAP + SNMP VLAN + enrich CRM; `manual_override` preserva edição na UI; `crm_cvlan` quando casa CRM |
+| Tabela                | Notas                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `bsod_cables`         | Sweep Xpertrak (MAC, node, IP, endereço físico do PathTrak)                                                              |
+| `bsod_monitor`        | Amostras RF (TX/RX/MER/status) — histórico                                                                               |
+| `bsod_monitor_latest` | Última amostra por `(ope, mac)` (leitura rápida da UI)                                                                   |
+| `bsod_crm_clients`    | Catálogo portal nocclaro; sync por UF; sem linhas `CANCELADO`                                                            |
+| `bsod_inventory`      | Inventário PME/BSoD: LDAP + SNMP VLAN + enrich CRM; `manual_override` preserva edição na UI; `crm_cvlan` quando casa CRM |
 
 Join inventário ↔ CRM: `contrato` LDAP ↔ `contrato_netsms`; fallback `vlan` ↔ `cvlan` única ≠ 0.  
 Campos de cliente/endereço também editáveis na UI (`manual_override=1`).

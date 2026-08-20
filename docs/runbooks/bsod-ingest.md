@@ -66,12 +66,13 @@ O timer combinado `bsod-ingest.timer` foi removido. `bsod-ingest.service` perman
 
 ## Persistência (update vs insert)
 
-| Tabela             | Comportamento                                            |
-| ------------------ | -------------------------------------------------------- |
-| `bsod_cables`      | **UPSERT** por `(ope, mac)`                              |
-| `bsod_inventory`   | **UPSERT** por `(ope, mac)`; órfãos do ope são removidos |
-| `bsod_crm_clients` | **replace** do ope (DELETE + INSERT da planilha ativa)   |
-| `bsod_monitor`     | **INSERT** de nova amostra a cada ciclo (histórico RF)   |
+| Tabela                | Comportamento                                              |
+| --------------------- | ---------------------------------------------------------- |
+| `bsod_cables`         | **UPSERT** por `(ope, mac)`                                |
+| `bsod_inventory`      | **UPSERT** por `(ope, mac)`; órfãos do ope são removidos   |
+| `bsod_crm_clients`    | **replace** do ope (DELETE + INSERT da planilha ativa)     |
+| `bsod_monitor`        | **INSERT** de nova amostra a cada ciclo (histórico RF)     |
+| `bsod_monitor_latest` | **UPSERT** da última amostra por `(ope, mac)` (leitura UI) |
 
 ## Ciclo por cidade (`enabled: true`)
 

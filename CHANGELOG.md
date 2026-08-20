@@ -9,12 +9,14 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 
 ### Added
 
+- Tabela `bsod_monitor_latest` (migration `028`) para leitura O(1) da última amostra RF na UI BSOD.
 - Seção **Normalizados aguardando confirmação** em RAL, REC e SDH (tratativa ativa após normalização da fonte).
 - Encerramento auditado de tratativas RAL/REC já normalizadas, distinto da liberação.
 - Documentação reestruturada: runbooks de produção, inventário de host, referência e ADRs.
 
 ### Changed
 
+- Página BSOD usa cache de inventário mesclado e `bsod_monitor_latest` (evita GROUP BY no histórico a cada request).
 - Ingest BSOD em cadências distintas: Xpertrak 10 min, SNMP 10 min, LDAP 3 h, CRM 6 h.
 - Planilha local BSOD preenche lacunas de cliente, designação e VLAN no inventário por contrato.
 - Belém (BLM) habilitada no ingest BSOD com 13 CMTS e faixas PME.

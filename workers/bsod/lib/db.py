@@ -86,20 +86,36 @@ INSERT INTO bsod_monitor (ope, ddd, mac, status, tx, rx, mer, sampled_at)
 VALUES (%(ope)s, %(ddd)s, %(mac)s, %(status)s, %(tx)s, %(rx)s, %(mer)s, %(sampled_at)s)
 """
 
+MONITOR_LATEST_UPSERT = """
+INSERT INTO bsod_monitor_latest (ope, ddd, mac, status, tx, rx, mer, sampled_at)
+VALUES (%(ope)s, %(ddd)s, %(mac)s, %(status)s, %(tx)s, %(rx)s, %(mer)s, %(sampled_at)s)
+ON DUPLICATE KEY UPDATE
+  ddd = VALUES(ddd),
+  status = IF(VALUES(sampled_at) >= sampled_at, VALUES(status), status),
+  tx = IF(VALUES(sampled_at) >= sampled_at, VALUES(tx), tx),
+  rx = IF(VALUES(sampled_at) >= sampled_at, VALUES(rx), rx),
+  mer = IF(VALUES(sampled_at) >= sampled_at, VALUES(mer), mer),
+  sampled_at = IF(VALUES(sampled_at) >= sampled_at, VALUES(sampled_at), sampled_at)
+"""
+
 
 def get_connection() -> pymysql.connections.Connection:
     """Abre conexão MySQL SIR com cursor dict."""
     cfg = get_sir_db_config()
-    return pymysql.connect(
-        host=cfg["host"],
-        port=cfg["port"],
-        user=cfg["user"],
-        password=cfg["password"],
-        database=cfg["database"],
-        charset=cfg["charset"],
-        cursorclass=DictCursor,
-        autocommit=False,
-    )
+    connect_kwargs: dict[str, Any] = {
+        "user": cfg["user"],
+        "password": cfg["password"],
+        "database": cfg["database"],
+        "charset": cfg["charset"],
+        "cursorclass": DictCursor,
+        "autocommit": False,
+    }
+    if cfg.get("unix_socket"):
+        connect_kwargs["unix_socket"] = cfg["unix_socket"]
+    else:
+        connect_kwargs["host"] = cfg["host"]
+        connect_kwargs["port"] = cfg["port"]
+    return pymysql.connect(**connect_kwargs)
 
 
 def upsert_cables(rows: Iterable[dict[str, Any]]) -> int:
@@ -122,7 +138,7 @@ def upsert_cables(rows: Iterable[dict[str, Any]]) -> int:
 
 
 def insert_monitor_samples(rows: Iterable[dict[str, Any]]) -> int:
-    """Insere amostras RF; retorna quantidade."""
+    """Insere amostras RF e atualiza bsod_monitor_latest; retorna quantidade."""
     params_list = list(rows)
     if not params_list:
         return 0
@@ -131,6 +147,7 @@ def insert_monitor_samples(rows: Iterable[dict[str, Any]]) -> int:
         with conn.cursor() as cursor:
             for params in params_list:
                 cursor.execute(MONITOR_INSERT, params)
+                cursor.execute(MONITOR_LATEST_UPSERT, params)
         conn.commit()
     except Exception:
         conn.rollback()
@@ -174,21 +191,16 @@ def list_cables_for_ope(ope: str) -> list[dict[str, Any]]:
 
 
 def list_latest_monitor_by_mac(ope: str) -> dict[str, dict[str, Any]]:
-    """Mapa MAC normalizado → última amostra bsod_monitor do ope."""
+    """Mapa MAC normalizado → última amostra bsod_monitor_latest do ope."""
     ope_key = (ope or "").strip().lower()
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT m.mac, m.status
-                FROM bsod_monitor m
-                INNER JOIN (
-                    SELECT mac, MAX(sampled_at) AS max_time
-                    FROM bsod_monitor
-                    WHERE ope = %s
-                    GROUP BY mac
-                ) latest ON m.mac = latest.mac AND m.sampled_at = latest.max_time
+                SELECT mac, status
+                FROM bsod_monitor_latest
+                WHERE ope = %s
                 """,
                 (ope_key,),
             )
