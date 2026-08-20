@@ -49,11 +49,16 @@ def get_sftp_config() -> dict:
 
 def get_sir_db_config() -> dict:
     """Retorna configuração MySQL SIR a partir de SIR_DB_*."""
-    return {
-        "host": required("SIR_DB_HOST"),
-        "port": int(os.environ.get("SIR_DB_PORT", "3306")),
+    socket_path = (os.environ.get("SIR_DB_SOCKET") or "").strip()
+    cfg = {
         "user": required("SIR_DB_USER"),
         "password": required("SIR_DB_PASSWORD"),
         "database": os.environ.get("SIR_DB_NAME") or "claroEmpresarial",
         "charset": "utf8mb4",
     }
+    if socket_path:
+        cfg["unix_socket"] = socket_path
+    else:
+        cfg["host"] = required("SIR_DB_HOST")
+        cfg["port"] = int(os.environ.get("SIR_DB_PORT", "3306"))
+    return cfg

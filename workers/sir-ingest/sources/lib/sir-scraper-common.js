@@ -154,12 +154,21 @@ function getSirDbConfig() {
     throw new Error("Missing SIR_DB_USER or SIR_DB_PASSWORD in worker .env");
   }
 
-  return {
-    host: process.env.SIR_DB_HOST || "127.0.0.1",
-    port: Number(process.env.SIR_DB_PORT || 3306),
+  const socketPath = (process.env.SIR_DB_SOCKET || "").trim();
+  const base = {
     user,
     password,
     database: process.env.SIR_DB_NAME || "claroEmpresarial",
+  };
+
+  if (socketPath) {
+    return { ...base, socketPath };
+  }
+
+  return {
+    ...base,
+    host: process.env.SIR_DB_HOST || "127.0.0.1",
+    port: Number(process.env.SIR_DB_PORT || 3306),
   };
 }
 

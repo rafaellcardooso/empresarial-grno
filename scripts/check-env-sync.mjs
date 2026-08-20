@@ -4,7 +4,14 @@ import { fileURLToPath } from "url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const SIR_DB_KEYS = ["SIR_DB_HOST", "SIR_DB_PORT", "SIR_DB_USER", "SIR_DB_PASSWORD", "SIR_DB_NAME"];
+const SIR_DB_KEYS = [
+  "SIR_DB_HOST",
+  "SIR_DB_PORT",
+  "SIR_DB_USER",
+  "SIR_DB_PASSWORD",
+  "SIR_DB_NAME",
+  "SIR_DB_SOCKET",
+];
 
 const PAIRS = [
   {

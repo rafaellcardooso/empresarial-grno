@@ -46,16 +46,20 @@ WHERE is_active = 1
 def get_connection() -> pymysql.connections.Connection:
     """Abre conexão MySQL SIR com cursor dict."""
     cfg = get_sir_db_config()
-    return pymysql.connect(
-        host=cfg["host"],
-        port=cfg["port"],
-        user=cfg["user"],
-        password=cfg["password"],
-        database=cfg["database"],
-        charset=cfg["charset"],
-        cursorclass=DictCursor,
-        autocommit=False,
-    )
+    connect_kwargs = {
+        "user": cfg["user"],
+        "password": cfg["password"],
+        "database": cfg["database"],
+        "charset": cfg["charset"],
+        "cursorclass": DictCursor,
+        "autocommit": False,
+    }
+    if cfg.get("unix_socket"):
+        connect_kwargs["unix_socket"] = cfg["unix_socket"]
+    else:
+        connect_kwargs["host"] = cfg["host"]
+        connect_kwargs["port"] = cfg["port"]
+    return pymysql.connect(**connect_kwargs)
 
 
 def _nullable(value: Any) -> str | None:

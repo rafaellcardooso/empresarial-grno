@@ -34,7 +34,10 @@ SIR_DB_PORT
 SIR_DB_USER
 SIR_DB_PASSWORD
 SIR_DB_NAME
+SIR_DB_SOCKET
 ```
+
+`SIR_DB_SOCKET` vazio usa `HOST`/`PORT` (produção). Em WSL com MariaDB só via socket, preencher o path (ex.: `/var/lib/mysql/mysql.sock`).
 
 Valores devem ser idênticos em `.env.local`, `workers/sir-ingest/.env` e `workers/tmip/.env`.
 

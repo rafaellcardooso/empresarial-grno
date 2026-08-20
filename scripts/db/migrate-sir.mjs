@@ -21,12 +21,14 @@ function env(name, fallback) {
 
 /** Monta configuração de conexão MySQL SIR a partir do ambiente. */
 function getConfig() {
+  const socketPath = (process.env.SIR_DB_SOCKET || "").trim();
   return {
     host: env("SIR_DB_HOST", "127.0.0.1"),
     port: Number(process.env.SIR_DB_PORT || 3306),
     user: env("SIR_DB_USER", "monitor"),
     password: env("SIR_DB_PASSWORD", "troque_me"),
     database: env("SIR_DB_NAME", "claroEmpresarial"),
+    ...(socketPath ? { socketPath } : {}),
   };
 }
 
@@ -86,8 +88,9 @@ function loadMigrationFiles() {
 async function main() {
   const config = getConfig();
   const adminConnection = await mysql.createConnection({
-    host: config.host,
-    port: config.port,
+    ...(config.socketPath
+      ? { socketPath: config.socketPath }
+      : { host: config.host, port: config.port }),
     user: config.user,
     password: config.password,
     multipleStatements: true,

@@ -10,6 +10,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 ### Added
 
 - Tabela `bsod_monitor_latest` (migration `028`) para leitura O(1) da última amostra RF na UI BSOD.
+- `SIR_DB_SOCKET` opcional (Next e workers) para MariaDB via Unix socket no WSL.
 - Seção **Normalizados aguardando confirmação** em RAL, REC e SDH (tratativa ativa após normalização da fonte).
 - Encerramento auditado de tratativas RAL/REC já normalizadas, distinto da liberação.
 - Documentação reestruturada: runbooks de produção, inventário de host, referência e ADRs.

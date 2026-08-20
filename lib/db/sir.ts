@@ -16,15 +16,24 @@ function required(name: string): string {
 
 /** Monta configuração do pool MySQL SIR a partir de SIR_DB_*. */
 function getSirPoolConfig() {
-  return {
-    host: required("SIR_DB_HOST"),
-    port: Number(process.env.SIR_DB_PORT || 3306),
+  const socketPath = process.env.SIR_DB_SOCKET?.trim();
+  const base = {
     user: required("SIR_DB_USER"),
     password: required("SIR_DB_PASSWORD"),
     database: process.env.SIR_DB_NAME || "claroEmpresarial",
     waitForConnections: true,
     connectionLimit: 10,
     enableKeepAlive: true,
+  };
+
+  if (socketPath) {
+    return { ...base, socketPath };
+  }
+
+  return {
+    ...base,
+    host: required("SIR_DB_HOST"),
+    port: Number(process.env.SIR_DB_PORT || 3306),
   };
 }
 
