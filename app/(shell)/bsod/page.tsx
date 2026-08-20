@@ -10,19 +10,9 @@ import {
   defaultBsodAlarmDdd,
   parseBsodSearchParams,
 } from "@/lib/config/bsod-filters";
-import { listBsodDddOptions } from "@/lib/config/bsod-locations";
-import {
-  BSOD_LIST_PAGE_SIZE,
-  bsodListOffset,
-  bsodPageFromParam,
-} from "@/lib/config/bsod-pagination";
-import {
-  countPmeBsod,
-  getCachedBsodCmts,
-  getCachedBsodNodes,
-  listPmeBsod,
-  type BsodFilters,
-} from "@/lib/queries/bsod";
+import { BSOD_LIST_PAGE_SIZE, bsodPageFromParam } from "@/lib/config/bsod-pagination";
+import { loadBsodAlarmPageData } from "@/lib/queries/bsod-alarms-page";
+import type { BsodFilters } from "@/lib/queries/bsod";
 import { listActiveBsodKeys } from "@/lib/queries/tratativa-chamados";
 import { loadTratativasForBsodRows } from "@/lib/tratativa/load-for-rows";
 
@@ -70,12 +60,6 @@ export default async function Page({ searchParams }: PageProps) {
   const currentPage = bsodPageFromParam(params.page);
   const normalizedPage = bsodPageFromParam(params.normalizedPage);
   const pageSize = BSOD_LIST_PAGE_SIZE;
-  const facetScope: BsodFilters = {
-    health: "offline",
-    opes: queryFilters.opes,
-    cmts: queryFilters.cmts,
-    node: queryFilters.node,
-  };
 
   try {
     const activeMacs = await listActiveBsodKeys();
@@ -85,68 +69,20 @@ export default async function Page({ searchParams }: PageProps) {
       activeMacs,
     );
 
-    const listFilters = {
-      ...scopedFilters,
-      limit: pageSize,
-      offset: bsodListOffset(currentPage, pageSize),
-    };
-
-    const baseOffline: BsodFilters = {
-      health: "offline",
-      opes: queryFilters.opes,
-      cmts: queryFilters.cmts,
-      node: queryFilters.node,
-      q: queryFilters.q,
-    };
-
-    const dddOptions = listBsodDddOptions();
-    const normalizedFilters: BsodFilters = {
-      health: "online",
-      opes: queryFilters.opes,
-      macs: activeMacs,
-    };
-
-    const [
-      rows,
-      total,
-      normalizedRows,
-      normalizedTotal,
-      kpiTotal,
-      kpiPending,
-      kpiInProgress,
-      cmtsOptions,
-      nodeOptions,
-      dddCountRows,
-    ] = await Promise.all([
-      empty ? Promise.resolve([]) : listPmeBsod(listFilters),
-      empty ? Promise.resolve(0) : countPmeBsod(scopedFilters),
-      activeMacs.length
-        ? listPmeBsod({
-            ...normalizedFilters,
-            limit: pageSize,
-            offset: bsodListOffset(normalizedPage, pageSize),
-          })
-        : Promise.resolve([]),
-      activeMacs.length ? countPmeBsod(normalizedFilters) : Promise.resolve(0),
-      countPmeBsod(baseOffline),
-      countPmeBsod(activeMacs.length ? { ...baseOffline, excludeMacs: activeMacs } : baseOffline),
-      activeMacs.length ? countPmeBsod({ ...baseOffline, macs: activeMacs }) : Promise.resolve(0),
-      getCachedBsodCmts(facetScope),
-      getCachedBsodNodes(facetScope),
-      Promise.all(
-        dddOptions.map((option) => countPmeBsod({ health: "offline", opes: option.opes })),
-      ),
-    ]);
+    const data = await loadBsodAlarmPageData({
+      queryFilters,
+      scopedFilters,
+      empty,
+      activeMacs,
+      currentPage,
+      normalizedPage,
+      pageSize,
+    });
 
     const [tratativasByKey, normalizedTratativasByKey] = await Promise.all([
-      loadTratativasForBsodRows(rows),
-      loadTratativasForBsodRows(normalizedRows),
+      loadTratativasForBsodRows(data.rows),
+      loadTratativasForBsodRows(data.normalizedRows),
     ]);
-    const dddCounts = dddOptions.map((option, index) => ({
-      ddd: option.ddd,
-      label: option.label,
-      total: Number(dddCountRows[index] ?? 0),
-    }));
 
     return (
       <>
@@ -154,19 +90,19 @@ export default async function Page({ searchParams }: PageProps) {
         <BsodScopeNav active="alarms" />
         <BsodAlarmToolbar
           kpiCounts={{
-            total: kpiTotal,
-            pending: kpiPending,
-            inProgress: kpiInProgress,
+            total: data.kpiTotal,
+            pending: data.kpiPending,
+            inProgress: data.kpiInProgress,
           }}
-          dddCounts={dddCounts}
-          cmtsOptions={cmtsOptions}
-          nodeOptions={nodeOptions}
+          dddCounts={data.dddCounts}
+          cmtsOptions={data.cmtsOptions}
+          nodeOptions={data.nodeOptions}
           activeState={urlState}
         />
         <BsodInventoryTable
-          rows={rows}
+          rows={data.rows}
           tratativasByKey={tratativasByKey}
-          total={total}
+          total={data.total}
           currentPage={currentPage}
           pageSize={pageSize}
           activeUrlState={urlState}
@@ -176,9 +112,9 @@ export default async function Page({ searchParams }: PageProps) {
           basePath="/bsod"
         />
         <BsodNormalizedTreatments
-          rows={normalizedRows}
+          rows={data.normalizedRows}
           tratativasByKey={normalizedTratativasByKey}
-          total={normalizedTotal}
+          total={data.normalizedTotal}
           currentPage={normalizedPage}
           pageSize={pageSize}
           activeUrlState={urlState}

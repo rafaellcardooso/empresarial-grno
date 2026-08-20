@@ -2,12 +2,14 @@ import { BSOD_LIST_MAX_PAGE_SIZE, BSOD_LIST_PAGE_SIZE } from "@/lib/config/bsod-
 import type { RowDataPacket } from "mysql2";
 import { sirExecute, sirQuery } from "@/lib/db/sir";
 import { getLatestMonitorByMac } from "@/lib/queries/bsod-monitor";
-import { countMergedPmeRows, listMergedPmeRows } from "@/lib/queries/bsod-rows";
+import {
+  countMergedPmeRows,
+  invalidateMergedInventoryCache,
+  listMergedPmeRows,
+} from "@/lib/queries/bsod-rows";
 import {
   BSOD_INVENTORY_SELECT,
   BSOD_PME_FROM,
-  buildBsodInventoryWhere,
-  bsodHasHealthFilter,
   compareBsodRows,
   mapPmeRow,
   mergeInventoryWithMonitor,
@@ -36,17 +38,8 @@ export {
   type BsodSummary,
 } from "@/lib/queries/bsod-facets";
 
-/** Conta PME com os mesmos filtros da listagem. */
+/** Conta PME com os mesmos filtros da listagem (cache mesclado). */
 export async function countPmeBsod(filters: BsodFilters = {}): Promise<number> {
-  if (!bsodHasHealthFilter(filters)) {
-    const { sql: whereSql, params } = buildBsodInventoryWhere(filters);
-    const [row] = await sirQuery<RowDataPacket[]>(
-      `SELECT COUNT(*) AS total ${BSOD_PME_FROM} ${whereSql}`,
-      params,
-    );
-    return Number(row?.total ?? 0);
-  }
-
   return countMergedPmeRows(filters);
 }
 
@@ -134,6 +127,7 @@ export async function updatePmeInventoryManualFields(input: {
     return null;
   }
 
+  invalidateMergedInventoryCache();
   return getPmeBsodByMac(mac);
 }
 

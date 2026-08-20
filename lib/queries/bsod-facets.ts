@@ -1,12 +1,6 @@
-import type { RowDataPacket } from "mysql2";
 import { unstable_cache } from "next/cache";
-import { sirQuery } from "@/lib/db/sir";
 import { listMergedPmeRows } from "@/lib/queries/bsod-rows";
 import {
-  appendWhereCondition,
-  BSOD_PME_FROM,
-  buildBsodInventoryWhere,
-  bsodHasHealthFilter,
   type BsodFacetCount,
   type BsodFilters,
   type BsodHealthCounts,
@@ -61,24 +55,6 @@ export async function listBsodCmts(
   filters: Omit<BsodFilters, "cmts" | "node" | "limit" | "offset"> = {},
 ): Promise<BsodFacetCount[]> {
   const options: BsodWhereOptions = { omit: ["cmts", "node", "q"] };
-
-  if (!bsodHasHealthFilter(filters, options)) {
-    const { sql: whereSql, params } = buildBsodInventoryWhere(filters, options);
-    const rows = await sirQuery<RowDataPacket[]>(
-      `SELECT i.cmts AS value, COUNT(*) AS total
-       ${BSOD_PME_FROM}
-       ${appendWhereCondition(whereSql, "i.cmts IS NOT NULL AND TRIM(i.cmts) <> ''")}
-       GROUP BY i.cmts
-       ORDER BY i.cmts ASC`,
-      params,
-    );
-
-    return rows.map((row) => ({
-      value: String(row.value),
-      total: Number(row.total),
-    }));
-  }
-
   const rows = await listMergedPmeRows(filters, options);
   return facetCountsFromRows(rows, "cmts");
 }
@@ -88,24 +64,6 @@ export async function listBsodNodes(
   filters: Omit<BsodFilters, "node" | "limit" | "offset"> = {},
 ): Promise<BsodFacetCount[]> {
   const options: BsodWhereOptions = { omit: ["node", "q"] };
-
-  if (!bsodHasHealthFilter(filters, options)) {
-    const { sql: whereSql, params } = buildBsodInventoryWhere(filters, options);
-    const rows = await sirQuery<RowDataPacket[]>(
-      `SELECT i.node AS value, COUNT(*) AS total
-       ${BSOD_PME_FROM}
-       ${appendWhereCondition(whereSql, "i.node IS NOT NULL AND TRIM(i.node) <> ''")}
-       GROUP BY i.node
-       ORDER BY i.node ASC`,
-      params,
-    );
-
-    return rows.map((row) => ({
-      value: String(row.value),
-      total: Number(row.total),
-    }));
-  }
-
   const rows = await listMergedPmeRows(filters, options);
   return facetCountsFromRows(rows, "node");
 }
@@ -129,26 +87,6 @@ export function getCachedBsodHealthCounts(
 export async function countBsodVlan(
   filters: Omit<BsodFilters, "vlan" | "limit" | "offset"> = {},
 ): Promise<BsodVlanCounts> {
-  if (!bsodHasHealthFilter(filters)) {
-    const { sql: whereSql, params } = buildBsodInventoryWhere(filters, { omit: ["vlan", "q"] });
-    const [row] = await sirQuery<RowDataPacket[]>(
-      `SELECT
-         COUNT(*) AS total,
-         COALESCE(SUM(CASE WHEN i.bsod_vlan > 0 THEN 1 ELSE 0 END), 0) AS com_vlan
-       ${BSOD_PME_FROM}
-       ${whereSql}`,
-      params,
-    );
-
-    const total = Number(row?.total ?? 0);
-    const comVlan = Number(row?.com_vlan ?? 0);
-    return {
-      total,
-      com_vlan: comVlan,
-      sem_vlan: total - comVlan,
-    };
-  }
-
   const rows = await listMergedPmeRows(filters, { omit: ["vlan", "q"] });
   let comVlan = 0;
   for (const row of rows) {
