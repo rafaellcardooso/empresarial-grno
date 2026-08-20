@@ -8,24 +8,9 @@ import {
   buildBsodExportHref,
   parseBsodSearchParams,
 } from "@/lib/config/bsod-filters";
-import { listBsodDddOptions } from "@/lib/config/bsod-locations";
-import {
-  BSOD_LIST_PAGE_SIZE,
-  bsodListOffset,
-  bsodPageFromParam,
-} from "@/lib/config/bsod-pagination";
-import {
-  countPmeBsod,
-  getCachedBsodCmts,
-  getCachedBsodHealthCounts,
-  getCachedBsodNodes,
-  getCachedBsodVlanCounts,
-  listPmeBsod,
-} from "@/lib/queries/bsod";
-import {
-  countActiveBsodByChamadoStatus,
-  listActiveBsodKeysByChamadoStatus,
-} from "@/lib/queries/tratativa-chamados";
+import { BSOD_LIST_PAGE_SIZE, bsodPageFromParam } from "@/lib/config/bsod-pagination";
+import { loadBsodInventoryPageData } from "@/lib/queries/bsod-inventory-page";
+import { getActiveBsodTratativaIndex } from "@/lib/queries/tratativa-chamados";
 import { loadTratativasForBsodRows } from "@/lib/tratativa/load-for-rows";
 
 export const dynamic = "force-dynamic";
@@ -51,77 +36,23 @@ export default async function Page({ searchParams }: PageProps) {
   const queryFilters = parseBsodSearchParams(params, { scope: "inventory" });
   const currentPage = bsodPageFromParam(params.page);
   const pageSize = BSOD_LIST_PAGE_SIZE;
-  const healthScope = {
-    vlan: queryFilters.vlan,
-    cmts: queryFilters.cmts,
-    node: queryFilters.node,
-    ope: queryFilters.ope,
-    opes: queryFilters.opes,
-  };
-  const vlanScope = {
-    health: queryFilters.health,
-    cmts: queryFilters.cmts,
-    node: queryFilters.node,
-    ope: queryFilters.ope,
-    opes: queryFilters.opes,
-  };
-  const facetScope = {
-    health: queryFilters.health,
-    vlan: queryFilters.vlan,
-    cmts: queryFilters.cmts,
-    node: queryFilters.node,
-    ope: queryFilters.ope,
-    opes: queryFilters.opes,
-  };
-  const dddOptions = listBsodDddOptions();
 
   try {
-    const [tratativaCounts, tratativaMacs] = await Promise.all([
-      countActiveBsodByChamadoStatus(),
-      urlState.tratativa
-        ? listActiveBsodKeysByChamadoStatus(urlState.tratativa)
-        : Promise.resolve<string[] | null>(null),
-    ]);
-
-    if (tratativaMacs) {
-      queryFilters.macs = tratativaMacs;
+    const tratativaIndex = await getActiveBsodTratativaIndex();
+    if (urlState.tratativa) {
+      queryFilters.macs = tratativaIndex.macsByStatus[urlState.tratativa] ?? [];
     }
 
-    const emptyByTratativa = Boolean(tratativaMacs && tratativaMacs.length === 0);
+    const emptyByTratativa = Boolean(urlState.tratativa && (queryFilters.macs?.length ?? 0) === 0);
 
-    const listFilters = {
-      ...queryFilters,
-      limit: pageSize,
-      offset: bsodListOffset(currentPage, pageSize),
-    };
+    const data = await loadBsodInventoryPageData({
+      queryFilters,
+      currentPage,
+      pageSize,
+      empty: emptyByTratativa,
+    });
 
-    const [rows, total, healthCounts, vlanCounts, cmtsOptions, nodeOptions, dddCountRows] =
-      emptyByTratativa
-        ? await Promise.all([
-            Promise.resolve([]),
-            Promise.resolve(0),
-            getCachedBsodHealthCounts(healthScope),
-            getCachedBsodVlanCounts(vlanScope),
-            getCachedBsodCmts(facetScope),
-            getCachedBsodNodes(facetScope),
-            Promise.all(dddOptions.map((option) => countPmeBsod({ opes: option.opes }))),
-          ])
-        : await Promise.all([
-            listPmeBsod(listFilters),
-            countPmeBsod(queryFilters),
-            getCachedBsodHealthCounts(healthScope),
-            getCachedBsodVlanCounts(vlanScope),
-            getCachedBsodCmts(facetScope),
-            getCachedBsodNodes(facetScope),
-            Promise.all(dddOptions.map((option) => countPmeBsod({ opes: option.opes }))),
-          ]);
-
-    const tratativasByKey = await loadTratativasForBsodRows(rows);
-    const dddCounts = dddOptions.map((option, index) => ({
-      ddd: option.ddd,
-      label: option.label,
-      total: Number(dddCountRows[index] ?? 0),
-    }));
+    const tratativasByKey = await loadTratativasForBsodRows(data.rows);
 
     return (
       <>
@@ -131,18 +62,18 @@ export default async function Page({ searchParams }: PageProps) {
         />
         <BsodScopeNav active="inventory" />
         <BsodFilterToolbar
-          healthCounts={healthCounts}
-          vlanCounts={vlanCounts}
-          cmtsOptions={cmtsOptions}
-          nodeOptions={nodeOptions}
-          dddCounts={dddCounts}
-          tratativaCounts={tratativaCounts}
+          healthCounts={data.healthCounts}
+          vlanCounts={data.vlanCounts}
+          cmtsOptions={data.cmtsOptions}
+          nodeOptions={data.nodeOptions}
+          dddCounts={data.dddCounts}
+          tratativaCounts={tratativaIndex.counts}
           activeState={urlState}
         />
         <BsodInventoryTable
-          rows={rows}
+          rows={data.rows}
           tratativasByKey={tratativasByKey}
-          total={total}
+          total={data.total}
           currentPage={currentPage}
           pageSize={pageSize}
           activeUrlState={urlState}

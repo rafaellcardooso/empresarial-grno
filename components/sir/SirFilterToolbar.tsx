@@ -21,6 +21,7 @@ export function SirFilterChip({
     <Link
       href={href}
       scroll={false}
+      prefetch
       className={`sir-filter-chip${active ? " sir-filter-chip--active" : ""}${accentClass ? ` ${accentClass}` : ""}`}
       aria-current={active ? "true" : undefined}
     >

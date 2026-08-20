@@ -34,6 +34,7 @@ export function FilterMetricCard({
     <Link
       href={href}
       scroll={false}
+      prefetch
       className={metricClassName}
       aria-current={active ? "true" : undefined}
     >

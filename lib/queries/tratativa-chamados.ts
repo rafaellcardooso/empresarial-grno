@@ -165,43 +165,29 @@ export async function listActiveBsodKeysByChamadoStatus(
   status: TratativaChamadoStatus,
 ): Promise<string[]> {
   if (status === "concluido") return [];
-
-  const active = await sirQuery<Array<{ id: number; record_key: string } & RowDataPacket>>(
-    `SELECT t.id, t.record_key
-     FROM app_tratativas t
-     WHERE t.record_kind = 'BSOD' AND t.released_at IS NULL`,
-  );
-  if (active.length === 0) return [];
-
-  const ids = active.map((row) => row.id);
-  const placeholders = ids.map(() => "?").join(", ");
-  const eventRows = await sirQuery<EventListRow[]>(
-    `SELECT tratativa_id, event_type, note, created_at
-     FROM app_tratativa_events
-     WHERE tratativa_id IN (${placeholders})
-       AND event_type IN (${WORKFLOW_EVENT_TYPES.map(() => "?").join(", ")})
-     ORDER BY tratativa_id ASC, created_at ASC`,
-    [...ids, ...WORKFLOW_EVENT_TYPES],
-  );
-
-  const eventsByTratativa = new Map<number, EventListRow[]>();
-  for (const event of eventRows) {
-    const list = eventsByTratativa.get(event.tratativa_id) ?? [];
-    list.push(event);
-    eventsByTratativa.set(event.tratativa_id, list);
-  }
-
-  return active
-    .filter((row) => deriveTratativaChamadoStatus(eventsByTratativa.get(row.id) ?? []) === status)
-    .map((row) => String(row.record_key).toUpperCase());
+  const index = await getActiveBsodTratativaIndex();
+  return index.macsByStatus[status] ?? [];
 }
 
 /** Contagens de tratativas BSOD ativas por status de pipeline. */
 export async function countActiveBsodByChamadoStatus(): Promise<
   Record<Exclude<TratativaChamadoStatus, "concluido"> | "all", number>
 > {
-  const active = await sirQuery<Array<{ id: number } & RowDataPacket>>(
-    `SELECT t.id FROM app_tratativas t
+  const index = await getActiveBsodTratativaIndex();
+  return index.counts;
+}
+
+/**
+ * Índice único de tratativas BSOD ativas: contagens e MACs por status.
+ * Evita duas consultas pesadas (count + list) no inventário.
+ */
+async function fetchActiveBsodTratativaIndex(): Promise<{
+  counts: Record<Exclude<TratativaChamadoStatus, "concluido"> | "all", number>;
+  macsByStatus: Partial<Record<Exclude<TratativaChamadoStatus, "concluido">, string[]>>;
+}> {
+  const active = await sirQuery<Array<{ id: number; record_key: string } & RowDataPacket>>(
+    `SELECT t.id, t.record_key
+     FROM app_tratativas t
      WHERE t.record_kind = 'BSOD' AND t.released_at IS NULL`,
   );
 
@@ -213,8 +199,17 @@ export async function countActiveBsodByChamadoStatus(): Promise<
     validacao_reprovada: 0,
     validado: 0,
   };
+  const macsByStatus: Partial<Record<Exclude<TratativaChamadoStatus, "concluido">, string[]>> = {
+    em_tratativa: [],
+    acionado: [],
+    validacao_pendente: [],
+    validacao_reprovada: [],
+    validado: [],
+  };
 
-  if (active.length === 0) return counts;
+  if (active.length === 0) {
+    return { counts, macsByStatus };
+  }
 
   const ids = active.map((row) => row.id);
   const placeholders = ids.map(() => "?").join(", ");
@@ -238,9 +233,47 @@ export async function countActiveBsodByChamadoStatus(): Promise<
     const status = deriveTratativaChamadoStatus(eventsByTratativa.get(row.id) ?? []);
     if (status === "concluido") continue;
     counts[status] += 1;
+    macsByStatus[status]?.push(String(row.record_key).toUpperCase());
   }
 
-  return counts;
+  return { counts, macsByStatus };
+}
+
+const TRATATIVA_INDEX_TTL_MS = 20_000;
+
+type TratativaIndexCacheEntry = {
+  expiresAt: number;
+  promise: Promise<Awaited<ReturnType<typeof fetchActiveBsodTratativaIndex>>>;
+};
+
+type TratativaIndexGlobal = typeof globalThis & {
+  bsodTratativaIndex?: TratativaIndexCacheEntry;
+};
+
+/** Índice de tratativas ativas com cache curto de processo. */
+export function getActiveBsodTratativaIndex(): Promise<
+  Awaited<ReturnType<typeof fetchActiveBsodTratativaIndex>>
+> {
+  const g = globalThis as TratativaIndexGlobal;
+  const now = Date.now();
+  const existing = g.bsodTratativaIndex;
+  if (existing && existing.expiresAt > now) {
+    return existing.promise;
+  }
+
+  const promise = fetchActiveBsodTratativaIndex().catch((err) => {
+    if (g.bsodTratativaIndex?.promise === promise) {
+      g.bsodTratativaIndex = undefined;
+    }
+    throw err;
+  });
+
+  g.bsodTratativaIndex = {
+    expiresAt: now + TRATATIVA_INDEX_TTL_MS,
+    promise,
+  };
+
+  return promise;
 }
 
 function emptyStatusCounts(): Record<TratativaChamadoStatusFilter, number> {
