@@ -104,6 +104,9 @@ export function BsodRecordsTable({
       <BsodDetalhesPanel
         open={selectedRow != null}
         row={selectedRow}
+        tratativa={
+          selectedRow ? (tratativas[normalizeTratativaKey("BSOD", selectedRow.mac)] ?? null) : null
+        }
         onClose={() => setSelectedRow(null)}
         onSaved={handleInventorySaved}
       />{" "}

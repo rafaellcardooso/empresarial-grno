@@ -4,12 +4,14 @@ import { useEffect, type ReactNode } from "react";
 import { formatDateTimeDisplay } from "@/components/ui/DateTimeStacked";
 import { RalTipoBadge } from "@/components/sir/RalTipoBadge";
 import { SirStatusBadge } from "@/components/sir/SirStatusBadge";
+import type { TratativaPublic } from "@/lib/models/tratativa";
 
 type SirDetalhesPanelProps = {
   open: boolean;
   recordLabel: "RAL" | "REC" | string;
   numRecup: string;
   row?: Record<string, unknown> | null;
+  tratativa?: TratativaPublic | null;
   text: string;
   onClose: () => void;
 };
@@ -20,6 +22,7 @@ export function SirDetalhesPanel({
   recordLabel,
   numRecup,
   row = null,
+  tratativa = null,
   text,
   onClose,
 }: SirDetalhesPanelProps) {
@@ -52,7 +55,9 @@ export function SirDetalhesPanel({
           <button type="button" className="btn-close" aria-label="Fechar" onClick={onClose} />
         </div>
         <div className="offcanvas-body">
-          {row ? <SirDetalhesMeta recordLabel={recordLabel} row={row} /> : null}
+          {row ? (
+            <SirDetalhesMeta recordLabel={recordLabel} row={row} tratativa={tratativa} />
+          ) : null}
           <p className="sir-detalhes-offcanvas__label mb-2">Detalhes</p>
           <div className="sir-detalhes-offcanvas__text">{text}</div>
         </div>
@@ -69,12 +74,29 @@ export function SirDetalhesPanel({
   );
 }
 
+/** Rótulo de tratativa no mesmo padrão do SDH (responsável ativo). */
+function sirTratativaLabel(
+  row: Record<string, unknown>,
+  tratativa: TratativaPublic | null | undefined,
+): string {
+  if (tratativa) {
+    const who = [tratativa.userName, tratativa.userCorporateId].filter(Boolean).join(" · ");
+    return `Em tratativa · ${who || "—"}`;
+  }
+  if (String(row.status ?? "").toUpperCase() !== "ATIVO") {
+    return "Encerrado";
+  }
+  return "Pendente";
+}
+
 function SirDetalhesMeta({
   recordLabel,
   row,
+  tratativa,
 }: {
   recordLabel: string;
   row: Record<string, unknown>;
+  tratativa?: TratativaPublic | null;
 }) {
   const isRal = recordLabel === "RAL";
 
@@ -109,6 +131,7 @@ function SirDetalhesMeta({
       <SirDetailItem label="Status SIR">
         <SirStatusBadge value={row.status as string | null} />
       </SirDetailItem>
+      <SirDetailItem label="Tratativa">{sirTratativaLabel(row, tratativa)}</SirDetailItem>
     </dl>
   );
 }

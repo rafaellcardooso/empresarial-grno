@@ -138,6 +138,9 @@ export function SirRecordsTable({
         recordLabel={selectedLabel}
         numRecup={selected?.numRecup ?? ""}
         row={selected?.row ?? null}
+        tratativa={
+          selected ? (tratativas[normalizeTratativaKey(domain, selected.numRecup)] ?? null) : null
+        }
         text={selected?.loading ? "Carregando…" : (selected?.text ?? "")}
         onClose={() => setSelected(null)}
       />

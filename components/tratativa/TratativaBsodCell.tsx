@@ -23,5 +23,9 @@ export function TratativaBsodStatusCell({ tratativa }: { tratativa?: TratativaPu
             ? "tratativa-workflow-badge tratativa-workflow-badge--validado"
             : "tratativa-workflow-badge tratativa-workflow-badge--em-tratativa";
 
-  return <span className={className}>{TRATATIVA_WORKFLOW_LABELS[status]}</span>;
+  return (
+    <span className={className} title={`${tratativa.userName} · ${tratativa.userCorporateId}`}>
+      {TRATATIVA_WORKFLOW_LABELS[status]}
+    </span>
+  );
 }

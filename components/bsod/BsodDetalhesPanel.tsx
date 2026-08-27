@@ -8,17 +8,25 @@ import {
 } from "@/components/bsod/bsod-table-cells";
 import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
 import { apiFetch } from "@/lib/config/base-path";
+import type { TratativaPublic } from "@/lib/models/tratativa";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
 
 type BsodDetalhesPanelProps = {
   open: boolean;
   row: PmeBsodRow | null;
+  tratativa?: TratativaPublic | null;
   onClose: () => void;
   onSaved?: (row: PmeBsodRow) => void;
 };
 
 /** Painel lateral com endereço, profile, VLAN e métricas de sinal do PME. */
-export function BsodDetalhesPanel({ open, row, onClose, onSaved }: BsodDetalhesPanelProps) {
+export function BsodDetalhesPanel({
+  open,
+  row,
+  tratativa = null,
+  onClose,
+  onSaved,
+}: BsodDetalhesPanelProps) {
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
@@ -48,7 +56,7 @@ export function BsodDetalhesPanel({ open, row, onClose, onSaved }: BsodDetalhesP
           <button type="button" className="btn-close" aria-label="Fechar" onClick={onClose} />
         </div>
         <div className="offcanvas-body">
-          {row ? <BsodDetalhesBody row={row} onSaved={onSaved} /> : null}
+          {row ? <BsodDetalhesBody row={row} tratativa={tratativa} onSaved={onSaved} /> : null}
         </div>
       </div>
 
@@ -63,11 +71,20 @@ export function BsodDetalhesPanel({ open, row, onClose, onSaved }: BsodDetalhesP
   );
 }
 
+/** Rótulo de tratativa no mesmo padrão do SDH (responsável ativo). */
+function bsodTratativaLabel(tratativa: TratativaPublic | null | undefined): string {
+  if (!tratativa) return "Pendente";
+  const who = [tratativa.userName, tratativa.userCorporateId].filter(Boolean).join(" · ");
+  return `Em tratativa · ${who || "—"}`;
+}
+
 function BsodDetalhesBody({
   row,
+  tratativa,
   onSaved,
 }: {
   row: PmeBsodRow;
+  tratativa?: TratativaPublic | null;
   onSaved?: (row: PmeBsodRow) => void;
 }) {
   const vlanBadges = buildBsodVlanCompareBadges({
@@ -278,6 +295,7 @@ function BsodDetalhesBody({
         <BsodDetailItem label="Última leitura">
           <DateTimeStacked value={row.monitor_time} />
         </BsodDetailItem>
+        <BsodDetailItem label="Tratativa">{bsodTratativaLabel(tratativa)}</BsodDetailItem>
       </dl>
     </>
   );
