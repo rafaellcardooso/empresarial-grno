@@ -3,7 +3,7 @@ import type { TratativaRecordKind } from "@/lib/models/tratativa";
 
 /** Rótulos UI dos tipos de evento em relatórios de tratativa. */
 export const TRATATIVA_REPORT_EVENT_LABELS: Record<string, string> = {
-  START: "Chamados assumidos",
+  START: "Iniciados na coorte",
   ACIONAMENTO: "VTs registradas",
   VALIDACAO_SOLICITADA: "Validação solicitada",
   VALIDACAO: "Validações",

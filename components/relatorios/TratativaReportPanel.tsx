@@ -90,7 +90,9 @@ export function TratativaReportPanel({
                 icon="bi-person-check"
                 label={RELATORIOS_COPY.kpiAssuncoes}
                 value={summary.assuncoes}
-                hint={RELATORIOS_COPY.kpiAssuncoesHint}
+                hint={RELATORIOS_COPY.kpiAbertosHint(
+                  Math.max(0, summary.assuncoes - summary.concluidas),
+                )}
                 tone="info"
               />
             </div>

@@ -6,12 +6,12 @@ export type TratativaChamadoStatus = TratativaWorkflowStatus | "concluido";
 /** Filtro de URL/relatório para chamados por status. */
 export type TratativaChamadoStatusFilter = TratativaChamadoStatus | "all";
 
-/** Rótulos alinhados ao vocabulário operacional. */
+/** Rótulos alinhados ao pipeline operacional (evita colidir com KPI “coorte”). */
 export const TRATATIVA_CHAMADO_STATUS_LABELS: Record<TratativaChamadoStatus, string> = {
-  em_tratativa: "Assumidos",
-  acionado: "Registrados",
+  em_tratativa: "Em tratativa",
+  acionado: "VT acionada",
   validacao_pendente: "Validação pendente",
-  validacao_reprovada: "Não validados",
+  validacao_reprovada: "Reprovada",
   validado: "Validados",
   concluido: "Concluídos",
 };

@@ -83,7 +83,7 @@ export function buildTratativaInsightHighlights(
 export function buildTratativaFunnelSteps(data: TratativaReportData) {
   const { summary } = data;
   return [
-    { key: "assuncoes", label: "Assumidos", value: summary.assuncoes, tone: "default" as const },
+    { key: "assuncoes", label: "Iniciados", value: summary.assuncoes, tone: "default" as const },
     {
       key: "acionamentos",
       label: "VT registrada",
