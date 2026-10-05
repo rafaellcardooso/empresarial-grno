@@ -1,4 +1,10 @@
-import { listOperationalUfs, operationalDddLabel } from "@/lib/config/locations";
+import {
+  HIDDEN_DDDS,
+  isDddHidden,
+  listOperationalUfs,
+  operationalDddLabel,
+} from "@/lib/config/locations";
+import { SDH_ALLOWED_ALARMES, SDH_DATACOM_ALLOWED_ALARMES } from "@/lib/config/sdh-alarms";
 
 /** Vendor de filtro na página SDH. */
 export type SdhVendorFilter = "datacom" | "tellabs" | "alcatel";
@@ -12,22 +18,6 @@ export const SDH_VENDOR_LABELS: Record<SdhVendorFilter, string> = {
   alcatel: "Alcatel",
 };
 
-/** Tipos de alarme aceitos na exibição SDH (legado SPI, aplicam a todos os vendors). */
-export const SDH_ALLOWED_ALARMES = [
-  "loss of signal",
-  "ais",
-  "loss of frame",
-  "fan failure",
-  "fan degraded",
-  "rdi",
-  "stm-1 loss of input signal",
-  "communication-transport  stm64 port  loss of frame",
-  "equipment  fan  fan voltage feed b failure",
-  "vc-4 loss of multiframe",
-  "connection failed",
-  "stm-1 ms remote defect indicator",
-] as const;
-
 /** Valor de query para DDD vazio. */
 export const SDH_DDD_EMPTY = "sem";
 
@@ -40,39 +30,59 @@ type SdhVendorFields = {
   ne?: string | null;
 };
 
-/** Predicado compartilhado: alarme permitido + UF do escopo operacional do projeto. */
+/** Predicado compartilhado: UF do escopo operacional + DDD não oculto. */
 export function sdhCommonScopePredicate(alias = ""): { sql: string; params: string[] } {
-  const a = alias ? `${alias}.alarme` : "alarme";
   const uf = alias ? `${alias}.uf` : "uf";
-  const alarmPlaceholders = SDH_ALLOWED_ALARMES.map(() => "?").join(", ");
+  const ddd = alias ? `${alias}.ddd` : "ddd";
   const ufs = listOperationalUfs();
   const ufPlaceholders = ufs.map(() => "?").join(", ");
+  const hiddenPlaceholders = HIDDEN_DDDS.map(() => "?").join(", ");
   return {
-    sql: `
-      LOWER(TRIM(COALESCE(${a}, ''))) IN (${alarmPlaceholders})
-      AND UPPER(TRIM(COALESCE(${uf}, ''))) IN (${ufPlaceholders})
-    `
-      .replace(/\s+/g, " ")
-      .trim(),
-    params: [...SDH_ALLOWED_ALARMES, ...ufs],
+    sql: `UPPER(TRIM(COALESCE(${uf}, ''))) IN (${ufPlaceholders}) AND TRIM(COALESCE(${ddd}, '')) NOT IN (${hiddenPlaceholders})`,
+    params: [...ufs, ...HIDDEN_DDDS],
   };
 }
 
-/** Predicado SQL Datacom (sem `AND` inicial). */
-function sdhDatacomPredicate(alias = ""): { sql: string; params: string[] } {
-  const col = alias ? `${alias}.gerencia` : "gerencia";
-  return { sql: `LOWER(TRIM(COALESCE(${col}, ''))) = ?`, params: ["datacom"] };
+/** Predicado SQL de tipo de alarme contra a lista informada (sem `AND` inicial). */
+function sdhAlarmPredicate(
+  allowed: readonly string[],
+  alias = "",
+): { sql: string; params: string[] } {
+  const col = alias ? `${alias}.alarme` : "alarme";
+  const placeholders = allowed.map(() => "?").join(", ");
+  return { sql: `LOWER(TRIM(COALESCE(${col}, ''))) IN (${placeholders})`, params: [...allowed] };
 }
 
-/** Predicado SQL Tellabs (sem `AND` inicial). */
+/** Predicado SQL Datacom: gerência + tipos equivalentes da nomenclatura Datacom. */
+function sdhDatacomPredicate(alias = ""): { sql: string; params: string[] } {
+  const col = alias ? `${alias}.gerencia` : "gerencia";
+  const alarm = sdhAlarmPredicate(SDH_DATACOM_ALLOWED_ALARMES, alias);
+  return {
+    sql: `LOWER(TRIM(COALESCE(${col}, ''))) = ? AND ${alarm.sql}`,
+    params: ["datacom", ...alarm.params],
+  };
+}
+
+/** Predicado SQL Tellabs: gerência + tipos de alarme legado. */
 function sdhTellabsPredicate(alias = ""): { sql: string; params: string[] } {
   const col = alias ? `${alias}.gerencia` : "gerencia";
-  return { sql: `LOWER(COALESCE(${col}, '')) LIKE ?`, params: ["%tellabs%"] };
+  const alarm = sdhAlarmPredicate(SDH_ALLOWED_ALARMES, alias);
+  return {
+    sql: `LOWER(COALESCE(${col}, '')) LIKE ? AND ${alarm.sql}`,
+    params: ["%tellabs%", ...alarm.params],
+  };
+}
+
+/** Predicado SQL Alcatel completo: gerência/exclusões + tipos de alarme legado. */
+function sdhAlcatelScopedPredicate(alias = ""): { sql: string; params: string[] } {
+  const base = sdhAlcatelPredicate(alias);
+  const alarm = sdhAlarmPredicate(SDH_ALLOWED_ALARMES, alias);
+  return { sql: `${base.sql} AND ${alarm.sql}`, params: [...base.params, ...alarm.params] };
 }
 
 /**
  * Predicado SQL Alcatel (gerência legado + exclusões de porta/NE).
- * Alarme e UF ficam no escopo comum (`sdhCommonScopePredicate`).
+ * Tipo de alarme em `sdhAlcatelScopedPredicate`; UF/DDD no escopo comum.
  */
 export function sdhAlcatelPredicate(alias = ""): { sql: string; params: string[] } {
   const g = alias ? `${alias}.gerencia` : "gerencia";
@@ -113,12 +123,16 @@ export function sdhAlcatelPredicate(alias = ""): { sql: string; params: string[]
   };
 }
 
-/** Indica se o alarme está no escopo comum (tipo permitido + UF do projeto). */
+/** Indica se o alarme está no escopo comum (UF do projeto + DDD não oculto). */
 function matchesSdhCommonScope(row: SdhVendorFields): boolean {
-  const alarme = (row.alarme ?? "").trim().toLowerCase();
-  if (!(SDH_ALLOWED_ALARMES as readonly string[]).includes(alarme)) return false;
+  if (isDddHidden(row.ddd)) return false;
   const uf = (row.uf ?? "").trim().toUpperCase();
   return listOperationalUfs().includes(uf);
+}
+
+/** Indica se o tipo de alarme consta na lista informada (comparação normalizada). */
+function isAlarmAllowed(row: SdhVendorFields, allowed: readonly string[]): boolean {
+  return allowed.includes((row.alarme ?? "").trim().toLowerCase());
 }
 
 /** Classifica alarme nos vendors exibidos; fora do escopo retorna null. */
@@ -126,7 +140,10 @@ export function classifySdhVendor(row: SdhVendorFields): SdhVendorFilter | null 
   if (!matchesSdhCommonScope(row)) return null;
 
   const gerencia = (row.gerencia ?? "").trim().toLowerCase();
-  if (gerencia === "datacom") return "datacom";
+  if (gerencia === "datacom") {
+    return isAlarmAllowed(row, SDH_DATACOM_ALLOWED_ALARMES) ? "datacom" : null;
+  }
+  if (!isAlarmAllowed(row, SDH_ALLOWED_ALARMES)) return null;
   if (gerencia.includes("tellabs")) return "tellabs";
 
   const g = (row.gerencia ?? "").toLowerCase();
@@ -162,10 +179,11 @@ export function parseSdhVendorParam(raw: string | null | undefined): SdhVendorFi
   return undefined;
 }
 
-/** Normaliza filtro DDD da URL (`sem` = vazio). */
+/** Normaliza filtro DDD da URL (`sem` = vazio); DDD oculto retorna undefined. */
 export function parseSdhDddParam(raw: string | null | undefined): string | undefined {
   if (raw == null || raw === "") return undefined;
-  return raw.trim();
+  const value = raw.trim();
+  return isDddHidden(value) ? undefined : value;
 }
 
 type SdhHrefFilters = {
@@ -217,7 +235,7 @@ export function sdhVendorSql(vendor: SdhVendorFilter | undefined): {
   const common = sdhCommonScopePredicate();
   const datacom = sdhDatacomPredicate();
   const tellabs = sdhTellabsPredicate();
-  const alcatel = sdhAlcatelPredicate();
+  const alcatel = sdhAlcatelScopedPredicate();
 
   if (!vendor) {
     return {
