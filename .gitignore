@@ -59,6 +59,12 @@ workers/tmip/venv/
 workers/tmip/**/__pycache__/
 workers/tmip/dados/*.csv
 
+# Decks gerenciais (scripts/presentation)
+scripts/presentation/venv/
+scripts/presentation/out/
+scripts/presentation/decks/*/shots/
+scripts/presentation/**/__pycache__/
+
 # BSOD ingest
 workers/bsod/.env
 workers/bsod/venv/

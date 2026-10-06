@@ -30,4 +30,4 @@ Monorepo em `/usr/local/empresarial`. Workers gravam tabelas-fonte; Next lê SIR
 
 Priorizar estabilidade do ingest (`AlertasRalRede.js`, `AlertasRecRede.js`) e contrato `rals`/`recs` com `lib/queries/sir.ts`.
 
-Skills: `emp-deploy-producao`, `emp-revisar-sir-ingest`, `emp-align-env`, `emp-db-setup`. Env: `npm run env:check`.
+Skills: `emp-deploy-producao`, `emp-revisar-sir-ingest`, `emp-align-env`, `emp-db-setup`, `emp-apresentacao-gerencial` (decks em `scripts/presentation/`). Env: `npm run env:check`.
