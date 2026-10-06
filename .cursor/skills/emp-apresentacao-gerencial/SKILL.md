@@ -9,14 +9,15 @@ Ferramenta: `scripts/presentation/` (README na pasta). Público-alvo: gerência 
 
 ## Estrutura
 
-| Caminho                    | Conteúdo                                                                                      |
-| -------------------------- | --------------------------------------------------------------------------------------------- |
-| `lib/theme.py`             | Paleta, fonte Aptos, margens, posição do logo                                                 |
-| `lib/primitives.py`        | `add_box`, `add_text`, `add_label`, `add_header`, `add_footer`, `add_screenshot`, `set_notes` |
-| `lib/template.py`          | Abre `assets/claro-template.pptx` mantendo só a capa                                          |
-| `decks/<deck>/__init__.py` | `TITLE`, `SLIDE_BUILDERS` (ordem dos slides), `SHOTS_DIR` e `REQUIRED_SHOTS`                  |
-| `decks/<deck>/facts.py`    | Números e datas da edição (único lugar a atualizar)                                           |
-| `decks/<deck>/shots/`      | Capturas PNG do portal, **fora do git**; `build.py` aborta listando as ausentes               |
+| Caminho                      | Conteúdo                                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `lib/theme.py`               | Paleta, fonte Aptos, margens, posição do logo                                                 |
+| `lib/primitives.py`          | `add_box`, `add_text`, `add_label`, `add_header`, `add_footer`, `add_screenshot`, `set_notes` |
+| `lib/template.py`            | Abre `assets/claro-template.pptx` mantendo só a capa                                          |
+| `decks/<deck>/__init__.py`   | `TITLE`, `SLIDE_BUILDERS` (ordem dos slides), `SHOTS_DIR` e `REQUIRED_SHOTS`                  |
+| `decks/<deck>/snapshot.json` | Números da edição, gerados por `npm run deck:facts` (`collect-facts.ts`)                      |
+| `decks/<deck>/facts.py`      | Formata textos a partir do snapshot; dados fixos (stakeholders, circuito do exemplo)          |
+| `decks/<deck>/shots/`        | Capturas PNG do portal, **fora do git**; `build.py` aborta listando as ausentes               |
 
 Deck novo: copiar a estrutura de `decks/grno_empresarial/`, um módulo por bloco de slides, cada slide uma função `build_x(prs)`. Limites de `emp-size` valem aqui (arquivo ≤ 350 linhas, função ≤ 60).
 
@@ -33,8 +34,8 @@ Depois de qualquer mudança visual, renderizar com `preview.py` e **ler os PNG**
 
 ## Números
 
-- Sempre do sistema em produção, nunca do lab; registrar a data da captura em `facts.py` e na nota de rodapé do slide.
-- Contagens de período seguem a mesma regra dos relatórios (`lib/queries/sir-reports.ts`).
+- Sempre do sistema em produção, nunca do lab: `npm run deck:facts` no servidor de produção; conferir a origem impressa por `build.py`.
+- O coletor reutiliza as queries dos relatórios (`getSirReport`, `countSdhByVendor`); número novo entra em `collect-facts.ts` chamando a função do portal, nunca SQL duplicado.
 - Sem metas ou percentuais inventados: indicador sem histórico vira "linha de base" com janela de medição.
 - Retorno sem dado financeiro é qualitativo (tempo liberado, resposta mais rápida, histórico).
 
@@ -49,7 +50,7 @@ Depois de qualquer mudança visual, renderizar com `preview.py` e **ler os PNG**
 ## Nova edição (relatório atualizado)
 
 1. Capturar de novo as telas listadas em `REQUIRED_SHOTS` no portal de produção (mesmos nomes de arquivo).
-2. Levantar os números no portal de produção (relatórios SIR/SDH, Início) e atualizar `facts.py`, incluindo `SNAPSHOT_DATE`.
+2. No servidor de produção: `npm run -s deck:facts -- --stdout > /tmp/snapshot.json`; copiar para `decks/grno_empresarial/snapshot.json`.
 3. Revisar textos que mudaram de status (módulo entregue sai de "em desenvolvimento").
 4. `build.py`, `preview.py`, ler os PNG e entregar.
 

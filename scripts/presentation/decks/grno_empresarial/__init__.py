@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from decks.grno_empresarial import intro, plan, portal, summary
+from decks.grno_empresarial import facts, intro, plan, portal, summary
 
 TITLE = "GRNO Empresarial - Apresentação"
+DATA_SOURCE = f"{facts.SNAPSHOT_SOURCE} (snapshot de {facts.SNAPSHOT_DATE})"
 SHOTS_DIR = Path(__file__).resolve().parent / "shots"
 REQUIRED_SHOTS = [
     "sir", "sdh_crop", "bsod_crop", "grb_ping_crop", "critel_graph_crop", "rel_sir_crop", "rel_sir2_crop",

@@ -45,6 +45,8 @@ def main() -> int:
         for path in missing:
             print(f"[DECK]   {path}", file=sys.stderr)
         return 1
+    if hasattr(deck, "DATA_SOURCE"):
+        print(f"[DECK] Números: {deck.DATA_SOURCE}")
     out_path = args.out or OUT_DIR / f"{deck.TITLE}.pptx"
     out_path.parent.mkdir(parents=True, exist_ok=True)
 

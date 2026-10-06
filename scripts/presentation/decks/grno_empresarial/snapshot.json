@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-10-05T23:30:00.000Z",
+  "source": "produção (captura manual de 05/10/2026)",
+  "sir": {
+    "periodFrom": "2026-09-06",
+    "periodTo": "2026-10-05",
+    "openedRal": 1734,
+    "openedRec": 2268,
+    "backlogRal": 140,
+    "backlogRec": 149,
+    "backlogOver3Days": 193,
+    "topRalDdd": {
+      "label": "91 - PA",
+      "total": 53
+    }
+  },
+  "sdh": {
+    "datacom": 97,
+    "tellabs": 7,
+    "alcatel": 5,
+    "total": 109
+  },
+  "deliveries": {
+    "total": 147,
+    "features": 65,
+    "fixes": 37
+  }
+}

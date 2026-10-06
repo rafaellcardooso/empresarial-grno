@@ -143,7 +143,7 @@ def build_results(prs) -> None:
     set_notes(s, "[1,5 min] Hoje o portal integra seis fontes de forma automática e se atualiza a cada 5 a 10 "
                  f"minutos. Só nos últimos 30 dias, passaram pelo portal {f.SIR_OPENED_TOTAL} registros do SIR: "
                  f"{f.SIR_OPENED_RAL} RAL e {f.SIR_OPENED_REC} entre REC, DSR e TCQ. No SDH, hoje são "
-                 f"{f.SDH_ACTIVE_TOTAL} alarmes ativos acompanhados, a maioria Datacom. Os benefícios: cada falha "
+                 f"{f.SDH_ACTIVE_TOTAL} alarmes ativos acompanhados, a maioria {f.SDH_LEADING_VENDOR}. Os benefícios: cada falha "
                  "tem um dono, e o sistema impede duas pessoas na mesma tratativa; toda ação fica registrada; a "
                  "gestão tem relatórios; e os dados se renovam sozinhos, sem consulta manual. Para acompanhar a "
                  "evolução, propomos três indicadores, que o próprio portal já consegue medir. Como o portal é "
@@ -184,5 +184,5 @@ def build_management_view(prs) -> None:
     set_notes(s, "[45 s] Os relatórios dão a visão gerencial: backlog ativo, quantos registros estão abertos há "
                  "mais de 3 dias, aberturas por dia e a concentração por DDD, classificação e CF executante. Tudo "
                  f"com filtro de período e exportação CSV. Hoje o backlog do SIR é de {f.SIR_BACKLOG_TOTAL} "
-                 f"registros, {f.SIR_BACKLOG_OVER_3_DAYS} deles abertos há mais de 3 dias, e o DDD 91 concentra "
-                 "mais RAL. Há relatórios equivalentes para SDH e BSOD.")
+                 f"registros, {f.SIR_BACKLOG_OVER_3_DAYS} deles abertos há mais de 3 dias, e o DDD "
+                 f"{f.SIR_TOP_RAL_DDD_CODE} concentra mais RAL. Há relatórios equivalentes para SDH e BSOD.")
