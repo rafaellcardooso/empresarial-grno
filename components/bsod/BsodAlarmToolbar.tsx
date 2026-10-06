@@ -57,7 +57,9 @@ export function BsodAlarmToolbar({
     return buildBsodHref({ ...activeState, status, page: undefined }, "/bsod");
   }
 
-  function dddHref(ddd: string): string {
+  const totalAllDdds = dddCounts.reduce((sum, item) => sum + item.total, 0);
+
+  function dddHref(ddd: string | undefined): string {
     return buildBsodHref({ ...activeState, ddd, page: undefined }, "/bsod");
   }
 
@@ -112,6 +114,12 @@ export function BsodAlarmToolbar({
           <div className="sir-filter-toolbar__group">
             <span className="sir-filter-toolbar__heading">DDD</span>
             <div className="sir-filter-toolbar__chips">
+              <SirFilterChip
+                label="Todos"
+                count={totalAllDdds}
+                href={dddHref(undefined)}
+                active={!activeState.ddd}
+              />
               {dddOptions.map((option) => {
                 const count = dddCounts.find((item) => item.ddd === option.ddd)?.total ?? 0;
                 return (

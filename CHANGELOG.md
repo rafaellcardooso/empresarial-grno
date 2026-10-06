@@ -17,6 +17,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 
 ### Changed
 
+- BSOD abre com todos os DDDs; o filtro por DDD só se aplica ao clicar no chip (como em SDH e SIR).
 - Página BSOD usa cache de inventário mesclado e `bsod_monitor_latest` (evita GROUP BY no histórico a cada request).
 - Ingest BSOD em cadências distintas: Xpertrak 10 min, SNMP 10 min, LDAP 3 h, CRM 6 h.
 - Planilha local BSOD preenche lacunas de cliente, designação e VLAN no inventário por contrato.

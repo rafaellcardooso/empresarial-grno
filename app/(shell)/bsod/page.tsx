@@ -7,7 +7,6 @@ import {
   bsodFilterSummary,
   bsodUrlStateFromParams,
   buildBsodExportHref,
-  defaultBsodAlarmDdd,
   parseBsodSearchParams,
 } from "@/lib/config/bsod-filters";
 import { BSOD_LIST_PAGE_SIZE, bsodPageFromParam } from "@/lib/config/bsod-pagination";
@@ -51,11 +50,7 @@ function applyAlarmStatusFilter(
 /** Monitor operacional de modems PME atualmente offline. */
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
-  const parsedState = bsodUrlStateFromParams(params);
-  const urlState = {
-    ...parsedState,
-    ddd: parsedState.ddd ?? defaultBsodAlarmDdd(),
-  };
+  const urlState = bsodUrlStateFromParams(params);
   const queryFilters = parseBsodSearchParams(params, { scope: "alarms" });
   const currentPage = bsodPageFromParam(params.page);
   const normalizedPage = bsodPageFromParam(params.normalizedPage);
@@ -86,7 +81,7 @@ export default async function Page({ searchParams }: PageProps) {
 
     return (
       <>
-        <PageHeader title="BSOD" description="Modems PME offline — escopo inicial DDD 98 (MA)." />
+        <PageHeader title="BSOD" description="Modems PME offline em todos os DDDs monitorados." />
         <BsodScopeNav active="alarms" />
         <BsodAlarmToolbar
           kpiCounts={{

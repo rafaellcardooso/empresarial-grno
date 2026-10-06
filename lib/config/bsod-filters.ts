@@ -1,5 +1,10 @@
 import { BSOD_STATUS_LABELS, METRIC_LABELS } from "@/lib/config/metric-labels";
-import { bsodOpesForDdd, listBsodDddOptions, parseBsodDddParam } from "@/lib/config/bsod-locations";
+import {
+  bsodOpesForDdd,
+  listBsodDddOptions,
+  listBsodOpes,
+  parseBsodDddParam,
+} from "@/lib/config/bsod-locations";
 import { normalizeTableSearch } from "@/lib/config/table-search";
 import {
   parseTratativaChamadoStatusFilter,
@@ -49,8 +54,6 @@ const ACTIVE_TRATATIVA_FILTERS = new Set<BsodTratativaFilter>([
   "validado",
 ]);
 
-const DEFAULT_ALARM_DDD = listBsodDddOptions()[0]?.ddd;
-
 /** Valida chave de filtro legado da URL (`filtro`). */
 export function isBsodFilterKey(value?: string): value is BsodFilterKey {
   return value != null && VALID_FILTERS.has(value as BsodFilterKey);
@@ -98,9 +101,16 @@ type BsodSearchParamsInput = {
   normalizedPage?: string;
 };
 
-/** Aplica escopo de operações a partir do DDD ativo. */
-function applyDddToFilters(filters: BsodFilters, ddd: string | undefined): BsodFilters {
-  if (!ddd) return filters;
+/**
+ * Aplica escopo de operações a partir do DDD ativo.
+ * Sem DDD, o monitor de alarmes cobre todas as operações mapeadas; o inventário fica sem restrição.
+ */
+function applyDddToFilters(
+  filters: BsodFilters,
+  ddd: string | undefined,
+  scope: BsodListScope,
+): BsodFilters {
+  if (!ddd) return scope === "alarms" ? { ...filters, opes: listBsodOpes() } : filters;
   const opes = bsodOpesForDdd(ddd);
   if (opes.length === 0) return filters;
   return { ...filters, opes };
@@ -109,7 +119,7 @@ function applyDddToFilters(filters: BsodFilters, ddd: string | undefined): BsodF
 /** Converte parâmetros da URL em filtros de consulta BSOD. */
 export function parseBsodSearchParams(
   params: BsodSearchParamsInput,
-  options?: { scope?: BsodListScope; defaultDdd?: string },
+  options?: { scope?: BsodListScope },
 ): BsodFilters {
   const scope = options?.scope ?? (params.scope === "alarms" ? "alarms" : "inventory");
   const filtro = isBsodFilterKey(params.filtro) ? params.filtro : undefined;
@@ -119,9 +129,7 @@ export function parseBsodSearchParams(
       ? filtro
       : undefined;
 
-  const ddd =
-    parseBsodDddParam(params.ddd) ??
-    (scope === "alarms" ? (options?.defaultDdd ?? DEFAULT_ALARM_DDD) : undefined);
+  const ddd = parseBsodDddParam(params.ddd);
 
   const filters: BsodFilters = {
     cmts: bsodParamFromUrl(params.cmts),
@@ -140,7 +148,7 @@ export function parseBsodSearchParams(
     filters.vlan = filtro as BsodVlanFilterKey;
   }
 
-  return applyDddToFilters(filters, ddd);
+  return applyDddToFilters(filters, ddd, scope);
 }
 
 /** Extrai estado de URL BSOD a partir dos search params. */
@@ -239,11 +247,6 @@ export function buildBsodExportHref(
   params.set("scope", scope);
   const query = params.toString();
   return query ? `/api/export/bsod?${query}` : `/api/export/bsod?scope=${scope}`;
-}
-
-/** DDD padrão do monitor de alarmes. */
-export function defaultBsodAlarmDdd(): string | undefined {
-  return DEFAULT_ALARM_DDD;
 }
 
 /** Chips de tratativa ativa na toolbar BSOD. */

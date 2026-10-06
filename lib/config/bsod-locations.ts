@@ -73,6 +73,11 @@ export function listBsodDddOptions(): Array<{ ddd: string; label: string; opes: 
   return [...byDdd.values()].sort((a, b) => Number(a.ddd) - Number(b.ddd));
 }
 
+/** Lista todas as operações PME mapeadas em algum DDD (escopo "Todos" do monitor). */
+export function listBsodOpes(): string[] {
+  return BSOD_LOCATIONS.map((item) => item.ope);
+}
+
 /** Resolve operações PME para um DDD configurado. */
 export function bsodOpesForDdd(ddd: string | null | undefined): string[] {
   if (!ddd) return [];
