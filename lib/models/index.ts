@@ -29,6 +29,27 @@ export {
   type SdhVendorCounts,
 } from "@/lib/models/sdh";
 export {
+  type FcaHeaderFields,
+  type FcaRecord,
+  type FcaRecordKind,
+  type FcaSearchResponse,
+  type FcaTextFields,
+} from "@/lib/models/fca";
+export {
+  type Tecnico,
+  type TecnicoFilters,
+  type TecnicoImportError,
+  type TecnicoImportResult,
+  type TecnicoInput,
+  type TecnicoListItem,
+  type TecnicoListResponse,
+} from "@/lib/models/tecnico";
+export {
+  type NavPendingCounts,
+  type ShellAlertsPayload,
+  type SirNetFoRecord,
+} from "@/lib/models/shell-alerts";
+export {
   type SdhReportData,
   type SdhReportFilters,
   type SdhReportSummary,

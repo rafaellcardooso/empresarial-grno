@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AcionamentoContextCard } from "@/components/tratativa/AcionamentoContextCard";
 import { AcionamentoFormFields } from "@/components/tratativa/AcionamentoFormFields";
+import { AcionamentoTechnicianSection } from "@/components/tratativa/AcionamentoTechnicianSection";
 import {
   ACIONAMENTO_SCHEDULE_FIELDS,
   ACIONAMENTO_SINTOMA_FIELD,
   ACIONAMENTO_SINTOMA_FIELD_SIR,
-  ACIONAMENTO_TECHNICIAN_FIELDS,
 } from "@/lib/config/acionamento-form";
 import { apiFetch } from "@/lib/config/base-path";
 import { UI_COPY } from "@/lib/config/ui-copy";
@@ -159,14 +159,12 @@ export function AcionamentoForm({
               onChange={updateField}
             />
           </section>
-          <section className="acionamento-form-section">
-            <p className="acionamento-section-label">{UI_COPY.acionamentoTechnicianSection}</p>
-            <AcionamentoFormFields
-              fields={ACIONAMENTO_TECHNICIAN_FIELDS}
-              technician={technician}
-              onChange={updateField}
-            />
-          </section>
+          <AcionamentoTechnicianSection
+            technician={technician}
+            defaultDdd={context.recordKind === "SDH" ? context.ddd : undefined}
+            disabled={disabled}
+            onChange={updateField}
+          />
           <section className="acionamento-form-section">
             <p className="acionamento-section-label">Ocorrência</p>
             <AcionamentoFormFields

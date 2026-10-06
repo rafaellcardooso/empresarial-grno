@@ -1,6 +1,6 @@
 # Referência — modelo de dados (SIR app)
 
-> Última revisão: **2026-08-06** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-10-05** · Índice: [../README.md](../README.md)
 
 Schema versionado em `migrations/sir/`. Fronteiras: [../architecture/data-and-write-boundaries.md](../architecture/data-and-write-boundaries.md).
 
@@ -35,6 +35,8 @@ Legado HFC (não usado pela UI): `tbl_inventory_pme` / `tbl_monitor_pme`.
 | `app_tratativas`            | Assunção ativa (`released_at` nulo)                                                     |
 | `app_tratativa_events`      | Cronologia (`START`, `RELEASE`, `ACIONAMENTO`, `OBSERVACAO`, `VALIDACAO*`, `CONCLUIDA`) |
 | `sdh_tratativa_events`      | Cronologia SDH (`START`, `OBSERVACAO`, `CLOSE`, …)                                      |
+| `app_tecnicos`              | Técnicos de campo por DDD (login único; RG/CPF mascarados na listagem)                  |
+| `app_tecnico_skills`        | Skills do técnico (catálogo fixo em `lib/config/tecnicos.ts`)                           |
 | Preferências / notificações | Conta e admin                                                                           |
 
 Next também atualiza colunas de inventário BSOD em edição manual (`cliente`, `cadastro_responsavel`, `designacao`, `address`, `manual_override`).

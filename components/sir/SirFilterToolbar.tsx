@@ -7,6 +7,9 @@ type SirFilterChipProps = {
   href: string;
   active?: boolean;
   accentClass?: string;
+  /** Classe Bootstrap Icons exibida antes do rótulo (ex.: `bi-tv`). */
+  icon?: string;
+  title?: string;
 };
 
 /** Chip clicável de filtro SIR (tipo ou status). */
@@ -16,6 +19,8 @@ export function SirFilterChip({
   href,
   active = false,
   accentClass,
+  icon,
+  title,
 }: SirFilterChipProps) {
   return (
     <Link
@@ -24,7 +29,9 @@ export function SirFilterChip({
       prefetch
       className={`sir-filter-chip${active ? " sir-filter-chip--active" : ""}${accentClass ? ` ${accentClass}` : ""}`}
       aria-current={active ? "true" : undefined}
+      title={title}
     >
+      {icon ? <i className={`bi ${icon} sir-filter-chip__icon`} aria-hidden="true" /> : null}
       <span className="sir-filter-chip__label">{label}</span>
       <span className="sir-filter-chip__count">{formatNumberPtBr(count)}</span>
     </Link>

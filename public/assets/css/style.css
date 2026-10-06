@@ -2019,6 +2019,15 @@ body {
   white-space: nowrap;
 }
 
+.sir-filter-chip__icon {
+  margin-right: -0.15rem;
+  color: var(--bs-secondary-color);
+}
+
+.sir-filter-chip--active .sir-filter-chip__icon {
+  color: var(--accent-clr);
+}
+
 .sir-filter-chip__count {
   display: inline-flex;
   align-items: center;
@@ -3570,6 +3579,165 @@ body {
 .sidebar-nav-btn--active .sidebar-nav-btn__badge {
   background: rgba(255, 255, 255, 0.95);
   color: var(--claro-red);
+}
+
+/* FCA */
+.fca-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 1rem;
+}
+
+@media (min-width: 1200px) {
+  .fca-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fca-layout__aside {
+    position: sticky;
+    top: 5rem;
+    align-self: start;
+  }
+}
+
+.fca-search-results {
+  max-height: 20rem;
+  overflow-y: auto;
+  border: 1px solid var(--line-clr);
+  border-radius: 8px;
+}
+
+.fca-search-results thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.fca-preview {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 40rem;
+}
+
+/* Técnicos (acionamento) */
+.tecnico-skill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--bs-secondary-bg);
+  color: var(--bs-emphasis-color);
+  border: 1px solid var(--bs-border-color);
+}
+
+.tecnico-import-errors {
+  max-height: 14rem;
+  overflow-y: auto;
+  padding-left: 1.1rem;
+}
+
+.tecnico-picker__ddd {
+  flex: 0 0 9.5rem;
+}
+
+/* Pop-ups do shell (chamados SIR /NET/FO) */
+.toast-stack {
+  position: fixed;
+  top: 4.5rem;
+  right: 1rem;
+  z-index: 1070;
+  width: min(360px, calc(100vw - 2rem));
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toast-stack__close-all {
+  align-self: flex-end;
+  font-size: var(--text-xs);
+}
+
+.toast-stack__item {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line-clr);
+  border-left: 4px solid var(--accent-clr);
+  border-radius: 8px;
+  background: var(--surface-clr);
+  color: var(--text-clr);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  animation: toast-rise-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.toast-stack__item--leaving {
+  pointer-events: none;
+  animation: toast-rise-out 0.3s ease-in forwards;
+}
+
+@keyframes toast-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes toast-rise-out {
+  to {
+    opacity: 0;
+    transform: translateY(-1.25rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-stack__item,
+  .toast-stack__item--leaving {
+    animation: none;
+  }
+}
+
+.toast-stack__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  color: var(--accent-clr);
+}
+
+.toast-stack__title {
+  flex: 1;
+  color: var(--text-clr);
+}
+
+.toast-stack__line {
+  margin: 0;
+  line-height: var(--leading-tight);
+  word-break: break-word;
+}
+
+.toast-stack__line + .toast-stack__line {
+  margin-top: 0.2rem;
+  color: var(--secondary-text-clr);
+  font-size: var(--text-xs);
+}
+
+.toast-stack__action {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-weight: 600;
+  color: var(--accent-clr);
+  text-decoration: none;
+}
+
+.toast-stack__action:hover {
+  text-decoration: underline;
 }
 
 .table {

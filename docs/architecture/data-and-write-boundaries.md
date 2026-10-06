@@ -1,18 +1,18 @@
 # Fronteiras de dados e escrita
 
-> Última revisão: **2026-08-06** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-10-05** · Índice: [../README.md](../README.md)
 
 Quem lê e quem escreve em cada banco. Esta é a fonte de verdade arquitetural; regras Cursor e READMEs devem espelhá-la.
 
 ## MySQL SIR (`claroEmpresarial`)
 
-| Writer               | Tabelas / escopo                                                                                                                                                                                               | Não escreve                            |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `workers/sir-ingest` | `rals`, `recs` (UPSERT + encerramento)                                                                                                                                                                         | app__, sdh__, bsod_*                   |
-| `workers/tmip`       | `sdh_alarms` (UPSERT / desativação)                                                                                                                                                                            | rals, recs, app__, bsod__              |
-| `workers/bsod`       | `bsod_cables`, `bsod_inventory`, `bsod_monitor`, `bsod_crm_clients`                                                                                                                                            | rals, recs, sdh__, app__               |
-| Next.js BFF          | `app_users`, preferências, notificações, `app_tratativas`, `app_tratativa_events`, colunas/eventos de tratativa em `sdh_alarms` / `sdh_tratativa_events`; edição manual em `bsod_inventory` (cliente/endereço) | `rals`, `recs` como fonte de incidente |
-| `npm run db:migrate` | DDL em `migrations/sir/`                                                                                                                                                                                       | dados operacionais                     |
+| Writer               | Tabelas / escopo                                                                                                                                                                                                                                      | Não escreve                            |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `workers/sir-ingest` | `rals`, `recs` (UPSERT + encerramento)                                                                                                                                                                                                                | app__, sdh__, bsod_*                   |
+| `workers/tmip`       | `sdh_alarms` (UPSERT / desativação)                                                                                                                                                                                                                   | rals, recs, app__, bsod__              |
+| `workers/bsod`       | `bsod_cables`, `bsod_inventory`, `bsod_monitor`, `bsod_crm_clients`                                                                                                                                                                                   | rals, recs, sdh__, app__               |
+| Next.js BFF          | `app_users`, preferências, notificações, `app_tratativas`, `app_tratativa_events`, `app_tecnicos` / `app_tecnico_skills`, colunas/eventos de tratativa em `sdh_alarms` / `sdh_tratativa_events`; edição manual em `bsod_inventory` (cliente/endereço) | `rals`, `recs` como fonte de incidente |
+| `npm run db:migrate` | DDL em `migrations/sir/`                                                                                                                                                                                                                              | dados operacionais                     |
 
 ## MySQL HFC (`hfc-sls`)
 

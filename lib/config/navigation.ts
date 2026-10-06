@@ -6,8 +6,11 @@ export type NavItem = {
   icon?: string;
   header?: boolean;
   staffOnly?: boolean;
-  badgeKey?: "pendingUsers";
+  badgeKey?: NavBadgeKey;
 };
+
+/** Origem do contador exibido ao lado do item no menu lateral. */
+export type NavBadgeKey = "pendingUsers" | "bsod" | "sdh" | "sir";
 
 /** Rotas com título exibido no breadcrumb e metadata. */
 export const PAGE_TITLES: Record<string, string> = {
@@ -22,6 +25,8 @@ export const PAGE_TITLES: Record<string, string> = {
   "/gpon": "GPON",
   "/grb": "TELNET",
   "/grb/critel": "CRITEL",
+  "/acionamento": "Acionamento",
+  "/fca": "FCA",
   "/relatorios": "Relatórios",
   "/relatorios/tratativas": "BSOD",
   "/relatorios/sdh": "SDH",
@@ -35,13 +40,16 @@ export const PAGE_TITLES: Record<string, string> = {
 const NAV_SECTIONS_RAW: NavItem[] = [
   { href: "/", label: "Início", icon: "bi-house" },
   { header: true, label: "Monitoramento" },
-  { href: "/sir", label: "SIR", icon: "bi-diagram-3" },
-  { href: "/bsod", label: "BSOD", icon: "bi-hdd-network" },
-  { href: "/sdh", label: "SDH", icon: "bi-broadcast" },
+  { href: "/sir", label: "SIR", icon: "bi-diagram-3", badgeKey: "sir" },
+  { href: "/bsod", label: "BSOD", icon: "bi-hdd-network", badgeKey: "bsod" },
+  { href: "/sdh", label: "SDH", icon: "bi-broadcast", badgeKey: "sdh" },
   { href: "/gpon", label: "GPON", icon: "bi-bezier2" },
   { header: true, label: "GRB" },
   { href: "/grb", label: "TELNET", icon: "bi-terminal" },
   { href: "/grb/critel", label: "CRITEL", icon: "bi-graph-up" },
+  { header: true, label: "Operação" },
+  { href: "/acionamento", label: "ACIONAMENTO", icon: "bi-telephone-outbound" },
+  { href: "/fca", label: "FCA", icon: "bi-clipboard-check" },
   { header: true, label: "Sistema" },
   { href: "/relatorios", label: "Relatórios", icon: "bi-file-earmark-bar-graph" },
   { href: "/conta", label: AUTH_COPY.accountTitle, icon: "bi-person" },

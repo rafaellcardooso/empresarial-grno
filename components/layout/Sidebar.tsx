@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { useSession } from "@/components/layout/SessionProvider";
+import { useShellAlerts } from "@/components/layout/ShellAlertsProvider";
 import { SidebarUserFooter } from "@/components/layout/SidebarUserFooter";
 import { useSidebarLayout } from "@/components/layout/SidebarLayoutProvider";
 import { isNavItemActive, NAV_SECTIONS, type NavItem } from "@/lib/config/navigation";
@@ -38,6 +39,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { mobileOpen, closeMobileSidebar } = useSidebarLayout();
   const { user, pendingUsersCount } = useSession();
+  const { counts: moduleCounts } = useShellAlerts();
   const isStaff = user.role === "STAFF";
 
   useEffect(() => {
@@ -49,12 +51,11 @@ export function Sidebar() {
     return NAV_SECTIONS.filter((item) => !item.staffOnly || isStaff);
   }
 
-  /** Resolve contador de badge do item. */
+  /** Resolve contador de badge do item (usuários pendentes ou pendentes do módulo). */
   function itemBadge(item: NavItem): number | undefined {
-    if (item.badgeKey === "pendingUsers" && pendingUsersCount > 0) {
-      return pendingUsersCount;
-    }
-    return undefined;
+    if (!item.badgeKey) return undefined;
+    if (item.badgeKey === "pendingUsers") return pendingUsersCount;
+    return moduleCounts?.[item.badgeKey];
   }
 
   return (

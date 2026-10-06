@@ -9,6 +9,9 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 
 ### Added
 
+- Badges de pendentes (BSOD, SDH, SIR) no menu e pop-up de chamados SIR `/NET/FO`, com notificação do navegador quando a aba está em segundo plano.
+- Módulo **FCA**: busca de chamado RAL/REC por número ou designação, dados do cliente, normalização, técnico, responsável e cópia do texto.
+- Técnicos de campo por DDD com skills em **Acionamento** (migration `030`): cadastro, edição e importação CSV para STAFF; seletor no acionamento WhatsApp.
 - Tabela `bsod_monitor_latest` (migration `028`) para leitura O(1) da última amostra RF na UI BSOD.
 - `SIR_DB_SOCKET` opcional (Next e workers) para MariaDB via Unix socket no WSL.
 - Seção **Normalizados aguardando confirmação** em RAL, REC e SDH (tratativa ativa após normalização da fonte).
