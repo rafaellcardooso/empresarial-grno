@@ -12,6 +12,9 @@ export const UI_COPY = {
   tableSearchRec: "Buscar por número, cliente, CF ou designação…",
   tableSearchBsod: "Buscar por MAC, contrato, node ou CMTS…",
   sirViewDetails: "Ver detalhes",
+  sirOpenInPortal: "Abrir no SIR",
+  sirOpenInPortalTitle: "Abrir a tarefa no portal SIR oficial",
+  sirOpenInPortalUnavailable: "Número do chamado indisponível para abrir no SIR",
   tratativaTreat: "Tratar",
   normalizedAwaitingTitle: "Normalizados aguardando confirmação",
   normalizedAwaitingSirLead:

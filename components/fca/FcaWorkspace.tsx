@@ -14,6 +14,7 @@ import type { FcaHeaderFields, FcaRecord, FcaTextFields } from "@/lib/models/fca
 export function FcaWorkspace() {
   const { user } = useSession();
   const [selectedNum, setSelectedNum] = useState<string | null>(null);
+  const [selectedKind, setSelectedKind] = useState<FcaRecord["kind"] | null>(null);
   const [header, setHeader] = useState<FcaHeaderFields>(EMPTY_FCA_HEADER);
   const [text, setText] = useState<FcaTextFields>(EMPTY_FCA_TEXT);
 
@@ -25,6 +26,7 @@ export function FcaWorkspace() {
 
   const handleSelect = useCallback((record: FcaRecord) => {
     setSelectedNum(record.numRecup);
+    setSelectedKind(record.kind);
     setHeader(fcaHeaderFromRecord(record));
   }, []);
 
@@ -38,6 +40,7 @@ export function FcaWorkspace() {
 
   const handleClear = useCallback(() => {
     setSelectedNum(null);
+    setSelectedKind(null);
     setHeader(EMPTY_FCA_HEADER);
     setText(EMPTY_FCA_TEXT);
   }, []);
@@ -55,6 +58,8 @@ export function FcaWorkspace() {
             preview={preview}
             copyBlocker={getFcaCopyBlocker(header, text)}
             onClear={handleClear}
+            sirKind={selectedKind}
+            sirNumRecup={selectedNum}
           />
         </div>
       </div>

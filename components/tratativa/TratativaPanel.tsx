@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { OpenInSirButton } from "@/components/sir/OpenInSirButton";
 import { AcionamentoForm } from "@/components/tratativa/AcionamentoForm";
 import { TratativaBsodWorkflow } from "@/components/tratativa/TratativaBsodWorkflow";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
@@ -210,7 +211,12 @@ export function TratativaPanel({
               <p className="small text-body-secondary mb-0 mt-1">{session.subtitle}</p>
             ) : null}
           </div>
-          <button type="button" className="btn-close" aria-label="Fechar" onClick={onClose} />
+          <div className="d-flex align-items-center gap-2">
+            {domain === "RAL" || domain === "REC" ? (
+              <OpenInSirButton domain={domain} numRecup={recordKey} />
+            ) : null}
+            <button type="button" className="btn-close" aria-label="Fechar" onClick={onClose} />
+          </div>
         </div>
 
         <div className="offcanvas-body">

@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { formatDateTimeDisplay } from "@/components/ui/DateTimeStacked";
+import { OpenInSirButton } from "@/components/sir/OpenInSirButton";
 import { RalTipoBadge } from "@/components/sir/RalTipoBadge";
 import { SirStatusBadge } from "@/components/sir/SirStatusBadge";
 import type { TratativaPublic } from "@/lib/models/tratativa";
@@ -52,7 +53,10 @@ export function SirDetalhesPanel({
               {numRecup}
             </h2>
           </div>
-          <button type="button" className="btn-close" aria-label="Fechar" onClick={onClose} />
+          <div className="d-flex align-items-center gap-2">
+            <OpenInSirButton domain={recordLabel} numRecup={numRecup} />
+            <button type="button" className="btn-close" aria-label="Fechar" onClick={onClose} />
+          </div>
         </div>
         <div className="offcanvas-body">
           {row ? (

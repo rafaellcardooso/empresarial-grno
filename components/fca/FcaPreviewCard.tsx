@@ -1,18 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import { OpenInSirButton } from "@/components/sir/OpenInSirButton";
 import { ContentCard } from "@/components/ui/ContentCard";
 import { copyTextToClipboard } from "@/lib/browser/clipboard";
 import { FCA_COPY } from "@/lib/config/fca";
+import type { FcaRecordKind } from "@/lib/models/fca";
 
 type FcaPreviewCardProps = {
   preview: string;
   copyBlocker: string | null;
   onClear: () => void;
+  sirKind?: FcaRecordKind | null;
+  sirNumRecup?: string | null;
 };
 
 /** Prévia do texto do FCA com botões de copiar e limpar; `copyBlocker` explica a cópia bloqueada. */
-export function FcaPreviewCard({ preview, copyBlocker, onClear }: FcaPreviewCardProps) {
+export function FcaPreviewCard({
+  preview,
+  copyBlocker,
+  onClear,
+  sirKind = null,
+  sirNumRecup = null,
+}: FcaPreviewCardProps) {
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [failedText, setFailedText] = useState<string | null>(null);
   const isCopied = copiedText === preview;
@@ -40,6 +50,9 @@ export function FcaPreviewCard({ preview, copyBlocker, onClear }: FcaPreviewCard
         ) : null}
         {isCopied ? (
           <span className="text-success small fw-semibold">{FCA_COPY.copied}</span>
+        ) : null}
+        {sirKind && sirNumRecup ? (
+          <OpenInSirButton domain={sirKind} numRecup={sirNumRecup} />
         ) : null}
         <button type="button" className="btn btn-outline-secondary" onClick={onClear}>
           {FCA_COPY.clear}
