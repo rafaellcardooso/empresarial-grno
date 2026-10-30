@@ -2437,6 +2437,27 @@ body {
   vertical-align: middle;
 }
 
+/* SLA do chamado: REC verde até 2h / RAL até 6h; estourou = vermelho. */
+.sortable-data-table--sir > tbody > tr.sir-age--ok > * {
+  --bs-table-bg-type: transparent;
+  --bs-table-color-state: var(--text-clr);
+  background-color: color-mix(in srgb, #198754 16%, var(--surface-clr)) !important;
+}
+
+.sortable-data-table--sir > tbody > tr.sir-age--over > * {
+  --bs-table-bg-type: transparent;
+  --bs-table-color-state: var(--text-clr);
+  background-color: color-mix(in srgb, #dc3545 16%, var(--surface-clr)) !important;
+}
+
+[data-bs-theme="dark"] .sortable-data-table--sir > tbody > tr.sir-age--ok > * {
+  background-color: color-mix(in srgb, #198754 28%, var(--surface-clr)) !important;
+}
+
+[data-bs-theme="dark"] .sortable-data-table--sir > tbody > tr.sir-age--over > * {
+  background-color: color-mix(in srgb, #dc3545 28%, var(--surface-clr)) !important;
+}
+
 .sir-detalhes-btn {
   width: 2rem;
   height: 2rem;
@@ -3561,6 +3582,13 @@ body {
   white-space: nowrap;
 }
 
+.sidebar-nav-btn__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
 .sidebar-nav-btn__badge {
   min-width: 1.25rem;
   height: 1.25rem;
@@ -3576,9 +3604,34 @@ body {
   flex-shrink: 0;
 }
 
+/* SIR: abertos (neutro) + SLA estourado (vermelho). */
+.sidebar-nav-btn__badge--open {
+  background: color-mix(in srgb, var(--secondary-text-clr) 75%, #000);
+  color: #fff;
+}
+
+.sidebar-nav-btn__badge--over {
+  background: var(--claro-red);
+  color: #fff;
+}
+
 .sidebar-nav-btn--active .sidebar-nav-btn__badge {
   background: rgba(255, 255, 255, 0.95);
   color: var(--claro-red);
+}
+
+.sidebar-nav-btn--active .sidebar-nav-btn__badge--open {
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--claro-gray);
+}
+
+.sidebar-nav-btn--active .sidebar-nav-btn__badge--over {
+  background: #fff;
+  color: var(--claro-red);
+}
+
+[data-bs-theme="dark"] .sidebar-nav-btn--active .sidebar-nav-btn__badge--open {
+  color: #1e1e1e;
 }
 
 /* FCA */
@@ -3642,18 +3695,24 @@ body {
   flex: 0 0 9.5rem;
 }
 
-/* Pop-ups do shell (chamados SIR /NET/FO) */
+/* Pop-ups do shell (novos SIR + estouro de SLA): entram de baixo, sobem ao sair. */
 .toast-stack {
   position: fixed;
-  top: 4.5rem;
+  bottom: 1.25rem;
   right: 1rem;
   z-index: 1070;
   width: min(360px, calc(100vw - 2rem));
   max-height: calc(100vh - 6rem);
+  overflow-x: hidden;
   overflow-y: auto;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   gap: 0.5rem;
+  pointer-events: none;
+}
+
+.toast-stack > * {
+  pointer-events: auto;
 }
 
 .toast-stack__close-all {
@@ -3670,18 +3729,81 @@ body {
   color: var(--text-clr);
   box-shadow: var(--shadow-md);
   font-size: var(--text-sm);
-  animation: toast-rise-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: toast-rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Chamado novo: superfície neutra, ícone sino, borda Claro. */
+.toast-stack__item--new {
+  border-left-color: var(--accent-clr);
+  background: var(--surface-clr);
+}
+
+.toast-stack__item--new .toast-stack__header {
+  color: var(--accent-clr);
+}
+
+/* Estouro de SLA: fundo vermelho, tag SLA, ícone alerta — distinto ao bater o olho. */
+.toast-stack__item--sla {
+  border-color: color-mix(in srgb, #dc3545 45%, var(--line-clr));
+  border-left: 5px solid #dc3545;
+  background: color-mix(in srgb, #dc3545 16%, var(--surface-clr));
+  box-shadow:
+    var(--shadow-md),
+    0 0 0 1px color-mix(in srgb, #dc3545 20%, transparent);
+}
+
+.toast-stack__item--sla .toast-stack__header {
+  color: #b02a37;
+}
+
+.toast-stack__item--sla .toast-stack__title {
+  color: #842029;
+  font-weight: 700;
+}
+
+.toast-stack__item--sla .toast-stack__action {
+  color: #b02a37;
+}
+
+.toast-stack__tag {
+  flex-shrink: 0;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  background: #dc3545;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+[data-bs-theme="dark"] .toast-stack__item--sla {
+  background: color-mix(in srgb, #dc3545 28%, var(--surface-clr));
+  border-color: color-mix(in srgb, #f87171 40%, var(--line-clr));
+  border-left-color: #f87171;
+}
+
+[data-bs-theme="dark"] .toast-stack__item--sla .toast-stack__header {
+  color: #f87171;
+}
+
+[data-bs-theme="dark"] .toast-stack__item--sla .toast-stack__title {
+  color: #fecaca;
+}
+
+[data-bs-theme="dark"] .toast-stack__item--sla .toast-stack__action {
+  color: #f87171;
 }
 
 .toast-stack__item--leaving {
   pointer-events: none;
-  animation: toast-rise-out 0.3s ease-in forwards;
+  animation: toast-rise-out 0.55s ease-in forwards;
 }
 
 @keyframes toast-rise-in {
   from {
     opacity: 0;
-    transform: translateY(1.5rem) scale(0.97);
+    transform: translateY(2rem) scale(0.97);
   }
   to {
     opacity: 1;
@@ -3692,7 +3814,7 @@ body {
 @keyframes toast-rise-out {
   to {
     opacity: 0;
-    transform: translateY(-1.25rem);
+    transform: translateY(-4rem) scale(0.98);
   }
 }
 

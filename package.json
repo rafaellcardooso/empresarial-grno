@@ -14,6 +14,7 @@
     "validate": "npm run format:check && npm run lint",
     "db:migrate": "node scripts/db/migrate-sir.mjs",
     "db:seed": "node scripts/db/seed-sir-dev.mjs",
+    "db:seed-sla-sim": "node scripts/db/seed-sir-sla-sim.mjs",
     "db:seed-staff": "node scripts/db/seed-app-staff.mjs",
     "db:setup": "npm run db:migrate && npm run db:seed",
     "db:import": "node scripts/db/import-sir-backup.mjs",

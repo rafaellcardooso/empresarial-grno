@@ -25,6 +25,7 @@ type SortableDataTableProps = {
   defaultSort?: SortState | null;
   sortTieBreakers?: string[];
   renderCell?: (key: string, value: unknown, row: Record<string, unknown>) => ReactNode;
+  getRowClassName?: (row: Record<string, unknown>) => string | undefined;
 };
 
 type SortState = {
@@ -42,6 +43,7 @@ export function SortableDataTable({
   defaultSort = null,
   sortTieBreakers = [],
   renderCell,
+  getRowClassName,
 }: SortableDataTableProps) {
   const [sort, setSort] = useState<SortState | null>(defaultSort);
 
@@ -112,7 +114,10 @@ export function SortableDataTable({
         </thead>
         <tbody>
           {sortedRows.map((row, index) => (
-            <tr key={String(row.mac ?? row.num_recup ?? row.id ?? index)}>
+            <tr
+              key={String(row.mac ?? row.num_recup ?? row.id ?? index)}
+              className={getRowClassName?.(row)}
+            >
               {columns.map((column) => {
                 const value = row[column.key];
                 const cellClass =

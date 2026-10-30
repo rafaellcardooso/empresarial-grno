@@ -9,6 +9,8 @@ export type ToastItem = {
   lines: string[];
   href?: string;
   actionLabel?: string;
+  /** `danger` = estouro de SLA (visual distinto do chamado novo). */
+  tone?: "default" | "danger";
 };
 
 type ToastStackProps = {
@@ -28,10 +30,10 @@ type ToastCardProps = {
 };
 
 /** Duração da animação de saída; igual à de `toast-stack__item--leaving` em style.css. */
-const TOAST_LEAVE_MS = 300;
+const TOAST_LEAVE_MS = 550;
 
 /**
- * Pop-up individual com animação de entrada e saída subindo; fecha sozinho após `autoDismissMs`.
+ * Pop-up individual: entra de baixo, permanece `autoDismissMs` e sobe ao fechar.
  * Remoção da lista ocorre por temporizador, independente do CSS carregado.
  */
 function ToastCard({ item, closeLabel, autoDismissMs, onDismiss }: ToastCardProps) {
@@ -50,14 +52,19 @@ function ToastCard({ item, closeLabel, autoDismissMs, onDismiss }: ToastCardProp
 
   const handleClose = () => setIsLeaving(true);
 
+  const isSla = item.tone === "danger";
+  const toneClass = isSla ? " toast-stack__item--sla" : " toast-stack__item--new";
+  const icon = isSla ? "bi-exclamation-triangle-fill" : "bi-bell-fill";
+
   return (
     <div
-      className={`toast-stack__item${isLeaving ? " toast-stack__item--leaving" : ""}`}
+      className={`toast-stack__item${toneClass}${isLeaving ? " toast-stack__item--leaving" : ""}`}
       role="alert"
     >
       <div className="toast-stack__header">
-        <i className="bi bi-bell-fill" aria-hidden="true" />
+        <i className={`bi ${icon}`} aria-hidden="true" />
         <strong className="toast-stack__title">{item.title}</strong>
+        {isSla ? <span className="toast-stack__tag">SLA</span> : null}
         <button
           type="button"
           className="btn-close btn-close-sm"
@@ -79,7 +86,7 @@ function ToastCard({ item, closeLabel, autoDismissMs, onDismiss }: ToastCardProp
   );
 }
 
-/** Pilha de pop-ups fixa no canto superior direito. */
+/** Pilha de pop-ups fixa no canto inferior direito (novos embaixo; saída sobe). */
 export function ToastStack({
   items,
   closeLabel,
@@ -92,15 +99,6 @@ export function ToastStack({
 
   return (
     <div className="toast-stack" role="region" aria-live="polite" aria-label="Alertas">
-      {items.length > 1 ? (
-        <button
-          type="button"
-          className="btn btn-sm btn-light toast-stack__close-all"
-          onClick={onDismissAll}
-        >
-          {closeAllLabel} ({items.length})
-        </button>
-      ) : null}
       {items.map((item) => (
         <ToastCard
           key={item.id}
@@ -110,6 +108,15 @@ export function ToastStack({
           onDismiss={onDismiss}
         />
       ))}
+      {items.length > 1 ? (
+        <button
+          type="button"
+          className="btn btn-sm btn-light toast-stack__close-all"
+          onClick={onDismissAll}
+        >
+          {closeAllLabel} ({items.length})
+        </button>
+      ) : null}
     </div>
   );
 }

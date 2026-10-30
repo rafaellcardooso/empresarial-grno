@@ -46,7 +46,9 @@ export {
 } from "@/lib/models/tecnico";
 export {
   type NavPendingCounts,
+  type NavSirCounts,
   type ShellAlertsPayload,
+  type SirAgeAlertRecord,
   type SirNetFoRecord,
 } from "@/lib/models/shell-alerts";
 export {

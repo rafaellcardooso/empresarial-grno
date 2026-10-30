@@ -7,6 +7,8 @@ import {
   SHELL_ALERTS_COPY,
   SHELL_ALERTS_POLL_MS,
   SHELL_ALERTS_TOAST_TTL_MS,
+  sirAgeAlertHref,
+  sirAgeAlertKey,
   sirNetFoHref,
   sirNetFoKey,
 } from "@/lib/config/shell-alerts";
@@ -14,30 +16,62 @@ import { fetchJson } from "@/lib/http/fetch-json";
 import type {
   NavPendingCounts,
   ShellAlertsPayload,
+  SirAgeAlertRecord,
   SirNetFoRecord,
 } from "@/lib/models/shell-alerts";
 import {
   requestNotificationPermissionOnInteraction,
   showBackgroundNotification,
 } from "@/lib/shell-alerts/browser-notify";
-import { diffNewNetFoKeys } from "@/lib/shell-alerts/seen-store";
+import { diffNewAgeAlertKeys, diffNewNetFoKeys } from "@/lib/shell-alerts/seen-store";
 
 type ShellAlertsContextValue = { counts: NavPendingCounts | null };
 
 const ShellAlertsContext = createContext<ShellAlertsContextValue>({ counts: null });
 
 /** Converte chamado /NET/FO em pop-up com número, CF, resumo e abertura. */
-function toToastItem(record: SirNetFoRecord): ToastItem {
+function toNetFoToast(record: SirNetFoRecord): ToastItem {
   const lines = [`${record.numRecup} · ${record.cf.replace(/\s+/g, " ").trim()}`];
   if (record.summary) lines.push(record.summary.trim().slice(0, 140));
   if (record.abertura) lines.push(`${SHELL_ALERTS_COPY.opened}: ${record.abertura}`);
   return {
-    id: sirNetFoKey(record),
+    id: `netfo:${sirNetFoKey(record)}`,
     title: SHELL_ALERTS_COPY.toastTitle,
     lines,
     href: sirNetFoHref(record),
     actionLabel: SHELL_ALERTS_COPY.open,
   };
+}
+
+/** Converte chamado que estourou o SLA em pop-up de alarme. */
+function toAgeToast(record: SirAgeAlertRecord): ToastItem {
+  const lines = [`${record.numRecup} · ${record.cf.replace(/\s+/g, " ").trim()}`];
+  if (record.summary) lines.push(record.summary.trim().slice(0, 140));
+  lines.push(`${SHELL_ALERTS_COPY.ageHours}: ${record.ageHours}h`);
+  if (record.abertura) lines.push(`${SHELL_ALERTS_COPY.opened}: ${record.abertura}`);
+  return {
+    id: `age:${sirAgeAlertKey(record)}`,
+    title: SHELL_ALERTS_COPY.ageToastTitle(record.kind),
+    lines,
+    href: sirAgeAlertHref(record),
+    actionLabel: SHELL_ALERTS_COPY.open,
+    tone: "danger",
+  };
+}
+
+/** Mescla novos toasts no topo sem duplicar ids já visíveis. */
+function mergeToasts(current: ToastItem[], incoming: ToastItem[]): ToastItem[] {
+  if (incoming.length === 0) return current;
+  return [...incoming.filter((item) => !current.some((c) => c.id === item.id)), ...current];
+}
+
+/** Dispara notificação de sistema para cada toast quando a aba está em segundo plano. */
+function notifyBackground(items: ToastItem[], push: (href: string) => void) {
+  for (const item of items) {
+    showBackgroundNotification(item.title, item.lines.join("\n"), item.id, () =>
+      push(item.href ?? "/sir"),
+    );
+  }
 }
 
 /** Executa `refresh` ao montar, a cada intervalo e quando a aba volta a ficar visível. */
@@ -56,7 +90,10 @@ function usePolling(refresh: () => Promise<void>) {
   }, [refresh]);
 }
 
-/** Consulta pendentes por módulo e alerta chamados SIR /NET/FO novos (pop-up e notificação do sistema). */
+/**
+ * Consulta pendentes por módulo e alerta chamados SIR novos (/NET/FO) ou
+ * com SLA estourado (pop-up e notificação do sistema).
+ */
 export function ShellAlertsProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [counts, setCounts] = useState<NavPendingCounts | null>(null);
@@ -67,20 +104,17 @@ export function ShellAlertsProvider({ children }: { children: React.ReactNode })
     if (!result.ok) return;
     setCounts(result.data.counts);
 
-    const newKeys = new Set(diffNewNetFoKeys(result.data.netFo.map(sirNetFoKey)));
-    const fresh = result.data.netFo.filter((record) => newKeys.has(sirNetFoKey(record)));
-    if (fresh.length === 0) return;
+    const newNetFoKeys = new Set(diffNewNetFoKeys(result.data.netFo.map(sirNetFoKey)));
+    const newAgeKeys = new Set(diffNewAgeAlertKeys(result.data.ageAlerts.map(sirAgeAlertKey)));
+    const freshNetFo = result.data.netFo.filter((record) => newNetFoKeys.has(sirNetFoKey(record)));
+    const freshAge = result.data.ageAlerts.filter((record) =>
+      newAgeKeys.has(sirAgeAlertKey(record)),
+    );
+    const items = [...freshAge.map(toAgeToast), ...freshNetFo.map(toNetFoToast)];
+    if (items.length === 0) return;
 
-    const items = fresh.map(toToastItem);
-    setToasts((current) => [
-      ...items.filter((item) => !current.some((c) => c.id === item.id)),
-      ...current,
-    ]);
-    for (const item of items) {
-      showBackgroundNotification(item.title, item.lines.join("\n"), item.id, () =>
-        router.push(item.href ?? "/sir"),
-      );
-    }
+    setToasts((current) => mergeToasts(current, items));
+    notifyBackground(items, (href) => router.push(href));
   }, [router]);
 
   usePolling(refresh);

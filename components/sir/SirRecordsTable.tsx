@@ -14,6 +14,7 @@ import { apiFetch } from "@/lib/config/base-path";
 import { recGroupDisplayLabel } from "@/lib/config/rec-types";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic } from "@/lib/models/tratativa";
+import { sirAgeRowClassName } from "@/lib/sir/age-tone";
 import { normalizeTratativaKey } from "@/lib/tratativa/keys";
 
 type SirRecordDomain = "RAL" | "REC";
@@ -128,6 +129,7 @@ export function SirRecordsTable({
         columns={columns}
         rows={rows}
         empty={empty}
+        getRowClassName={(row) => sirAgeRowClassName(domain, row)}
         renderCell={(key, value, row) =>
           renderSirCell(key, value, row, openDetalhes, domain, tratativas, setTreatKey, variant)
         }
