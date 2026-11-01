@@ -23,7 +23,10 @@ export type SirNetFoRecord = {
   summary: string | null;
 };
 
-/** Chamado SIR ativo que estourou o SLA (pop-up no shell). */
+/** Nível do alerta por idade: aviso (≥2h) ou estouro de SLA. */
+export type SirAgeAlertLevel = "warn" | "over";
+
+/** Chamado SIR ativo com alerta por idade (pop-up no shell). */
 export type SirAgeAlertRecord = {
   kind: "RAL" | "REC";
   numRecup: string;
@@ -31,6 +34,7 @@ export type SirAgeAlertRecord = {
   abertura: string | null;
   summary: string | null;
   ageHours: number;
+  level: SirAgeAlertLevel;
 };
 
 /** Payload de `/api/shell/alerts` consultado periodicamente pelo shell. */

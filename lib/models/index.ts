@@ -48,6 +48,7 @@ export {
   type NavPendingCounts,
   type NavSirCounts,
   type ShellAlertsPayload,
+  type SirAgeAlertLevel,
   type SirAgeAlertRecord,
   type SirNetFoRecord,
 } from "@/lib/models/shell-alerts";

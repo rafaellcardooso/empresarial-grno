@@ -9,8 +9,10 @@ export type ToastItem = {
   lines: string[];
   href?: string;
   actionLabel?: string;
-  /** `danger` = estouro de SLA (visual distinto do chamado novo). */
-  tone?: "default" | "danger";
+  /** `warning` = atenção por idade; `danger` = estouro de SLA. */
+  tone?: "default" | "warning" | "danger";
+  /** Rótulo da tag (ex.: `1h`, `2h`, `SLA`). */
+  tag?: string;
 };
 
 type ToastStackProps = {
@@ -52,9 +54,17 @@ function ToastCard({ item, closeLabel, autoDismissMs, onDismiss }: ToastCardProp
 
   const handleClose = () => setIsLeaving(true);
 
-  const isSla = item.tone === "danger";
-  const toneClass = isSla ? " toast-stack__item--sla" : " toast-stack__item--new";
-  const icon = isSla ? "bi-exclamation-triangle-fill" : "bi-bell-fill";
+  const toneClass =
+    item.tone === "danger"
+      ? " toast-stack__item--sla"
+      : item.tone === "warning"
+        ? " toast-stack__item--warn"
+        : " toast-stack__item--new";
+  const icon =
+    item.tone === "danger" || item.tone === "warning"
+      ? "bi-exclamation-triangle-fill"
+      : "bi-bell-fill";
+  const tagLabel = item.tag ?? (item.tone === "danger" ? "SLA" : null);
 
   return (
     <div
@@ -64,7 +74,7 @@ function ToastCard({ item, closeLabel, autoDismissMs, onDismiss }: ToastCardProp
       <div className="toast-stack__header">
         <i className={`bi ${icon}`} aria-hidden="true" />
         <strong className="toast-stack__title">{item.title}</strong>
-        {isSla ? <span className="toast-stack__tag">SLA</span> : null}
+        {tagLabel ? <span className="toast-stack__tag">{tagLabel}</span> : null}
         <button
           type="button"
           className="btn-close btn-close-sm"

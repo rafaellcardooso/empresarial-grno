@@ -13,6 +13,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 - Alarme de SLA SIR no shell (pop-up + cor na tabela): REC 2h, RAL 6h — verde dentro do SLA, vermelho e aviso ao estourar.
 - Badge do menu **SIR** com dois contadores: abertos (ATIVO) e SLA estourado.
 - Botão **Abrir no SIR** (detalhes, tratativa e FCA) com deep link `framesetNivel2Tarefa{Ral|Rec}.cfm?recup=`.
+
 - Módulo **FCA**: busca de chamado RAL/REC por número ou designação, dados do cliente, normalização, técnico, responsável e cópia do texto.
 - Técnicos de campo por DDD com skills em **Acionamento** (migration `030`): cadastro, edição e importação CSV para STAFF; seletor no acionamento WhatsApp.
 - Tabela `bsod_monitor_latest` (migration `028`) para leitura O(1) da última amostra RF na UI BSOD.
@@ -23,6 +24,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 
 ### Changed
 
+- Cores e alertas por idade: REC verde ate 1h / amarelo 1-2h / vermelho >=2h; RAL verde ate 2h / amarelo 2-6h / vermelho >=6h.
 - BSOD abre com todos os DDDs; o filtro por DDD só se aplica ao clicar no chip (como em SDH e SIR).
 - Página BSOD usa cache de inventário mesclado e `bsod_monitor_latest` (evita GROUP BY no histórico a cada request).
 - Ingest BSOD em cadências distintas: Xpertrak 10 min, SNMP 10 min, LDAP 3 h, CRM 6 h.

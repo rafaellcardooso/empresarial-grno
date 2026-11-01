@@ -43,7 +43,7 @@ function toNetFoToast(record: SirNetFoRecord): ToastItem {
   };
 }
 
-/** Converte chamado que estourou o SLA em pop-up de alarme. */
+/** Converte chamado com alerta por idade (aviso ≥2h ou estouro de SLA) em pop-up. */
 function toAgeToast(record: SirAgeAlertRecord): ToastItem {
   const lines = [`${record.numRecup} · ${record.cf.replace(/\s+/g, " ").trim()}`];
   if (record.summary) lines.push(record.summary.trim().slice(0, 140));
@@ -51,11 +51,12 @@ function toAgeToast(record: SirAgeAlertRecord): ToastItem {
   if (record.abertura) lines.push(`${SHELL_ALERTS_COPY.opened}: ${record.abertura}`);
   return {
     id: `age:${sirAgeAlertKey(record)}`,
-    title: SHELL_ALERTS_COPY.ageToastTitle(record.kind),
+    title: SHELL_ALERTS_COPY.ageToastTitle(record.kind, record.level),
     lines,
     href: sirAgeAlertHref(record),
     actionLabel: SHELL_ALERTS_COPY.open,
-    tone: "danger",
+    tone: record.level === "warn" ? "warning" : "danger",
+    tag: SHELL_ALERTS_COPY.ageToastTag(record.kind, record.level),
   };
 }
 

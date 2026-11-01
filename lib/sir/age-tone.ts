@@ -1,10 +1,12 @@
-import { sirSlaHours } from "@/lib/config/sir-age";
+import { RAL_SLA_HOURS, RAL_WARN_HOURS, REC_SLA_HOURS, REC_WARN_HOURS } from "@/lib/config/sir-age";
 import { parseAppDateTime } from "@/lib/format/datetime";
 
-export type SirAgeTone = "ok" | "over";
+export type SirAgeTone = "ok" | "warn" | "over";
 
 /**
- * Classifica se o chamado está dentro ou fora do SLA a partir de `abertura`.
+ * Classifica a idade do chamado para colorir a linha da tabela.
+ * REC: verde abaixo de 1h, amarelo de 1h a 2h, vermelho a partir de 2h.
+ * RAL: verde abaixo de 2h, amarelo de 2h a 6h, vermelho a partir de 6h.
  * Retorna null quando a data é inválida ou o registro não está ATIVO.
  */
 export function sirAgeTone(
@@ -24,7 +26,12 @@ export function sirAgeTone(
   if (!opened) return null;
   const ageHours = (nowMs - opened.getTime()) / 3_600_000;
   if (ageHours < 0) return "ok";
-  return ageHours < sirSlaHours(domain) ? "ok" : "over";
+
+  const warnHours = domain === "RAL" ? RAL_WARN_HOURS : REC_WARN_HOURS;
+  const slaHours = domain === "RAL" ? RAL_SLA_HOURS : REC_SLA_HOURS;
+  if (ageHours < warnHours) return "ok";
+  if (ageHours < slaHours) return "warn";
+  return "over";
 }
 
 /** Classe CSS da linha conforme o SLA do chamado. */

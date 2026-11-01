@@ -1,7 +1,7 @@
 import type { RowDataPacket } from "mysql2/promise";
 import { listBsodOpes } from "@/lib/config/bsod-locations";
 import { SIR_NET_FO_CF_SUFFIX } from "@/lib/config/shell-alerts";
-import { RAL_SLA_HOURS, REC_SLA_HOURS } from "@/lib/config/sir-age";
+import { RAL_SLA_HOURS, RAL_WARN_HOURS, REC_SLA_HOURS, REC_WARN_HOURS } from "@/lib/config/sir-age";
 import { sirQuery } from "@/lib/db/sir";
 import { SIR_TABLES } from "@/lib/models";
 import type {
@@ -120,8 +120,9 @@ export async function listActiveSirNetFo(): Promise<SirNetFoRecord[]> {
 }
 
 /**
- * Lista RAL e REC ativos que estouraram o SLA (idade ≥ limiar do domínio).
- * Sem paginação: limitado aos ativos fora do SLA, usado só no diff de pop-ups.
+ * Lista RAL/REC ativos com alerta por idade para pop-up.
+ * REC 1–2h = aviso, ≥2h = estouro; RAL 2–6h = aviso, ≥6h = estouro.
+ * Sem paginação: limitado aos ativos no limiar, usado só no diff de pop-ups.
  */
 export async function listActiveSirAgeAlerts(): Promise<SirAgeAlertRecord[]> {
   const ageWhere = `status = 'ATIVO'
@@ -132,26 +133,32 @@ export async function listActiveSirAgeAlerts(): Promise<SirAgeAlertRecord[]> {
       `SELECT num_recup, cf_executante, abertura, descricao AS summary,
               TIMESTAMPDIFF(HOUR, ${SIR_ABERTURA_EXPR}, NOW()) AS age_hours
        FROM ${SIR_TABLES.rals} WHERE ${ageWhere}`,
-      [RAL_SLA_HOURS],
+      [RAL_WARN_HOURS],
     ),
     sirQuery<AgeAlertRow[]>(
       `SELECT num_recup, cf_executante, abertura, cliente AS summary,
               TIMESTAMPDIFF(HOUR, ${SIR_ABERTURA_EXPR}, NOW()) AS age_hours
        FROM ${SIR_TABLES.recs} WHERE ${ageWhere}`,
-      [REC_SLA_HOURS],
+      [REC_WARN_HOURS],
     ),
   ]);
 
-  const toRecord = (kind: SirAgeAlertRecord["kind"]) => (row: AgeAlertRow) => ({
-    kind,
-    numRecup: String(row.num_recup),
-    cf: String(row.cf_executante ?? ""),
-    abertura: row.abertura,
-    summary: row.summary,
-    ageHours: Number(row.age_hours) || 0,
-  });
+  const toRecord =
+    (kind: SirAgeAlertRecord["kind"], slaHours: number) =>
+    (row: AgeAlertRow): SirAgeAlertRecord => {
+      const ageHours = Number(row.age_hours) || 0;
+      return {
+        kind,
+        numRecup: String(row.num_recup),
+        cf: String(row.cf_executante ?? ""),
+        abertura: row.abertura,
+        summary: row.summary,
+        ageHours,
+        level: ageHours >= slaHours ? "over" : "warn",
+      };
+    };
 
-  return [...rals.map(toRecord("RAL")), ...recs.map(toRecord("REC"))];
+  return [...rals.map(toRecord("RAL", RAL_SLA_HOURS)), ...recs.map(toRecord("REC", REC_SLA_HOURS))];
 }
 
 /** Monta o payload de badges, /NET/FO e alarmes por idade consultado pelo shell. */

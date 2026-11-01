@@ -2437,11 +2437,17 @@ body {
   vertical-align: middle;
 }
 
-/* SLA do chamado: REC verde até 2h / RAL até 6h; estourou = vermelho. */
+/* SLA: REC verde ate 1h, amarelo 1-2h, vermelho depois; RAL verde ate 2h, amarelo 2-6h, vermelho depois. */
 .sortable-data-table--sir > tbody > tr.sir-age--ok > * {
   --bs-table-bg-type: transparent;
   --bs-table-color-state: var(--text-clr);
   background-color: color-mix(in srgb, #198754 16%, var(--surface-clr)) !important;
+}
+
+.sortable-data-table--sir > tbody > tr.sir-age--warn > * {
+  --bs-table-bg-type: transparent;
+  --bs-table-color-state: var(--text-clr);
+  background-color: color-mix(in srgb, #ffc107 22%, var(--surface-clr)) !important;
 }
 
 .sortable-data-table--sir > tbody > tr.sir-age--over > * {
@@ -2452,6 +2458,10 @@ body {
 
 [data-bs-theme="dark"] .sortable-data-table--sir > tbody > tr.sir-age--ok > * {
   background-color: color-mix(in srgb, #198754 28%, var(--surface-clr)) !important;
+}
+
+[data-bs-theme="dark"] .sortable-data-table--sir > tbody > tr.sir-age--warn > * {
+  background-color: color-mix(in srgb, #ffc107 28%, var(--surface-clr)) !important;
 }
 
 [data-bs-theme="dark"] .sortable-data-table--sir > tbody > tr.sir-age--over > * {
@@ -3740,6 +3750,52 @@ body {
 
 .toast-stack__item--new .toast-stack__header {
   color: var(--accent-clr);
+}
+
+/* Aviso ≥2h: fundo amarelo, tag 2h. */
+.toast-stack__item--warn {
+  border-color: color-mix(in srgb, #ffc107 50%, var(--line-clr));
+  border-left: 5px solid #e0a800;
+  background: color-mix(in srgb, #ffc107 22%, var(--surface-clr));
+  box-shadow:
+    var(--shadow-md),
+    0 0 0 1px color-mix(in srgb, #ffc107 25%, transparent);
+}
+
+.toast-stack__item--warn .toast-stack__header {
+  color: #997404;
+}
+
+.toast-stack__item--warn .toast-stack__title {
+  color: #664d03;
+  font-weight: 700;
+}
+
+.toast-stack__item--warn .toast-stack__action {
+  color: #997404;
+}
+
+.toast-stack__item--warn .toast-stack__tag {
+  background: #e0a800;
+  color: #212529;
+}
+
+[data-bs-theme="dark"] .toast-stack__item--warn {
+  background: color-mix(in srgb, #ffc107 24%, var(--surface-clr));
+  border-color: color-mix(in srgb, #ffc107 40%, var(--line-clr));
+  border-left-color: #ffc107;
+}
+
+[data-bs-theme="dark"] .toast-stack__item--warn .toast-stack__header {
+  color: #ffc107;
+}
+
+[data-bs-theme="dark"] .toast-stack__item--warn .toast-stack__title {
+  color: #ffe69c;
+}
+
+[data-bs-theme="dark"] .toast-stack__item--warn .toast-stack__action {
+  color: #ffc107;
 }
 
 /* Estouro de SLA: fundo vermelho, tag SLA, ícone alerta — distinto ao bater o olho. */
