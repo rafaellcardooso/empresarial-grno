@@ -31,12 +31,15 @@ export function GrbTelnetPanel({ baseUrl }: GrbTelnetPanelProps) {
 
       <ContentCard title="TELNET" bodyClassName="p-3">
         <p className="text-body-secondary small mb-3">
-          Selecione UF e equipamento, escolha o comando e preencha os campos. Equipamentos Nokia
-          usam router-instance (VPRN) quando aplicável{panel.introSuffix}
+          Use a UF para o catálogo local ou informe outro hostname (qualquer região) com o modelo
+          correto. Equipamentos Nokia usam router-instance (VPRN) quando aplicável
+          {panel.introSuffix}
         </p>
 
         <form className="grb-panel__form" onSubmit={panel.handleSubmit}>
-          <GrbTelnetUfSelector {...panel.ufSection} />
+          {panel.equipmentSection.isCustomEquipment ? null : (
+            <GrbTelnetUfSelector {...panel.ufSection} />
+          )}
           <GrbTelnetEquipmentSection {...panel.equipmentSection} />
           <GrbTelnetCommandSelect {...panel.commandSection} />
 

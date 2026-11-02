@@ -1,4 +1,5 @@
 import { GRB_DEFAULT_ID_REDE, isGrbCircuitIpValid } from "@/lib/config/grb";
+import { parseTelnetPlatform, type TelnetPlatform } from "@/lib/config/grb-telnet-catalog";
 import {
   getTelnetCommandPreset,
   isNokiaVprnBgpPreset,
@@ -11,6 +12,7 @@ import { isGrbIpv6Valid, isGrbTelnetDestinationValid } from "@/lib/grb/telnet-ad
 
 export type GrbTelnetExecuteBody = {
   eqpto?: string;
+  platform?: string;
   idRede?: number;
   ipNetwork?: string;
   ipv6Network?: string;
@@ -24,6 +26,7 @@ export type GrbTelnetExecuteBody = {
 
 export type GrbTelnetExecuteParsed = {
   eqpto: string;
+  platform?: TelnetPlatform;
   idRede: number;
   ipNetwork: string;
   ipv6Network: string;
@@ -88,8 +91,10 @@ export function parseTelnetExecuteBody(
       error: "Informe o service-id, o nome VPRN (ex.: PRODUCTION:7776) ou selecione na lista.",
     };
   }
+  const platform = parseTelnetPlatform(body.platform);
+
   if (
-    presetNeedsVprnList(preset, eqpto) &&
+    presetNeedsVprnList(preset, eqpto, platform) &&
     !isNokiaVprnBgpPreset(preset.id) &&
     !vprnRouterInstance &&
     !vrfName
@@ -101,6 +106,7 @@ export function parseTelnetExecuteBody(
   return {
     data: {
       eqpto,
+      platform,
       idRede: Number.isFinite(idRede) ? idRede : GRB_DEFAULT_ID_REDE,
       ipNetwork,
       ipv6Network,

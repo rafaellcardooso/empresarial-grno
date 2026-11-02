@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       grbBaseUrl,
       pageArg0: process.env.GRB_TELNET_ARG0,
       eqpto: parsed.data.eqpto,
+      platform: parsed.data.platform,
       idRede: parsed.data.idRede,
       ipNetwork: parsed.data.ipNetwork,
       ipv6Network: parsed.data.ipv6Network,

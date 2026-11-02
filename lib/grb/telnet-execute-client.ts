@@ -1,8 +1,10 @@
 import type { GrbTelnetExecuteResult } from "@/components/grb/grb-telnet-form-types";
 import { apiFetch } from "@/lib/config/base-path";
+import type { TelnetPlatform } from "@/lib/config/grb-telnet-catalog";
 
 export type TelnetExecuteRequest = {
   eqpto: string;
+  platform?: TelnetPlatform;
   idRede: number;
   ipNetwork: string;
   ipv6Network: string;

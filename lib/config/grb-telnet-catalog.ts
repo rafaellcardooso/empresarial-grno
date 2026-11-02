@@ -41,10 +41,20 @@ export function eqptosForUf(uf: string): readonly string[] {
   return getTelnetState(uf)?.eqptos ?? [];
 }
 
-/** Plataforma CLI do eqpto (catálogo ou Cisco para hostname livre). */
-export function eqptoPlatform(eqpto: string): TelnetPlatform {
+/** Valida plataforma telnet recebida da UI/API (`nokia` | `cisco`). */
+export function parseTelnetPlatform(raw: string | null | undefined): TelnetPlatform | undefined {
+  const value = raw?.trim().toLowerCase();
+  if (value === "nokia" || value === "cisco") return value;
+  return undefined;
+}
+
+/**
+ * Plataforma CLI do eqpto: catálogo quando o hostname é conhecido;
+ * senão usa `override` (hostname livre) ou Cisco.
+ */
+export function eqptoPlatform(eqpto: string, override?: TelnetPlatform | null): TelnetPlatform {
   const name = eqpto.trim().toUpperCase();
-  if (!name) return "cisco";
+  if (!name) return override ?? "cisco";
 
   for (const state of Object.values(TELNET_STATES)) {
     if (state.eqptos.some((item) => item.toUpperCase() === name)) {
@@ -52,12 +62,12 @@ export function eqptoPlatform(eqpto: string): TelnetPlatform {
     }
   }
 
-  return "cisco";
+  return override ?? "cisco";
 }
 
 /** Indica se o eqpto usa sintaxe Nokia SR OS no fluxo TELNET. */
-export function isNokiaEqpto(eqpto: string): boolean {
-  return eqptoPlatform(eqpto) === "nokia";
+export function isNokiaEqpto(eqpto: string, override?: TelnetPlatform | null): boolean {
+  return eqptoPlatform(eqpto, override) === "nokia";
 }
 
 /** Retorna UF do catálogo quando o hostname pertence a um estado cadastrado. */

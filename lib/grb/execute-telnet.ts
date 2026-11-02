@@ -11,7 +11,7 @@ import {
   isTelnetStaffPreset,
   telnetPresetCategory,
 } from "@/lib/config/grb-telnet-commands";
-import { isNokiaEqpto } from "@/lib/config/grb-telnet-catalog";
+import { isNokiaEqpto, type TelnetPlatform } from "@/lib/config/grb-telnet-catalog";
 import { resolveRouterInstance, resolveVprnServiceId } from "@/lib/grb/telnet-vprn";
 import {
   applyCiscoPingIpv6Syntax,
@@ -45,6 +45,8 @@ export type GrbExecuteTelnetPresetInput = {
   grbBaseUrl: string;
   pageArg0?: string;
   eqpto: string;
+  /** Plataforma para hostname fora do catálogo (Nokia/Cisco). */
+  platform?: TelnetPlatform | null;
   idRede: number;
   commandPresetId: string;
   ipNetwork?: string;
@@ -139,9 +141,10 @@ export async function executeTelnetPreset(
   }
 
   let resolvedValue: string;
+  const platform = input.platform;
   const isNokiaPingWithVprn =
-    telnetPresetCategory(preset) === "ping" && preset.requiresVrf && isNokiaEqpto(eqpto);
-  const isNokiaBgpWithVprn = isNokiaEqpto(eqpto) && isNokiaVprnBgpPreset(preset.id);
+    telnetPresetCategory(preset) === "ping" && preset.requiresVrf && isNokiaEqpto(eqpto, platform);
+  const isNokiaBgpWithVprn = isNokiaEqpto(eqpto, platform) && isNokiaVprnBgpPreset(preset.id);
 
   if (isNokiaPingWithVprn) {
     const instance = input.vprnRouterInstance?.trim() || resolveRouterInstance(vrfName);
@@ -168,7 +171,7 @@ export async function executeTelnetPreset(
     }));
   } else {
     const vrfResolved =
-      isNokiaEqpto(eqpto) && preset.requiresVrf
+      isNokiaEqpto(eqpto, platform) && preset.requiresVrf
         ? input.vprnRouterInstance?.trim() || resolveRouterInstance(vrfName) || vrfName
         : vrfName;
 
@@ -181,7 +184,11 @@ export async function executeTelnetPreset(
     }));
   }
 
-  if (telnetPresetCategory(preset) === "ping" && !isNokiaEqpto(eqpto) && ipNetwork.includes(":")) {
+  if (
+    telnetPresetCategory(preset) === "ping" &&
+    !isNokiaEqpto(eqpto, platform) &&
+    ipNetwork.includes(":")
+  ) {
     const prefix = resolvedValue.slice(0, GRB_COMMAND_VALUE_PREFIX_LENGTH);
     const body = applyCiscoPingIpv6Syntax(
       resolvedValue.slice(GRB_COMMAND_VALUE_PREFIX_LENGTH),

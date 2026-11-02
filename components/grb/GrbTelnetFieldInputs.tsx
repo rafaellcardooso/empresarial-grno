@@ -4,6 +4,7 @@ import { FIELD_LABELS, fieldPrompt } from "@/lib/config/grb-telnet-ui";
 
 type GrbTelnetFieldBaseProps = {
   eqpto: string;
+  platform: TelnetPlatform;
   isExecuting: boolean;
 };
 
@@ -18,6 +19,7 @@ export type GrbTelnetIpFieldProps = GrbTelnetFieldBaseProps & {
 /** Campo IP do formulário TELNET. */
 export function GrbTelnetIpField({
   eqpto,
+  platform,
   isExecuting,
   value,
   onChange,
@@ -40,7 +42,9 @@ export function GrbTelnetIpField({
         autoComplete="off"
         disabled={isExecuting}
       />
-      <div className="form-text text-body-secondary">{hint ?? fieldPrompt("ip", eqpto)}</div>
+      <div className="form-text text-body-secondary">
+        {hint ?? fieldPrompt("ip", eqpto, platform)}
+      </div>
     </div>
   );
 }
@@ -53,6 +57,7 @@ export type GrbTelnetIpv6FieldProps = GrbTelnetFieldBaseProps & {
 /** Campo IPv6 do formulário TELNET. */
 export function GrbTelnetIpv6Field({
   eqpto,
+  platform,
   isExecuting,
   value,
   onChange,
@@ -72,12 +77,14 @@ export function GrbTelnetIpv6Field({
         autoComplete="off"
         disabled={isExecuting}
       />
-      <div className="form-text text-body-secondary">{fieldPrompt("ipv6", eqpto)}</div>
+      <div className="form-text text-body-secondary">{fieldPrompt("ipv6", eqpto, platform)}</div>
     </div>
   );
 }
 
-export type GrbTelnetInterfaceFieldProps = GrbTelnetFieldBaseProps & {
+export type GrbTelnetInterfaceFieldProps = {
+  eqpto: string;
+  isExecuting: boolean;
   interfaceChoice: string;
   customInterface: string;
   interfaceOptions: string[];
@@ -142,7 +149,8 @@ export function GrbTelnetInterfaceField({
   );
 }
 
-export type GrbTelnetVrfInputFieldProps = GrbTelnetFieldBaseProps & {
+export type GrbTelnetVrfInputFieldProps = {
+  isExecuting: boolean;
   value: string;
   onChange: (value: string) => void;
 };
@@ -201,7 +209,7 @@ export function GrbTelnetWordField({
         autoComplete="off"
         disabled={isExecuting}
       />
-      <div className="form-text text-body-secondary">{fieldPrompt("word", eqpto)}</div>
+      <div className="form-text text-body-secondary">{fieldPrompt("word", eqpto, platform)}</div>
     </div>
   );
 }

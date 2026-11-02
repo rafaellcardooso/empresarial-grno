@@ -76,8 +76,8 @@ export function GrbTelnetCommandFields({
       {fields.map((field) => {
         if (field === "vrf" && needsVprnList) {
           const vprnHint = commandPreset
-            ? vrfFieldPrompt(commandPreset, eqpto)
-            : fieldPrompt("vrf", eqpto);
+            ? vrfFieldPrompt(commandPreset, eqpto, platform)
+            : fieldPrompt("vrf", eqpto, platform);
 
           return (
             <GrbTelnetVprnField
@@ -110,6 +110,7 @@ export function GrbTelnetCommandFields({
             <GrbTelnetIpv6Field
               key={field}
               eqpto={eqpto}
+              platform={platform}
               isExecuting={isExecuting}
               value={ipv6Network}
               onChange={onIpv6NetworkChange}
@@ -122,11 +123,16 @@ export function GrbTelnetCommandFields({
             <GrbTelnetIpField
               key={field}
               eqpto={eqpto}
+              platform={platform}
               isExecuting={isExecuting}
               value={ipNetwork}
               onChange={onIpNetworkChange}
               label={commandPreset ? fieldLabelForPreset("ip", commandPreset) : undefined}
-              hint={commandPreset ? fieldPromptForPreset("ip", eqpto, commandPreset) : undefined}
+              hint={
+                commandPreset
+                  ? fieldPromptForPreset("ip", eqpto, commandPreset, platform)
+                  : undefined
+              }
             />
           );
         }
@@ -152,7 +158,6 @@ export function GrbTelnetCommandFields({
           return (
             <GrbTelnetVrfInputField
               key={field}
-              eqpto={eqpto}
               isExecuting={isExecuting}
               value={vrfName}
               onChange={onVrfNameChange}

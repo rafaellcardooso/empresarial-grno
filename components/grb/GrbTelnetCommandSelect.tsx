@@ -1,8 +1,10 @@
+import type { TelnetPlatform } from "@/lib/config/grb-telnet-catalog";
 import { presetUiLabel, type TelnetCommandGroup } from "@/lib/config/grb-telnet-ui";
 
 export type GrbTelnetCommandSelectProps = {
   commandPresetId: string;
   eqpto: string;
+  platform: TelnetPlatform;
   isExecuting: boolean;
   commandGroups: TelnetCommandGroup[];
   onCommandPresetIdChange: (presetId: string) => void;
@@ -12,6 +14,7 @@ export type GrbTelnetCommandSelectProps = {
 export function GrbTelnetCommandSelect({
   commandPresetId,
   eqpto,
+  platform,
   isExecuting,
   commandGroups,
   onCommandPresetIdChange,
@@ -32,7 +35,7 @@ export function GrbTelnetCommandSelect({
           <optgroup key={group.category} label={group.label}>
             {group.presets.map((preset) => (
               <option key={preset.id} value={preset.id}>
-                {presetUiLabel(preset, eqpto)}
+                {presetUiLabel(preset, eqpto, platform)}
               </option>
             ))}
           </optgroup>

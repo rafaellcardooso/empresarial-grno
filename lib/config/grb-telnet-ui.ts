@@ -1,4 +1,4 @@
-import { isNokiaEqpto } from "@/lib/config/grb-telnet-catalog";
+import { isNokiaEqpto, type TelnetPlatform } from "@/lib/config/grb-telnet-catalog";
 import {
   CISCO_TELNET_CATEGORY_LABELS,
   CISCO_TELNET_CATEGORY_ORDER,
@@ -73,8 +73,11 @@ export type TelnetCommandGroup = {
 };
 
 /** Lista presets de ping exibidos para o equipamento. */
-export function pingPresetsForEqpto(eqpto: string): TelnetCommandPreset[] {
-  if (isNokiaEqpto(eqpto)) {
+export function pingPresetsForEqpto(
+  eqpto: string,
+  platform?: TelnetPlatform | null,
+): TelnetCommandPreset[] {
+  if (isNokiaEqpto(eqpto, platform)) {
     const allowed = new Set(NOKIA_PING_PRESET_IDS);
     return TELNET_PING_PRESETS.filter((preset) => allowed.has(preset.id));
   }
@@ -82,13 +85,17 @@ export function pingPresetsForEqpto(eqpto: string): TelnetCommandPreset[] {
 }
 
 /** Lista presets disponíveis conforme papel, equipamento e plataforma. */
-export function telnetCommandsForRoleAndEqpto(role: string, eqpto: string): TelnetCommandPreset[] {
-  if (!isNokiaEqpto(eqpto)) {
+export function telnetCommandsForRoleAndEqpto(
+  role: string,
+  eqpto: string,
+  platform?: TelnetPlatform | null,
+): TelnetCommandPreset[] {
+  if (!isNokiaEqpto(eqpto, platform)) {
     return ciscoTelnetCommandsForRole(role);
   }
 
   const isStaff = role === "STAFF";
-  const ping = pingPresetsForEqpto(eqpto);
+  const ping = pingPresetsForEqpto(eqpto, platform);
 
   if (!isStaff) return ping;
 
@@ -101,9 +108,10 @@ export function telnetCommandsForRoleAndEqpto(role: string, eqpto: string): Teln
 export function telnetCommandGroupsForRoleAndEqpto(
   role: string,
   eqpto: string,
+  platform?: TelnetPlatform | null,
 ): TelnetCommandGroup[] {
-  const presets = telnetCommandsForRoleAndEqpto(role, eqpto);
-  const order: TelnetCommandCategory[] = isNokiaEqpto(eqpto)
+  const presets = telnetCommandsForRoleAndEqpto(role, eqpto, platform);
+  const order: TelnetCommandCategory[] = isNokiaEqpto(eqpto, platform)
     ? ["ping", "interfaces", "bgp"]
     : [...CISCO_TELNET_CATEGORY_ORDER];
   const grouped = new Map<TelnetCommandCategory, TelnetCommandPreset[]>();
@@ -125,16 +133,24 @@ export function telnetCommandGroupsForRoleAndEqpto(
 }
 
 /** Rótulo amigável do preset conforme a plataforma. */
-export function presetUiLabel(preset: TelnetCommandPreset, eqpto: string): string {
-  if (isNokiaEqpto(eqpto)) {
+export function presetUiLabel(
+  preset: TelnetCommandPreset,
+  eqpto: string,
+  platform?: TelnetPlatform | null,
+): string {
+  if (isNokiaEqpto(eqpto, platform)) {
     return NOKIA_PRESET_LABELS[preset.id] ?? preset.label;
   }
   return preset.label;
 }
 
 /** Texto curto solicitando o campo no formulário. */
-export function fieldPrompt(field: TelnetCommandField, eqpto: string): string {
-  const prompts = isNokiaEqpto(eqpto) ? FIELD_PROMPTS_NOKIA : FIELD_PROMPTS_DEFAULT;
+export function fieldPrompt(
+  field: TelnetCommandField,
+  eqpto: string,
+  platform?: TelnetPlatform | null,
+): string {
+  const prompts = isNokiaEqpto(eqpto, platform) ? FIELD_PROMPTS_NOKIA : FIELD_PROMPTS_DEFAULT;
   return prompts[field];
 }
 
@@ -154,24 +170,33 @@ export function fieldPromptForPreset(
   field: TelnetCommandField,
   eqpto: string,
   preset: TelnetCommandPreset,
+  platform?: TelnetPlatform | null,
 ): string {
   if (field === "ip" && telnetPresetCategory(preset) === "ping") {
     return "Informe o IPv4 ou IPv6 de destino.";
   }
-  return fieldPrompt(field, eqpto);
+  return fieldPrompt(field, eqpto, platform);
 }
 
 /** Texto do campo VPRN conforme preset (ping usa nome; BGP usa service-id). */
-export function vrfFieldPrompt(preset: TelnetCommandPreset, eqpto: string): string {
-  if (isNokiaEqpto(eqpto) && isNokiaVprnBgpPreset(preset.id)) {
+export function vrfFieldPrompt(
+  preset: TelnetCommandPreset,
+  eqpto: string,
+  platform?: TelnetPlatform | null,
+): string {
+  if (isNokiaEqpto(eqpto, platform) && isNokiaVprnBgpPreset(preset.id)) {
     return "Escolha na lista ou informe o VPRN; o comando usa o service-id (ex.: 7776).";
   }
-  return fieldPrompt("vrf", eqpto);
+  return fieldPrompt("vrf", eqpto, platform);
 }
 
 /** Ordem dos campos no formulário; Nokia pede VPRN antes do IP quando aplicável. */
-export function fieldsForEqpto(preset: TelnetCommandPreset, eqpto: string): TelnetCommandField[] {
-  if (isNokiaEqpto(eqpto) && preset.requiresVrf) {
+export function fieldsForEqpto(
+  preset: TelnetCommandPreset,
+  eqpto: string,
+  platform?: TelnetPlatform | null,
+): TelnetCommandField[] {
+  if (isNokiaEqpto(eqpto, platform) && preset.requiresVrf) {
     const fields: TelnetCommandField[] = ["vrf"];
     if (preset.requiresIp) fields.push("ip");
     if (preset.requiresIpv6) fields.push("ipv6");
@@ -185,6 +210,7 @@ export function fieldsForEqpto(preset: TelnetCommandPreset, eqpto: string): Teln
 export type TelnetCommandPreviewInput = {
   presetId: string;
   eqpto: string;
+  platform?: TelnetPlatform | null;
   ip?: string;
   ipv6?: string;
   vrf?: string;
@@ -202,13 +228,17 @@ export function previewTelnetCommand(input: TelnetCommandPreviewInput): string {
   const preset = getTelnetCommandPreset(input.presetId);
   if (!preset) return input.presetId;
 
+  const platform = input.platform;
   const ipVal = input.ip?.trim() || "(IP)";
-  const ipv6Val = input.ipv6?.trim() || "(IPv6)";
   const vprnVal = (input.vprnRouterInstance || input.vrf)?.trim() || "(VRF)";
   const wordVal = input.word?.trim() || "(N)";
   const ifaceVal = input.interface?.trim() || "(INTERFACE)";
 
-  if (telnetPresetCategory(preset) === "ping" && isNokiaEqpto(input.eqpto) && preset.requiresVrf) {
+  if (
+    telnetPresetCategory(preset) === "ping" &&
+    isNokiaEqpto(input.eqpto, platform) &&
+    preset.requiresVrf
+  ) {
     if (preset.id === "ping-vrf-vrf-ip-word") {
       return `ping ${ipVal} router-instance ${vprnVal} count ${wordVal}`;
     }
@@ -217,13 +247,13 @@ export function previewTelnetCommand(input: TelnetCommandPreviewInput): string {
 
   if (
     telnetPresetCategory(preset) === "ping" &&
-    isNokiaEqpto(input.eqpto) &&
+    isNokiaEqpto(input.eqpto, platform) &&
     preset.id === "ping-ip"
   ) {
     return `ping ${ipVal}`;
   }
 
-  if (isNokiaEqpto(input.eqpto) && isNokiaVprnBgpPreset(preset.id)) {
+  if (isNokiaEqpto(input.eqpto, platform) && isNokiaVprnBgpPreset(preset.id)) {
     const serviceIdVal =
       input.vprnServiceId?.trim() ||
       resolveVprnServiceId(input.vprnRouterInstance || input.vrf || "");
@@ -236,7 +266,7 @@ export function previewTelnetCommand(input: TelnetCommandPreviewInput): string {
 
   try {
     const vrfForBuild =
-      isNokiaEqpto(input.eqpto) && preset.requiresVrf && !isNokiaVprnBgpPreset(preset.id)
+      isNokiaEqpto(input.eqpto, platform) && preset.requiresVrf && !isNokiaVprnBgpPreset(preset.id)
         ? input.vprnRouterInstance || input.vrf || "(VRF)"
         : input.vrf || "(VRF)";
 
@@ -249,7 +279,7 @@ export function previewTelnetCommand(input: TelnetCommandPreviewInput): string {
     });
     return display;
   } catch {
-    return presetUiLabel(preset, input.eqpto);
+    return presetUiLabel(preset, input.eqpto, platform);
   }
 }
 
@@ -259,8 +289,12 @@ export function previewPingCommand(input: TelnetCommandPreviewInput): string {
 }
 
 /** Indica se o preset exige lista VPRN Nokia (ping ou BGP com VRF). */
-export function presetNeedsVprnList(preset: TelnetCommandPreset, eqpto: string): boolean {
-  return isNokiaEqpto(eqpto) && preset.requiresVrf === true;
+export function presetNeedsVprnList(
+  preset: TelnetCommandPreset,
+  eqpto: string,
+  platform?: TelnetPlatform | null,
+): boolean {
+  return isNokiaEqpto(eqpto, platform) && preset.requiresVrf === true;
 }
 
 /** Indica se o preset exige confirmação STAFF no servidor. */

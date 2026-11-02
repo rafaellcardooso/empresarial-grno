@@ -20,9 +20,11 @@ type UseGrbTelnetPanelSectionsInput = {
   customEquipment: string;
   eqpto: string;
   platform: TelnetPlatform;
+  isCustomEquipment: boolean;
   handleSelectCatalogEqpto: (hostname: string) => void;
   setEquipmentChoice: (value: string) => void;
   setCustomEquipment: (value: string) => void;
+  onPlatformChange: (platform: TelnetPlatform) => void;
   commandPresetId: string;
   setCommandPresetId: (value: string) => void;
   commandGroups: TelnetCommandGroup[];
@@ -67,11 +69,13 @@ export function useGrbTelnetPanelSections(input: UseGrbTelnetPanelSectionsInput)
       customEquipment: input.customEquipment,
       eqpto: input.eqpto,
       platform: input.platform,
+      isCustomEquipment: input.isCustomEquipment,
       isExecuting: input.isExecuting,
       ufForEqpto,
       onSelectCatalogEqpto: input.handleSelectCatalogEqpto,
       onEquipmentChoiceChange: input.setEquipmentChoice,
       onCustomEquipmentChange: input.setCustomEquipment,
+      onPlatformChange: input.onPlatformChange,
     }),
     [
       input.catalogEqptos,
@@ -79,7 +83,9 @@ export function useGrbTelnetPanelSections(input: UseGrbTelnetPanelSectionsInput)
       input.eqpto,
       input.equipmentChoice,
       input.handleSelectCatalogEqpto,
+      input.isCustomEquipment,
       input.isExecuting,
+      input.onPlatformChange,
       input.platform,
     ],
   );
@@ -88,6 +94,7 @@ export function useGrbTelnetPanelSections(input: UseGrbTelnetPanelSectionsInput)
     (): GrbTelnetCommandSelectProps => ({
       commandPresetId: input.commandPresetId,
       eqpto: input.eqpto,
+      platform: input.platform,
       isExecuting: input.isExecuting,
       commandGroups: input.commandGroups,
       onCommandPresetIdChange: input.setCommandPresetId,
@@ -97,6 +104,7 @@ export function useGrbTelnetPanelSections(input: UseGrbTelnetPanelSectionsInput)
       input.commandPresetId,
       input.eqpto,
       input.isExecuting,
+      input.platform,
       input.setCommandPresetId,
     ],
   );

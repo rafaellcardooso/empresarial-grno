@@ -11,7 +11,11 @@ import {
   GRB_DEFAULT_ID_REDE,
   GRB_INTERFACE_EMPTY_VALUE,
 } from "@/lib/config/grb";
-import { eqptoPlatform, getTelnetState } from "@/lib/config/grb-telnet-catalog";
+import {
+  eqptoPlatform,
+  getTelnetState,
+  type TelnetPlatform,
+} from "@/lib/config/grb-telnet-catalog";
 import {
   isNokiaVprnBgpPreset,
   TELNET_DEFAULT_PING_PRESET_ID,
@@ -38,6 +42,7 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
   const [selectedUf, setSelectedUf] = useState("MA");
   const [equipmentChoice, setEquipmentChoice] = useState("");
   const [customEquipment, setCustomEquipment] = useState("");
+  const [customPlatform, setCustomPlatform] = useState<TelnetPlatform>("nokia");
   const [commandPresetId, setCommandPresetId] = useState(TELNET_DEFAULT_PING_PRESET_ID);
   const [ipNetwork, setIpNetwork] = useState("");
   const [ipv6Network, setIpv6Network] = useState("");
@@ -53,13 +58,14 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
 
   const stateConfig = getTelnetState(selectedUf);
   const catalogEqptos = useMemo(() => stateConfig?.eqptos ?? [], [stateConfig]);
+  const isCustomEquipment = equipmentChoice === GRB_CUSTOM_EQUIPMENT_VALUE;
 
   const eqpto = useMemo(() => {
-    if (equipmentChoice === GRB_CUSTOM_EQUIPMENT_VALUE) {
+    if (isCustomEquipment) {
       return customEquipment.trim().toUpperCase();
     }
     return equipmentChoice.trim();
-  }, [customEquipment, equipmentChoice]);
+  }, [customEquipment, equipmentChoice, isCustomEquipment]);
 
   const networkInterface = useMemo(() => {
     if (interfaceChoice === GRB_CUSTOM_INTERFACE_VALUE) {
@@ -68,14 +74,17 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     return interfaceChoice.trim();
   }, [customInterface, interfaceChoice]);
 
-  const platform = eqpto ? eqptoPlatform(eqpto) : (stateConfig?.platform ?? "nokia");
+  const platformOverride = isCustomEquipment ? customPlatform : null;
+  const platform = eqpto
+    ? eqptoPlatform(eqpto, platformOverride)
+    : (stateConfig?.platform ?? "nokia");
   const availableCommands = useMemo(
-    () => (eqpto ? telnetCommandsForRoleAndEqpto(userRole, eqpto) : []),
-    [eqpto, userRole],
+    () => (eqpto ? telnetCommandsForRoleAndEqpto(userRole, eqpto, platform) : []),
+    [eqpto, platform, userRole],
   );
   const commandGroups = useMemo(
-    () => (eqpto ? telnetCommandGroupsForRoleAndEqpto(userRole, eqpto) : []),
-    [eqpto, userRole],
+    () => (eqpto ? telnetCommandGroupsForRoleAndEqpto(userRole, eqpto, platform) : []),
+    [eqpto, platform, userRole],
   );
   const commandPreset = useMemo(
     () => availableCommands.find((preset) => preset.id === commandPresetId) ?? availableCommands[0],
@@ -83,13 +92,14 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
   );
 
   const activeFields = useMemo(
-    () => (commandPreset && eqpto ? fieldsForEqpto(commandPreset, eqpto) : []),
-    [commandPreset, eqpto],
+    () => (commandPreset && eqpto ? fieldsForEqpto(commandPreset, eqpto, platform) : []),
+    [commandPreset, eqpto, platform],
   );
 
-  const needsVprnList = commandPreset && eqpto ? presetNeedsVprnList(commandPreset, eqpto) : false;
+  const needsVprnList =
+    commandPreset && eqpto ? presetNeedsVprnList(commandPreset, eqpto, platform) : false;
   const needsVprnServiceId =
-    commandPreset && eqpto ? isNokiaVprnBgpPreset(commandPreset.id) : false;
+    commandPreset && eqpto && platform === "nokia" ? isNokiaVprnBgpPreset(commandPreset.id) : false;
 
   const { interfaceOptions, interfacesLoading, interfacesError } = useGrbTelnetInterfaces({
     baseUrl,
@@ -108,6 +118,7 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
       previewTelnetCommand({
         presetId: commandPreset?.id ?? commandPresetId,
         eqpto,
+        platform,
         ip: ipNetwork,
         ipv6: ipv6Network,
         vrf: vrfName,
@@ -120,6 +131,7 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
       commandPreset?.id,
       commandPresetId,
       eqpto,
+      platform,
       ipNetwork,
       ipv6Network,
       networkInterface,
@@ -158,8 +170,12 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
   const handleUfChange = useCallback((uf: string) => {
     setSelectedUf(uf);
     const nextState = getTelnetState(uf);
-    setEquipmentChoice(nextState?.eqptos[0] ?? GRB_CUSTOM_EQUIPMENT_VALUE);
-    setCustomEquipment("");
+    // Troca de UF só afeta o catálogo; hostname livre permanece intacto.
+    setEquipmentChoice((current) =>
+      current === GRB_CUSTOM_EQUIPMENT_VALUE
+        ? current
+        : (nextState?.eqptos[0] ?? GRB_CUSTOM_EQUIPMENT_VALUE),
+    );
     setFormError(null);
     setExecuteError(null);
     setExecuteResult(null);
@@ -179,6 +195,10 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     setCustomInterface("");
   }, []);
 
+  const handleEquipmentChoiceChange = useCallback((value: string) => {
+    setEquipmentChoice(value);
+  }, []);
+
   const { ufSection, equipmentSection, commandSection, commandFields } = useGrbTelnetPanelSections({
     selectedUf,
     isExecuting,
@@ -188,9 +208,11 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     customEquipment,
     eqpto,
     platform,
+    isCustomEquipment,
     handleSelectCatalogEqpto,
-    setEquipmentChoice,
+    setEquipmentChoice: handleEquipmentChoiceChange,
     setCustomEquipment,
+    onPlatformChange: setCustomPlatform,
     commandPresetId,
     setCommandPresetId,
     commandGroups,
@@ -240,6 +262,7 @@ export function useGrbTelnetPanel({ baseUrl, userRole }: UseGrbTelnetPanelInput)
     try {
       const result = await executeTelnetPreset({
         eqpto,
+        platform,
         idRede: GRB_DEFAULT_ID_REDE,
         ipNetwork: ipNetwork.trim(),
         ipv6Network: ipv6Network.trim(),
