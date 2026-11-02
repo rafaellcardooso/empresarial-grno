@@ -76,3 +76,6 @@ workers/bsod/log/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local leftovers (planta não faz parte do monorepo)
+workers/planta/
