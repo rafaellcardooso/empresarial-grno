@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import {
+  TRATATIVA_AWAITING_CONCLUSION_LABEL,
+  TRATATIVA_WORKFLOW_LABELS,
+} from "@/lib/config/tratativa-workflow";
 import type { SdhAlarmListItem } from "@/lib/models/sdh";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
+import { hasAcionamentoInCurrentCycle } from "@/lib/tratativa/treatment-types";
 
 type SdhDetalhesPanelProps = {
   open: boolean;
@@ -55,10 +60,17 @@ export function SdhDetalhesPanel({ open, alarm, onClose }: SdhDetalhesPanelProps
 }
 
 function SdhDetalhesBody({ alarm }: { alarm: SdhAlarmListItem }) {
-  const tratativaLabel =
-    Number(alarm.em_tratativa) === 1
-      ? `Em tratativa · ${alarm.tratativa_user_login ?? "—"}`
-      : "Pendente";
+  const active = Number(alarm.em_tratativa) === 1;
+  const awaitingConclusion = active && Number(alarm.is_active) !== 1;
+  const acionado = hasAcionamentoInCurrentCycle(alarm.tratativa_history ?? []);
+  const phase = !active
+    ? "Pendente"
+    : awaitingConclusion
+      ? TRATATIVA_AWAITING_CONCLUSION_LABEL
+      : acionado
+        ? TRATATIVA_WORKFLOW_LABELS.acionado
+        : TRATATIVA_WORKFLOW_LABELS.em_tratativa;
+  const tratativaLabel = active ? `${phase} · ${alarm.tratativa_user_login ?? "—"}` : phase;
   const dataAlarme =
     formatDateTimePtBr(
       typeof alarm.data_alarme === "string"

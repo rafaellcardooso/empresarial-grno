@@ -6,6 +6,7 @@ import { OpenInSirButton } from "@/components/sir/OpenInSirButton";
 import { RalTipoBadge } from "@/components/sir/RalTipoBadge";
 import { SirIncidentDetailsView } from "@/components/sir/SirIncidentDetailsView";
 import { SirStatusBadge } from "@/components/sir/SirStatusBadge";
+import { TRATATIVA_WORKFLOW_LABELS } from "@/lib/config/tratativa-workflow";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 
 type SirDetalhesPanelProps = {
@@ -86,7 +87,9 @@ function sirTratativaLabel(
 ): string {
   if (tratativa) {
     const who = [tratativa.userName, tratativa.userCorporateId].filter(Boolean).join(" · ");
-    return `Em tratativa · ${who || "—"}`;
+    const status = tratativa.workflowStatus ?? "em_tratativa";
+    const phase = TRATATIVA_WORKFLOW_LABELS[status] ?? TRATATIVA_WORKFLOW_LABELS.em_tratativa;
+    return `${phase} · ${who || "—"}`;
   }
   if (String(row.status ?? "").toUpperCase() !== "ATIVO") {
     return "Encerrado";

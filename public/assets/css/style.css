@@ -4678,8 +4678,33 @@ a.sir-report-summary__metric:focus-visible {
 }
 
 .tratativa-workflow-badge--em-tratativa {
-  background: rgba(13, 202, 240, 0.14);
-  color: #0aa2c0;
+  background: rgba(253, 126, 20, 0.16);
+  color: #d9480f;
+}
+
+[data-bs-theme="dark"] .tratativa-workflow-badge--acionado {
+  background: rgba(13, 110, 253, 0.28);
+  color: #8bb4ff;
+}
+
+[data-bs-theme="dark"] .tratativa-workflow-badge--pendente {
+  background: rgba(255, 193, 7, 0.22);
+  color: #ffda6a;
+}
+
+[data-bs-theme="dark"] .tratativa-workflow-badge--validado {
+  background: rgba(25, 135, 84, 0.28);
+  color: #75b798;
+}
+
+[data-bs-theme="dark"] .tratativa-workflow-badge--reprovada {
+  background: rgba(220, 53, 69, 0.28);
+  color: #ea868f;
+}
+
+[data-bs-theme="dark"] .tratativa-workflow-badge--em-tratativa {
+  background: rgba(253, 126, 20, 0.28);
+  color: #ffb074;
 }
 
 .tratativa-cell--bsod-combined {

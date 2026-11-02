@@ -8,6 +8,10 @@ import {
 } from "@/components/bsod/bsod-table-cells";
 import { DateTimeStacked } from "@/components/ui/DateTimeStacked";
 import { apiFetch } from "@/lib/config/base-path";
+import {
+  TRATATIVA_BSOD_ACIONADO_LABEL,
+  TRATATIVA_WORKFLOW_LABELS,
+} from "@/lib/config/tratativa-workflow";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
 
@@ -75,7 +79,12 @@ export function BsodDetalhesPanel({
 function bsodTratativaLabel(tratativa: TratativaPublic | null | undefined): string {
   if (!tratativa) return "Pendente";
   const who = [tratativa.userName, tratativa.userCorporateId].filter(Boolean).join(" · ");
-  return `Em tratativa · ${who || "—"}`;
+  const status = tratativa.workflowStatus ?? "em_tratativa";
+  const phase =
+    status === "acionado"
+      ? TRATATIVA_BSOD_ACIONADO_LABEL
+      : (TRATATIVA_WORKFLOW_LABELS[status] ?? TRATATIVA_WORKFLOW_LABELS.em_tratativa);
+  return `${phase} · ${who || "—"}`;
 }
 
 function BsodDetalhesBody({

@@ -7,6 +7,10 @@ import { TratativaPanel } from "@/components/tratativa/TratativaPanel";
 import { TratativaTreatButton } from "@/components/tratativa/TratativaTreatButton";
 import { SortableDataTable } from "@/components/ui/SortableDataTable";
 import { SDH_TABLE_COLUMNS } from "@/lib/config/sdh-tables";
+import {
+  TRATATIVA_AWAITING_CONCLUSION_LABEL,
+  TRATATIVA_WORKFLOW_LABELS,
+} from "@/lib/config/tratativa-workflow";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import type { SdhAlarmListItem } from "@/lib/models/sdh";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
@@ -68,10 +72,10 @@ export function SdhRecordsTable({
             const label = !active
               ? "Pendente"
               : awaitingConclusion
-                ? "Aguardando conclusão"
+                ? TRATATIVA_AWAITING_CONCLUSION_LABEL
                 : acionado
-                  ? "Acionado"
-                  : "Em tratativa";
+                  ? TRATATIVA_WORKFLOW_LABELS.acionado
+                  : TRATATIVA_WORKFLOW_LABELS.em_tratativa;
             const className = !active
               ? "tratativa-workflow-badge tratativa-workflow-badge--pendente"
               : awaitingConclusion

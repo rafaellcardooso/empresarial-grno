@@ -2,7 +2,7 @@ import type { TratativaWorkflowStatus } from "@/lib/models/tratativa";
 
 /** Rótulos UI do status operacional da tratativa. */
 export const TRATATIVA_WORKFLOW_LABELS: Record<TratativaWorkflowStatus, string> = {
-  em_tratativa: "Em tratativa",
+  em_tratativa: "Aguardando acionamento",
   acionado: "Acionado",
   validacao_pendente: "Validar sinal",
   validacao_reprovada: "Reprovada",

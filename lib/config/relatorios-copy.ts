@@ -192,7 +192,7 @@ export const RELATORIOS_COPY = {
   allDdds: "Todos os DDDs",
   chamadosTitle: "Chamados por status",
   chamadosLead:
-    "Listagem da coorte (iniciados no período). Status = etapa atual: Em tratativa ainda sem VT; Concluídos já têm data de conclusão. O filtro afeta só esta tabela.",
+    "Listagem da coorte (iniciados no período). Status = etapa atual: Aguardando acionamento ainda sem VT; Concluídos já têm data de conclusão. O filtro afeta só esta tabela.",
   emptyChamados: "Nenhum chamado encontrado para o filtro selecionado.",
   chamadosColMac: "MAC",
   chamadosColStatus: "Status",

@@ -6,8 +6,10 @@ import { AcionamentoModal } from "@/components/tratativa/AcionamentoModal";
 import { SirConcludeFcaModal } from "@/components/tratativa/SirConcludeFcaModal";
 import { SirPrepModal } from "@/components/tratativa/SirPrepModal";
 import { TratativaBsodWorkflow } from "@/components/tratativa/TratativaBsodWorkflow";
+import { TratativaWorkflowBadge } from "@/components/tratativa/TratativaWorkflowBadge";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
 import { UI_COPY } from "@/lib/config/ui-copy";
+import { TRATATIVA_WORKFLOW_LABELS } from "@/lib/config/tratativa-workflow";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 import type { ValidacaoFcaInput } from "@/lib/models/validacao";
 import type { TreatmentDomain, TreatmentSession } from "@/lib/tratativa/treatment-types";
@@ -296,7 +298,24 @@ export function TratativaPanel({
           {session ? (
             <>
               <section className="tratativa-panel__section">
-                <h3 className="h6">Resumo</h3>
+                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                  <h3 className="h6 mb-0">Resumo</h3>
+                  {session.tratativa || session.workflowStatus ? (
+                    <TratativaWorkflowBadge
+                      status={
+                        session.workflowStatus ??
+                        session.tratativa?.workflowStatus ??
+                        "em_tratativa"
+                      }
+                    />
+                  ) : null}
+                </div>
+                {showInternalAcionamentoEntry || showBsodAcionamento ? (
+                  <div className="alert alert-warning py-2 small mb-3">
+                    {TRATATIVA_WORKFLOW_LABELS.em_tratativa}. Use{" "}
+                    <strong>{UI_COPY.acionamentoOpen}</strong> para registrar a visita técnica.
+                  </div>
+                ) : null}
                 <dl className="tratativa-panel__summary">
                   {session.summary.map((item) => (
                     <div key={item.label} className="tratativa-panel__summary-item">

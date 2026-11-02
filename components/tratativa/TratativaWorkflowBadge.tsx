@@ -8,9 +8,9 @@ type TratativaWorkflowBadgeProps = {
   status?: TratativaWorkflowStatus;
 };
 
-/** Badge compacto com fase operacional da tratativa BSOD. */
+/** Badge compacto com fase operacional da tratativa (inclui aguardando acionamento). */
 export function TratativaWorkflowBadge({ status }: TratativaWorkflowBadgeProps) {
-  if (!status || status === "em_tratativa") return null;
+  if (!status) return null;
 
   const className =
     status === "acionado"
@@ -19,7 +19,9 @@ export function TratativaWorkflowBadge({ status }: TratativaWorkflowBadgeProps) 
         ? "tratativa-workflow-badge tratativa-workflow-badge--pendente"
         : status === "validacao_reprovada"
           ? "tratativa-workflow-badge tratativa-workflow-badge--reprovada"
-          : "tratativa-workflow-badge tratativa-workflow-badge--validado";
+          : status === "validado"
+            ? "tratativa-workflow-badge tratativa-workflow-badge--validado"
+            : "tratativa-workflow-badge tratativa-workflow-badge--em-tratativa";
 
   const label =
     status === "acionado" ? TRATATIVA_BSOD_ACIONADO_LABEL : TRATATIVA_WORKFLOW_LABELS[status];
