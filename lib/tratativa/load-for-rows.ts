@@ -16,5 +16,9 @@ export async function loadTratativasForSirRows(
   recordKind: "RAL" | "REC",
   rows: { num_recup: string }[],
 ): Promise<Record<string, TratativaPublic>> {
-  return mapActiveTratativas(recordKind, rows.map((row) => row.num_recup).filter(Boolean));
+  const map = await mapActiveTratativas(
+    recordKind,
+    rows.map((row) => row.num_recup).filter(Boolean),
+  );
+  return enrichTratativasWorkflow(map);
 }

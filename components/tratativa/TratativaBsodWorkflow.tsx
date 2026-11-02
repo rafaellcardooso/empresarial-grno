@@ -96,8 +96,7 @@ export function TratativaBsodWorkflow({
           title={UI_COPY.acionamentoOpen}
           aria-label={UI_COPY.acionamentoOpen}
         >
-          <i className="bi bi-whatsapp" aria-hidden="true" />
-          {variant === "compact" ? null : <span>{UI_COPY.acionamentoOpen}</span>}
+          <span>{UI_COPY.acionamentoOpen}</span>
         </button>
       ) : null}
 

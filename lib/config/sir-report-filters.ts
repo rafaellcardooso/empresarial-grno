@@ -66,14 +66,29 @@ export function parseSirReportParams(params: {
 }
 
 /** Monta href do relatório SIR preservando filtros. */
-export function buildSirReportHref(filters: SirReportFilters): string {
+export function buildSirReportHref(
+  filters: SirReportFilters,
+  options?: { concluidosPage?: number; concluidosEscopo?: string },
+): string {
   const params = new URLSearchParams();
   params.set("de", formatRelatorioDateParam(filters.from));
   params.set("ate", formatRelatorioDateParam(filters.to));
   if (filters.domain !== "all") params.set("dominio", filters.domain);
   if (filters.tratativa) params.set("tratativa", filters.tratativa);
   if (filters.ddd) params.set("ddd", filters.ddd);
+  if (options?.concluidosEscopo) params.set("concluidosEscopo", options.concluidosEscopo);
+  if (options?.concluidosPage && options.concluidosPage > 1) {
+    params.set("concluidosPage", String(options.concluidosPage));
+  }
   return `/relatorios/sir?${params.toString()}`;
+}
+
+/** Normaliza escopo da listagem de concluídos (RAL/REC/DSR/TCQ). */
+export function sirConcludedScopeFromParam(
+  param?: string | null,
+): "RAL" | "REC" | "DSR" | "TCQ" | undefined {
+  if (param === "RAL" || param === "REC" || param === "DSR" || param === "TCQ") return param;
+  return undefined;
 }
 
 /** Href do monitoramento SIR (RAL ou REC) com filtros operacionais. */

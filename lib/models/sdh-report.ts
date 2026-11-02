@@ -1,4 +1,5 @@
 import type { SdhVendorFilter } from "@/lib/config/sdh-filters";
+import type { ValidacaoFcaInput } from "@/lib/models/validacao";
 
 /** Filtros do relatório analítico SDH. */
 export type SdhReportFilters = {
@@ -6,6 +7,34 @@ export type SdhReportFilters = {
   to: Date;
   vendor?: SdhVendorFilter;
   ddd?: string;
+};
+
+/** Evento da cronologia de um encerramento SDH. */
+export type SdhConcludedHistoryEntry = {
+  eventType: string;
+  note: string | null;
+  userName: string;
+  createdAt: string;
+};
+
+/** Linha da listagem de tratativas SDH encerradas no período. */
+export type SdhConcludedChamadoRow = {
+  id: number;
+  alarmId: number;
+  ne: string | null;
+  alarme: string | null;
+  ddd: string | null;
+  municipio: string | null;
+  vendor: string | null;
+  porta: string | null;
+  circuito: string | null;
+  dataAlarme: string | null;
+  userName: string;
+  userCorporateId: string;
+  startedAt: string | null;
+  concludedAt: string;
+  fca: ValidacaoFcaInput | null;
+  history: SdhConcludedHistoryEntry[];
 };
 
 /** Resumo do backlog ativo e da atividade de tratativa no período. */

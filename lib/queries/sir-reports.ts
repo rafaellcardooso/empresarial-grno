@@ -5,17 +5,20 @@ import { sirDddFromCf } from "@/lib/config/sir-locations";
 import { sirReportEndExclusive } from "@/lib/config/sir-report-filters";
 import { sirQuery } from "@/lib/db/sir";
 import { SIR_TABLES } from "@/lib/models";
+import { REC_TIPOS } from "@/lib/config/rec-types";
 import type {
   SirReportAgeBucket,
   SirReportDailyPoint,
   SirReportData,
   SirReportDomainSummary,
   SirReportFilters,
+  SirReportKpiScope,
   SirReportRankRow,
 } from "@/lib/models/sir-report";
 import {
   sirReportActiveScope,
   sirReportDddClause,
+  sirReportPrefixClause,
   sirReportTreatmentClause,
 } from "@/lib/queries/sir-report-scope";
 
@@ -46,6 +49,7 @@ const EMPTY_DOMAIN: SirReportDomainSummary = {
   pending: 0,
   inTreatment: 0,
   openingsInPeriod: 0,
+  conclusionsInPeriod: 0,
 };
 
 /** Backlog ativo com pendentes e em tratativa. */
@@ -53,8 +57,9 @@ async function loadDomainBacklog(
   table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs,
   kind: "RAL" | "REC",
   filters: SirReportFilters,
-): Promise<Omit<SirReportDomainSummary, "openingsInPeriod">> {
-  const scope = sirReportActiveScope(table, kind, filters);
+  prefix?: string,
+): Promise<Omit<SirReportDomainSummary, "openingsInPeriod" | "conclusionsInPeriod">> {
+  const scope = sirReportActiveScope(table, kind, filters, prefix);
   const rows = await sirQuery<BacklogRow[]>(
     `SELECT
        COUNT(*) AS total_active,
@@ -87,9 +92,11 @@ async function loadOpeningsInPeriod(
   table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs,
   kind: "RAL" | "REC",
   filters: SirReportFilters,
+  prefix?: string,
 ): Promise<number> {
   const treatment = sirReportTreatmentClause(table, kind, filters.tratativa);
   const ddd = sirReportDddClause(filters.ddd);
+  const byPrefix = sirReportPrefixClause(prefix);
   const endExclusive = sirReportEndExclusive(filters);
   const rows = await sirQuery<CountRow[]>(
     `SELECT COUNT(*) AS total
@@ -98,8 +105,36 @@ async function loadOpeningsInPeriod(
        AND ${SIR_ABERTURA_EXPR} >= ?
        AND ${SIR_ABERTURA_EXPR} < ?
        ${treatment.sql}
-       ${ddd.sql}`,
-    [filters.from, endExclusive, ...treatment.params, ...ddd.params],
+       ${ddd.sql}
+       ${byPrefix.sql}`,
+    [filters.from, endExclusive, ...treatment.params, ...ddd.params, ...byPrefix.params],
+  );
+  return Number(rows[0]?.total ?? 0);
+}
+
+/** Conclusões (`CONCLUIDA`) no período, opcionalmente filtradas por DDD/prefixo. */
+async function loadConclusionsInPeriod(
+  table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs,
+  kind: "RAL" | "REC",
+  filters: SirReportFilters,
+  prefix?: string,
+): Promise<number> {
+  const ddd = sirReportDddClause(filters.ddd);
+  const byPrefix = sirReportPrefixClause(prefix);
+  const endExclusive = sirReportEndExclusive(filters);
+  const rows = await sirQuery<CountRow[]>(
+    `SELECT COUNT(DISTINCT e.tratativa_id) AS total
+     FROM app_tratativa_events e
+     INNER JOIN ${table} r
+       ON CONVERT(r.num_recup USING utf8mb4) COLLATE utf8mb4_unicode_ci =
+          e.record_key COLLATE utf8mb4_unicode_ci
+     WHERE e.record_kind = ?
+       AND e.event_type = 'CONCLUIDA'
+       AND e.created_at >= ?
+       AND e.created_at < ?
+       ${ddd.sql}
+       ${byPrefix.sql.replace(/num_recup/g, "r.num_recup")}`,
+    [kind, filters.from, endExclusive, ...ddd.params, ...byPrefix.params],
   );
   return Number(rows[0]?.total ?? 0);
 }
@@ -260,17 +295,51 @@ async function loadDailyOpenings(
   return map;
 }
 
-/** Monta resumo de um domínio. */
+/** Série diária de conclusões (`CONCLUIDA`) no período. */
+async function loadDailyConclusions(
+  table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs,
+  kind: "RAL" | "REC",
+  filters: SirReportFilters,
+): Promise<Map<string, number>> {
+  const ddd = sirReportDddClause(filters.ddd);
+  const endExclusive = sirReportEndExclusive(filters);
+  const rows = await sirQuery<DailyRow[]>(
+    `SELECT DATE(e.created_at) AS day, COUNT(DISTINCT e.tratativa_id) AS total
+     FROM app_tratativa_events e
+     INNER JOIN ${table} r
+       ON CONVERT(r.num_recup USING utf8mb4) COLLATE utf8mb4_unicode_ci =
+          e.record_key COLLATE utf8mb4_unicode_ci
+     WHERE e.record_kind = ?
+       AND e.event_type = 'CONCLUIDA'
+       AND e.created_at >= ?
+       AND e.created_at < ?
+       ${ddd.sql}
+     GROUP BY DATE(e.created_at)
+     ORDER BY day ASC`,
+    [kind, filters.from, endExclusive, ...ddd.params],
+  );
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    const date =
+      row.day instanceof Date ? formatRelatorioDateParam(row.day) : String(row.day).slice(0, 10);
+    map.set(date, Number(row.total));
+  }
+  return map;
+}
+
+/** Monta resumo de um domínio (opcionalmente filtrado por prefixo REC/DSR/TCQ). */
 async function loadDomainSummary(
   table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs,
   kind: "RAL" | "REC",
   filters: SirReportFilters,
+  prefix?: string,
 ): Promise<SirReportDomainSummary> {
-  const [backlog, openingsInPeriod] = await Promise.all([
-    loadDomainBacklog(table, kind, filters),
-    loadOpeningsInPeriod(table, kind, filters),
+  const [backlog, openingsInPeriod, conclusionsInPeriod] = await Promise.all([
+    loadDomainBacklog(table, kind, filters, prefix),
+    loadOpeningsInPeriod(table, kind, filters, prefix),
+    loadConclusionsInPeriod(table, kind, filters, prefix),
   ]);
-  return { ...backlog, openingsInPeriod };
+  return { ...backlog, openingsInPeriod, conclusionsInPeriod };
 }
 
 /** Carrega agregações e rankings de um domínio. */
@@ -279,15 +348,16 @@ async function loadDomainBundle(
   kind: "RAL" | "REC",
   filters: SirReportFilters,
 ) {
-  const [summary, ageBuckets, byCf, byTipo, byDdd, daily] = await Promise.all([
+  const [summary, ageBuckets, byCf, byTipo, byDdd, daily, dailyConclusions] = await Promise.all([
     loadDomainSummary(table, kind, filters),
     loadAgeBuckets(table, kind, filters),
     loadByCf(table, kind, filters),
     loadByTipo(table, kind, filters),
     loadByDdd(table, kind, filters),
     loadDailyOpenings(table, kind, filters),
+    loadDailyConclusions(table, kind, filters),
   ]);
-  return { summary, ageBuckets, byCf, byTipo, byDdd, daily };
+  return { summary, ageBuckets, byCf, byTipo, byDdd, daily, dailyConclusions };
 }
 
 /** Carrega o payload analítico completo do relatório SIR. */
@@ -295,42 +365,60 @@ export async function getSirReport(filters: SirReportFilters): Promise<SirReport
   const includeRal = filters.domain === "all" || filters.domain === "ral";
   const includeRec = filters.domain === "all" || filters.domain === "rec";
 
+  const emptyBundle = {
+    summary: EMPTY_DOMAIN,
+    ageBuckets: [] as SirReportAgeBucket[],
+    byCf: [] as SirReportRankRow[],
+    byTipo: [] as SirReportRankRow[],
+    byDdd: [] as SirReportRankRow[],
+    daily: new Map<string, number>(),
+    dailyConclusions: new Map<string, number>(),
+  };
+
   const [ral, rec] = await Promise.all([
-    includeRal
-      ? loadDomainBundle(SIR_TABLES.rals, "RAL", filters)
-      : Promise.resolve({
-          summary: EMPTY_DOMAIN,
-          ageBuckets: [] as SirReportAgeBucket[],
-          byCf: [] as SirReportRankRow[],
-          byTipo: [] as SirReportRankRow[],
-          byDdd: [] as SirReportRankRow[],
-          daily: new Map<string, number>(),
-        }),
-    includeRec
-      ? loadDomainBundle(SIR_TABLES.recs, "REC", filters)
-      : Promise.resolve({
-          summary: EMPTY_DOMAIN,
-          ageBuckets: [] as SirReportAgeBucket[],
-          byCf: [] as SirReportRankRow[],
-          byTipo: [] as SirReportRankRow[],
-          byDdd: [] as SirReportRankRow[],
-          daily: new Map<string, number>(),
-        }),
+    includeRal ? loadDomainBundle(SIR_TABLES.rals, "RAL", filters) : Promise.resolve(emptyBundle),
+    includeRec ? loadDomainBundle(SIR_TABLES.recs, "REC", filters) : Promise.resolve(emptyBundle),
   ]);
 
-  const dates = new Set([...ral.daily.keys(), ...rec.daily.keys()]);
-  const dailyOpenings: SirReportDailyPoint[] = [...dates].sort().map((date) => {
+  const openingDates = new Set([...ral.daily.keys(), ...rec.daily.keys()]);
+  const dailyOpenings: SirReportDailyPoint[] = [...openingDates].sort().map((date) => {
     const ralCount = ral.daily.get(date) ?? 0;
     const recCount = rec.daily.get(date) ?? 0;
     return { date, ral: ralCount, rec: recCount, total: ralCount + recCount };
   });
 
+  const conclusionDates = new Set([...ral.dailyConclusions.keys(), ...rec.dailyConclusions.keys()]);
+  const dailyConclusions: SirReportDailyPoint[] = [...conclusionDates].sort().map((date) => {
+    const ralCount = ral.dailyConclusions.get(date) ?? 0;
+    const recCount = rec.dailyConclusions.get(date) ?? 0;
+    return { date, ral: ralCount, rec: recCount, total: ralCount + recCount };
+  });
+
+  const scopes: SirReportKpiScope[] = [];
+  if (includeRal) {
+    scopes.push({ key: "RAL", label: "RAL", ...ral.summary });
+  }
+  if (includeRec) {
+    const tipoSummaries = await Promise.all(
+      REC_TIPOS.map(async (tipo) => {
+        const summary = await loadDomainSummary(SIR_TABLES.recs, "REC", filters, tipo.prefix);
+        return {
+          key: tipo.prefix as SirReportKpiScope["key"],
+          label: tipo.label,
+          ...summary,
+        } satisfies SirReportKpiScope;
+      }),
+    );
+    scopes.push(...tipoSummaries);
+  }
+
   return {
-    summary: { ral: ral.summary, rec: rec.summary },
+    summary: { ral: ral.summary, rec: rec.summary, scopes },
     ageBuckets: [...ral.ageBuckets, ...rec.ageBuckets],
     byCf: [...ral.byCf, ...rec.byCf],
     byTipo: [...ral.byTipo, ...rec.byTipo],
     byDdd: [...ral.byDdd, ...rec.byDdd],
     dailyOpenings,
+    dailyConclusions,
   };
 }

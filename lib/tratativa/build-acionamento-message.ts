@@ -77,11 +77,26 @@ export function buildBsodAcionamentoMessage(
     "TÉCNICO",
     ...technicianBlock,
     "",
-    "CLIENTE",
+    "INSTALAÇÃO",
     ...equipmentBlock,
   ];
 
   return lines.join("\n").trim();
+}
+
+/** Bloco de dados do alarme SDH (sem técnico). */
+function buildSdhRecordBlock(context: SdhAcionamentoContext, sintoma?: string): string[] {
+  return [
+    fieldLine("DDD", context.ddd),
+    fieldLine("MUNICÍPIO", context.municipio),
+    fieldLine("NE", context.ne),
+    fieldLine("PORTA", context.porta),
+    fieldLine("ALARME", context.alarme),
+    fieldLine("CIRCUITO", context.circuito),
+    fieldLine("SIR", context.sir),
+    fieldLine("IP", context.ip),
+    fieldLine("SINTOMA", sintoma?.trim() || context.sintoma),
+  ];
 }
 
 /** Monta mensagem SDH para acionamento técnico via WhatsApp. */
@@ -96,17 +111,17 @@ export function buildSdhAcionamentoMessage(
     ...buildTechnicianBlock(technician),
     "",
     "ALARME SDH",
-    fieldLine("DDD", context.ddd),
-    fieldLine("MUNICÍPIO", context.municipio),
-    fieldLine("NE", context.ne),
-    fieldLine("PORTA", context.porta),
-    fieldLine("ALARME", context.alarme),
-    fieldLine("CIRCUITO", context.circuito),
-    fieldLine("SIR", context.sir),
-    fieldLine("IP", context.ip),
-    fieldLine("SINTOMA", technician.sintoma || context.sintoma),
+    ...buildSdhRecordBlock(context, technician.sintoma),
   ];
   return lines.join("\n").trim();
+}
+
+/** Monta texto de preparação SDH (sem técnico/WhatsApp) para copiar e registrar. */
+export function buildSdhPrepAcionamentoMessage(
+  context: SdhAcionamentoContext,
+  sintoma?: string,
+): string {
+  return ["Acionamento SDH:", "", ...buildSdhRecordBlock(context, sintoma)].join("\n").trim();
 }
 
 /** Monta mensagem de acionamento conforme o tipo de registro. */

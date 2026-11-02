@@ -7,6 +7,7 @@ import { AcionamentoTechnicianSection } from "@/components/tratativa/Acionamento
 import {
   ACIONAMENTO_SCHEDULE_FIELDS,
   ACIONAMENTO_SINTOMA_FIELD,
+  ACIONAMENTO_SINTOMA_FIELD_SDH,
   ACIONAMENTO_SINTOMA_FIELD_SIR,
 } from "@/lib/config/acionamento-form";
 import { apiFetch } from "@/lib/config/base-path";
@@ -57,7 +58,11 @@ export function AcionamentoForm({
   const [technician, setTechnician] = useState<AcionamentoTechnicianInput>(EMPTY_TECHNICIAN);
 
   const isSir = recordKind === "RAL" || recordKind === "REC";
-  const sintomaField = isSir ? ACIONAMENTO_SINTOMA_FIELD_SIR : ACIONAMENTO_SINTOMA_FIELD;
+  const sintomaField = isSir
+    ? ACIONAMENTO_SINTOMA_FIELD_SIR
+    : recordKind === "SDH"
+      ? ACIONAMENTO_SINTOMA_FIELD_SDH
+      : ACIONAMENTO_SINTOMA_FIELD;
 
   const previewMessage = useMemo(() => {
     if (!context || !isAcionamentoTechnicianComplete(technician)) return "";
@@ -183,11 +188,10 @@ export function AcionamentoForm({
             ) : null}
             <button
               type="button"
-              className="btn btn-success"
+              className="btn btn-primary"
               onClick={() => void handleCopy()}
               disabled={disabled || submitting || !isAcionamentoTechnicianComplete(technician)}
             >
-              <i className="bi bi-whatsapp me-1" aria-hidden="true" />
               {submitting ? UI_COPY.tratativaBusy : UI_COPY.acionamentoCopy}
             </button>
           </div>

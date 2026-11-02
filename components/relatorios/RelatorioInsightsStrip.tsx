@@ -25,7 +25,9 @@ export function RelatorioInsightsStrip({ items }: RelatorioInsightsStripProps) {
     <div className="relatorio-insights-strip" aria-label="Destaques do período">
       {items.map((item) => (
         <div key={item.id} className={`relatorio-insights-strip__item ${TONE_CLASS[item.tone]}`}>
-          <i className={`bi ${item.icon} relatorio-insights-strip__icon`} aria-hidden="true" />
+          <span className="relatorio-insights-strip__icon" aria-hidden="true">
+            <i className={`bi ${item.icon}`} />
+          </span>
           <div className="relatorio-insights-strip__text">
             <span className="relatorio-insights-strip__label">{item.label}</span>
             <strong className="relatorio-insights-strip__value">{item.value}</strong>

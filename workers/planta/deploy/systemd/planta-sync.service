@@ -1,0 +1,16 @@
+[Unit]
+Description=Planta sync — db_planta.planta_instalada (MySQL Terminal → MySQL SIR)
+After=network.target mariadb.service
+
+[Service]
+Type=oneshot
+User=datacenter
+Group=datacenter
+WorkingDirectory=/usr/local/empresarial/workers/planta
+Environment=PATH=/usr/local/empresarial/workers/planta/venv/bin:/usr/bin:/usr/local/bin
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/usr/local/empresarial/workers/planta/.env
+ExecStart=/usr/local/empresarial/workers/planta/venv/bin/python sync_planta.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=planta-sync

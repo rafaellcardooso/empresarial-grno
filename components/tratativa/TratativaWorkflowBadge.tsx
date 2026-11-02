@@ -1,5 +1,8 @@
 import type { TratativaWorkflowStatus } from "@/lib/models/tratativa";
-import { TRATATIVA_WORKFLOW_LABELS } from "@/lib/config/tratativa-workflow";
+import {
+  TRATATIVA_BSOD_ACIONADO_LABEL,
+  TRATATIVA_WORKFLOW_LABELS,
+} from "@/lib/config/tratativa-workflow";
 
 type TratativaWorkflowBadgeProps = {
   status?: TratativaWorkflowStatus;
@@ -18,5 +21,8 @@ export function TratativaWorkflowBadge({ status }: TratativaWorkflowBadgeProps) 
           ? "tratativa-workflow-badge tratativa-workflow-badge--reprovada"
           : "tratativa-workflow-badge tratativa-workflow-badge--validado";
 
-  return <span className={className}>{TRATATIVA_WORKFLOW_LABELS[status]}</span>;
+  const label =
+    status === "acionado" ? TRATATIVA_BSOD_ACIONADO_LABEL : TRATATIVA_WORKFLOW_LABELS[status];
+
+  return <span className={className}>{label}</span>;
 }

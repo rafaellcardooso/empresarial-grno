@@ -10,6 +10,7 @@ import { SDH_TABLE_COLUMNS } from "@/lib/config/sdh-tables";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import type { SdhAlarmListItem } from "@/lib/models/sdh";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
+import { hasAcionamentoInCurrentCycle } from "@/lib/tratativa/treatment-types";
 
 type SdhRecordsTableProps = {
   rows: SdhAlarmListItem[];
@@ -57,24 +58,30 @@ export function SdhRecordsTable({
           const alarm = row as unknown as SdhAlarmListItem;
           if (key === "tratativa_status") {
             const active = Number(alarm.em_tratativa) === 1;
+            const awaitingConclusion = active && Number(alarm.is_active) !== 1;
+            const acionado = hasAcionamentoInCurrentCycle(alarm.tratativa_history ?? []);
+            const who = active
+              ? `${alarm.tratativa_user_login ?? "—"} · ${formatDateTimePtBr(
+                  typeof alarm.tratativa_marked_at === "string" ? alarm.tratativa_marked_at : null,
+                )}`
+              : "Sem tratativa ativa";
+            const label = !active
+              ? "Pendente"
+              : awaitingConclusion
+                ? "Aguardando conclusão"
+                : acionado
+                  ? "Acionado"
+                  : "Em tratativa";
+            const className = !active
+              ? "tratativa-workflow-badge tratativa-workflow-badge--pendente"
+              : awaitingConclusion
+                ? "tratativa-workflow-badge tratativa-workflow-badge--validado"
+                : acionado
+                  ? "tratativa-workflow-badge tratativa-workflow-badge--acionado"
+                  : "tratativa-workflow-badge tratativa-workflow-badge--em-tratativa";
             return (
-              <span
-                className={`tratativa-workflow-badge ${
-                  active
-                    ? "tratativa-workflow-badge--em-tratativa"
-                    : "tratativa-workflow-badge--pendente"
-                }`}
-                title={
-                  active
-                    ? `${alarm.tratativa_user_login ?? "—"} · ${formatDateTimePtBr(
-                        typeof alarm.tratativa_marked_at === "string"
-                          ? alarm.tratativa_marked_at
-                          : null,
-                      )}`
-                    : "Sem tratativa ativa"
-                }
-              >
-                {active ? "Em tratativa" : "Pendente"}
+              <span className={className} title={who}>
+                {label}
               </span>
             );
           }

@@ -4,6 +4,7 @@ import { BsodRecordsTable } from "@/components/bsod/BsodRecordsTable";
 import { ContentCard } from "@/components/ui/ContentCard";
 import { TablePagination } from "@/components/ui/TablePagination";
 import { buildBsodHref, type BsodUrlState } from "@/lib/config/bsod-filters";
+import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 import type { PmeBsodRow } from "@/lib/queries/bsod";
 
@@ -16,7 +17,7 @@ type BsodNormalizedTreatmentsProps = {
   activeUrlState: BsodUrlState;
 };
 
-/** Exibe tratativas ativas de modems que retornaram ao estado online. */
+/** Exibe modems online com tratativa ativa aguardando FCA e conclusão. */
 export function BsodNormalizedTreatments({
   rows,
   tratativasByKey,
@@ -28,17 +29,16 @@ export function BsodNormalizedTreatments({
   if (total === 0) return null;
 
   return (
-    <div className="mt-3">
-      <ContentCard title={`Normalizados aguardando validação (${total})`}>
-        <p className="text-body-secondary small mb-3">
-          Modems online com tratativa ativa permanecem visíveis até a validação, conclusão ou
-          liberação.
+    <div className="mb-3">
+      <ContentCard title={`${UI_COPY.normalizedAwaitingSirTitle} (${total})`}>
+        <p className="text-body-secondary small px-3 pt-3 pb-2 mb-0">
+          {UI_COPY.normalizedAwaitingBsodLead}
         </p>
         <BsodRecordsTable
           rows={rows}
           tratativasByKey={tratativasByKey}
           variant="normalized"
-          empty="Nenhuma tratativa normalizada aguardando validação."
+          empty={UI_COPY.normalizedAwaitingBsodEmpty}
         />
         <TablePagination
           currentPage={currentPage}

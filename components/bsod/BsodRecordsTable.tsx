@@ -134,9 +134,15 @@ function renderBsodCell(
   const tratativa = tratativas[normalized] ?? null;
   const monitorStatus = row.monitor_status;
   const isOffline = monitorStatus === 0 || monitorStatus === "0";
+  const isOnline = monitorStatus === 1 || monitorStatus === "1";
 
   if (key === "tratativa_status") {
-    return <TratativaBsodStatusCell tratativa={tratativa} />;
+    return (
+      <TratativaBsodStatusCell
+        tratativa={tratativa}
+        awaitingConclusion={Boolean(tratativa && isOnline)}
+      />
+    );
   }
   if (key === "tratativa_actions" || key === "tratativa") {
     if (!tratativa && !isOffline) return "—";

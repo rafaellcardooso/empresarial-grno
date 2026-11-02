@@ -62,13 +62,19 @@ export function parseSdhReportParams(params: {
   };
 }
 
-/** Monta href do relatório SDH preservando período e filtros. */
-export function buildSdhReportHref(filters: SdhReportFilters): string {
+/** Monta href do relatório SDH preservando período, filtros e página de encerramentos. */
+export function buildSdhReportHref(
+  filters: SdhReportFilters,
+  options?: { concluidosPage?: number },
+): string {
   const params = new URLSearchParams();
   params.set("de", formatRelatorioDateParam(filters.from));
   params.set("ate", formatRelatorioDateParam(filters.to));
   if (filters.vendor) params.set("vendor", filters.vendor);
   if (filters.ddd) params.set("ddd", filters.ddd);
+  if (options?.concluidosPage && options.concluidosPage > 1) {
+    params.set("concluidosPage", String(options.concluidosPage));
+  }
   return `/relatorios/sdh?${params.toString()}`;
 }
 

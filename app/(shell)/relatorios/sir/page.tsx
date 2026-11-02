@@ -6,7 +6,8 @@ import { SirReportLoading } from "@/components/relatorios/SirReportLoading";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RELATORIOS_COPY } from "@/lib/config/relatorios-copy";
 import { formatRelatorioDateParam } from "@/lib/config/relatorios-filters";
-import { parseSirReportParams } from "@/lib/config/sir-report-filters";
+import { parseSirReportParams, sirConcludedScopeFromParam } from "@/lib/config/sir-report-filters";
+import { sirConcludedPageFromParam } from "@/lib/config/sir-report-pagination";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "SIR" };
@@ -18,19 +19,25 @@ type PageProps = {
     dominio?: string;
     tratativa?: string;
     ddd?: string;
+    concluidosPage?: string;
+    concluidosEscopo?: string;
   }>;
 };
 
-/** Análise do backlog SIR e aberturas no período por domínio. */
+/** Análise do backlog SIR, aberturas/conclusões e listagem de concluídos. */
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters = parseSirReportParams(params);
+  const concluidosPage = sirConcludedPageFromParam(params.concluidosPage);
+  const concluidosEscopo = sirConcludedScopeFromParam(params.concluidosEscopo);
   const reportCacheKey = [
     formatRelatorioDateParam(filters.from),
     formatRelatorioDateParam(filters.to),
     filters.domain,
     filters.tratativa ?? "all",
     filters.ddd ?? "all",
+    String(concluidosPage),
+    concluidosEscopo ?? "all",
   ].join(":");
 
   return (
@@ -47,7 +54,11 @@ export default async function Page({ searchParams }: PageProps) {
       <SirReportFiltersForm filters={filters} />
 
       <Suspense key={reportCacheKey} fallback={<SirReportLoading />}>
-        <SirReportAsync filters={filters} />
+        <SirReportAsync
+          filters={filters}
+          concluidosPage={concluidosPage}
+          concluidosEscopo={concluidosEscopo}
+        />
       </Suspense>
     </>
   );

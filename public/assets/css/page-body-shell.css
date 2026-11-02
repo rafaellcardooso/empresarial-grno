@@ -326,6 +326,23 @@
   color: #212529;
 }
 
+.page-body button.btn.btn-success,
+.page-body a.btn.btn-success,
+.page-body .btn.btn-success {
+  background-color: #198754;
+  background-image: none;
+  border-color: #198754;
+  color: #fff;
+}
+
+.page-body button.btn.btn-success:hover:not(:disabled),
+.page-body a.btn.btn-success:hover:not(:disabled),
+.page-body .btn.btn-success:hover:not(:disabled) {
+  background-color: #157347;
+  border-color: #146c43;
+  color: #fff;
+}
+
 .page-body .list-group {
   list-style: none;
   margin: 0;

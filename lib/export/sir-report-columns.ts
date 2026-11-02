@@ -16,14 +16,13 @@ export function sirReportRowsForExport(data: SirReportData): Record<string, unkn
     rows.push({ secao, dominio, chave, rotulo, total });
   };
 
-  push("backlog", "RAL", "total_ativo", "Ativos", data.summary.ral.totalActive);
-  push("backlog", "RAL", "pendente", "Pendentes", data.summary.ral.pending);
-  push("backlog", "RAL", "em_tratativa", "Em tratativa", data.summary.ral.inTreatment);
-  push("aberturas", "RAL", "periodo", "Aberturas no período", data.summary.ral.openingsInPeriod);
-  push("backlog", "REC", "total_ativo", "Ativos", data.summary.rec.totalActive);
-  push("backlog", "REC", "pendente", "Pendentes", data.summary.rec.pending);
-  push("backlog", "REC", "em_tratativa", "Em tratativa", data.summary.rec.inTreatment);
-  push("aberturas", "REC", "periodo", "Aberturas no período", data.summary.rec.openingsInPeriod);
+  for (const scope of data.summary.scopes) {
+    push("backlog", scope.key, "total_ativo", "Ativos", scope.totalActive);
+    push("backlog", scope.key, "pendente", "Pendentes", scope.pending);
+    push("backlog", scope.key, "em_tratativa", "Em tratativa", scope.inTreatment);
+    push("aberturas", scope.key, "periodo", "Aberturas no período", scope.openingsInPeriod);
+    push("conclusoes", scope.key, "periodo", "Conclusões no período", scope.conclusionsInPeriod);
+  }
 
   for (const bucket of data.ageBuckets) {
     push("idade", bucket.domain, bucket.key, bucket.label, bucket.total);
@@ -40,6 +39,10 @@ export function sirReportRowsForExport(data: SirReportData): Record<string, unkn
   for (const point of data.dailyOpenings) {
     push("aberturas_dia", "RAL", point.date, point.date, point.ral);
     push("aberturas_dia", "REC", point.date, point.date, point.rec);
+  }
+  for (const point of data.dailyConclusions) {
+    push("conclusoes_dia", "RAL", point.date, point.date, point.ral);
+    push("conclusoes_dia", "REC", point.date, point.date, point.rec);
   }
 
   return rows;

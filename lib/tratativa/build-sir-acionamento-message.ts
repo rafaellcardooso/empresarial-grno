@@ -51,11 +51,7 @@ export function buildSirAcionamentoMessage(
   context: SirAcionamentoContext,
   technician: AcionamentoTechnicianInput,
 ): string {
-  const sintoma =
-    technician.sintoma?.trim() ||
-    context.sintoma?.trim() ||
-    context.descricao?.trim() ||
-    "sem sinal.";
+  const sintoma = technician.sintoma?.trim() || sirSintomaFromContext(context);
 
   const lines = [
     "Favor informar dados do técnico para VT:",
@@ -68,9 +64,19 @@ export function buildSirAcionamentoMessage(
   return lines.join("\n").trim();
 }
 
-/** Sugere sintoma inicial a partir do contexto SIR. */
+/**
+ * Sintoma do tooltip SIR (`SINTOMA`); sem valor deixa o campo vazio.
+ * Não reutiliza `descricao` do RAL — esse campo é a designação do circuito.
+ */
 export function sirSintomaFromContext(context: SirAcionamentoContext): string {
-  if (context.sintoma?.trim()) return context.sintoma.trim();
-  if (context.recordKind === "RAL" && context.descricao?.trim()) return context.descricao.trim();
-  return "sem sinal.";
+  return context.sintoma?.trim() ?? "";
+}
+
+/** Monta texto de preparação SIR (sem técnico/WhatsApp) para copiar e registrar. */
+export function buildSirPrepAcionamentoMessage(
+  context: SirAcionamentoContext,
+  sintoma?: string,
+): string {
+  const resolved = sintoma?.trim() || sirSintomaFromContext(context);
+  return ["Acionamento SIR:", "", ...buildSirRecordBlock(context, resolved)].join("\n").trim();
 }

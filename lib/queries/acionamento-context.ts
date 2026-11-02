@@ -46,7 +46,6 @@ async function getSdhAcionamentoContext(recordKey: string): Promise<SdhAcionamen
     circuito: row.circuito ?? undefined,
     sir: row.sir ?? undefined,
     ip: row.ip ?? undefined,
-    sintoma: row.alarme ?? undefined,
   };
 }
 

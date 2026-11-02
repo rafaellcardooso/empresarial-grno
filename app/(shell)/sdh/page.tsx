@@ -75,6 +75,17 @@ export default async function Page({ searchParams }: PageProps) {
         title="SDH"
         description="Alarmes SDH (TMIP) com mais de 6 horas — filtros por gerência e DDD."
       />
+      <SdhNormalizedTreatments
+        rows={normalizedRows}
+        total={normalizedTotal}
+        currentPage={currentNormalizedPage}
+        pageSize={pageSize}
+        activeVendor={vendor}
+        activeDdd={ddd}
+        activeStatus={status}
+        activeQ={q}
+        page={currentPage > 1 ? currentPage : undefined}
+      />
       <SdhPanel
         rows={rows}
         total={total}
@@ -89,17 +100,6 @@ export default async function Page({ searchParams }: PageProps) {
         pageSize={pageSize}
         normalizedPage={currentNormalizedPage}
         exportHref={buildSdhExportHref({ vendor, ddd, status, q })}
-      />
-      <SdhNormalizedTreatments
-        rows={normalizedRows}
-        total={normalizedTotal}
-        currentPage={currentNormalizedPage}
-        pageSize={pageSize}
-        activeVendor={vendor}
-        activeDdd={ddd}
-        activeStatus={status}
-        activeQ={q}
-        page={currentPage > 1 ? currentPage : undefined}
       />
     </>
   );

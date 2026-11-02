@@ -103,6 +103,17 @@ async function assertClosedSirTarget(recordKind: "RAL" | "REC", recordKey: strin
   }
 }
 
+/** Confirma que o modem BSOD normalizou (online) antes da conclusão com FCA. */
+async function assertNormalizedBsodTarget(recordKey: string): Promise<void> {
+  const row = await getPmeBsodByMac(recordKey);
+  if (!row) {
+    throw new TratativaConclusionError("Modem BSOD não encontrado.");
+  }
+  if (String(row.monitor_status) !== "1") {
+    throw new TratativaConclusionError("Conclua a tratativa somente após o modem normalizar.");
+  }
+}
+
 /** Restringe novas tratativas BSOD a modems atualmente offline. */
 async function assertStartableTarget(
   recordKind: TratativaRecordKind,
@@ -377,18 +388,27 @@ export async function releaseTratativa(input: {
   );
 }
 
-/** Conclui tratativa RAL/REC já encerrada na fonte e registra auditoria. */
+/** Conclui tratativa RAL/REC/BSOD já normalizada na fonte com FCA obrigatório. */
 export async function concludeSirTratativa(input: {
-  recordKind: "RAL" | "REC";
+  recordKind: "RAL" | "REC" | "BSOD";
   recordKey: string;
   userId: number;
   userRole: AppUserRole;
-  note: string;
+  /** Resumo curto (opcional); o FCA completo vai em `messageText`. */
+  note?: string | null;
+  messageText: string;
 }): Promise<void> {
   const key = normalizeTratativaKey(input.recordKind, input.recordKey);
-  const note = input.note.trim().slice(0, 500);
-  if (!note) throw new TratativaConclusionError("Informe a observação de encerramento.");
-  await assertClosedSirTarget(input.recordKind, key);
+  const messageText = input.messageText.trim();
+  if (!messageText) {
+    throw new TratativaConclusionError("Informe o FCA (fato, causa e ação) para concluir.");
+  }
+  const note = (input.note ?? "").trim().slice(0, 500) || null;
+  if (input.recordKind === "BSOD") {
+    await assertNormalizedBsodTarget(key);
+  } else {
+    await assertClosedSirTarget(input.recordKind, key);
+  }
 
   const connection = await getSirPool().getConnection();
   try {
@@ -407,9 +427,9 @@ export async function concludeSirTratativa(input: {
 
     await connection.execute(
       `INSERT INTO app_tratativa_events
-         (tratativa_id, record_kind, record_key, event_type, user_id, note)
-       VALUES (?, ?, ?, 'CONCLUIDA', ?, ?)`,
-      [active.id, input.recordKind, key, input.userId, note],
+         (tratativa_id, record_kind, record_key, event_type, user_id, note, message_text)
+       VALUES (?, ?, ?, 'CONCLUIDA', ?, ?, ?)`,
+      [active.id, input.recordKind, key, input.userId, note, messageText],
     );
     await connection.execute(
       `UPDATE app_tratativas SET released_at = NOW(), released_by = ?

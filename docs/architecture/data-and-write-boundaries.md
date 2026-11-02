@@ -11,6 +11,7 @@ Quem lê e quem escreve em cada banco. Esta é a fonte de verdade arquitetural; 
 | `workers/sir-ingest` | `rals`, `recs` (UPSERT + encerramento)                                                                                                                                                                                                                | app__, sdh__, bsod_*                   |
 | `workers/tmip`       | `sdh_alarms` (UPSERT / desativação)                                                                                                                                                                                                                   | rals, recs, app__, bsod__              |
 | `workers/bsod`       | `bsod_cables`, `bsod_inventory`, `bsod_monitor`, `bsod_crm_clients`                                                                                                                                                                                   | rals, recs, sdh__, app__               |
+| `workers/planta`     | `tbl_planta_instalada` (substituição completa diária)                                                                                                                                                                                                 | rals, recs, sdh__, app__, bsod__       |
 | Next.js BFF          | `app_users`, preferências, notificações, `app_tratativas`, `app_tratativa_events`, `app_tecnicos` / `app_tecnico_skills`, colunas/eventos de tratativa em `sdh_alarms` / `sdh_tratativa_events`; edição manual em `bsod_inventory` (cliente/endereço) | `rals`, `recs` como fonte de incidente |
 | `npm run db:migrate` | DDL em `migrations/sir/`                                                                                                                                                                                                                              | dados operacionais                     |
 
@@ -22,6 +23,13 @@ Quem lê e quem escreve em cada banco. Esta é a fonte de verdade arquitetural; 
 | Este monorepo | **Nunca escreve** no MySQL hfc-sls         |
 
 Legado: tabelas `tbl_inventory_pme` / `tbl_monitor_pme` no HFC podem existir até desligamento do enrich; a UI empresarial não as usa mais.
+
+## MySQL Terminal (`db_planta`)
+
+| Componente       | Acesso                                                             |
+| ---------------- | ------------------------------------------------------------------ |
+| `workers/planta` | Somente leitura de `planta_instalada`; credenciais `TERMINAL_DB_*` |
+| Este monorepo    | **Nunca escreve** no MySQL Terminal                                |
 
 ## HTTP externos
 

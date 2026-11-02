@@ -9,6 +9,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 
 ### Added
 
+- Worker `workers/planta` (timer diário 03:30) que espelha `db_planta.planta_instalada` na tabela `tbl_planta_instalada` (migration `029`).
 - Badges de pendentes (BSOD, SDH, SIR) no menu e pop-up de chamados SIR `/NET/FO`, com notificação do navegador quando a aba está em segundo plano.
 - Alarme de SLA SIR no shell (pop-up + cor na tabela): REC 2h, RAL 6h — verde dentro do SLA, vermelho e aviso ao estourar.
 - Badge do menu **SIR** com dois contadores: abertos (ATIVO) e SLA estourado.
@@ -24,6 +25,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 
 ### Changed
 
+- Tratativa SIR sem WhatsApp: preparação (acionamento ou FCA) libera Abrir no SIR; concluir exige FCA com chamado ENCERRADO.
 - Cores e alertas por idade: REC verde ate 1h / amarelo 1-2h / vermelho >=2h; RAL verde ate 2h / amarelo 2-6h / vermelho >=6h.
 - BSOD abre com todos os DDDs; o filtro por DDD só se aplica ao clicar no chip (como em SDH e SIR).
 - Página BSOD usa cache de inventário mesclado e `bsod_monitor_latest` (evita GROUP BY no histórico a cada request).

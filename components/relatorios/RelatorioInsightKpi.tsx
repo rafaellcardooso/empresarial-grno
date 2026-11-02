@@ -23,14 +23,14 @@ export function RelatorioInsightKpi({
 }: RelatorioInsightKpiProps) {
   return (
     <article className={`relatorio-insight-kpi ${TONE_CLASS[tone]}`}>
-      <div className="relatorio-insight-kpi__icon" aria-hidden="true">
-        <i className={`bi ${icon}`} />
-      </div>
-      <div className="relatorio-insight-kpi__body">
+      <header className="relatorio-insight-kpi__head">
         <p className="relatorio-insight-kpi__label">{label}</p>
-        <p className="relatorio-insight-kpi__value">{value}</p>
-        {hint ? <p className="relatorio-insight-kpi__hint">{hint}</p> : null}
-      </div>
+        <span className="relatorio-insight-kpi__icon" aria-hidden="true">
+          <i className={`bi ${icon}`} />
+        </span>
+      </header>
+      <p className="relatorio-insight-kpi__value">{value}</p>
+      {hint ? <p className="relatorio-insight-kpi__hint">{hint}</p> : null}
     </article>
   );
 }

@@ -38,9 +38,11 @@ export function SdhNormalizedTreatments({
   if (total === 0) return null;
 
   return (
-    <div className="mt-3">
-      <ContentCard title={`${UI_COPY.normalizedAwaitingTitle} (${total})`}>
-        <p className="text-body-secondary small mb-3">{UI_COPY.normalizedAwaitingSdhLead}</p>
+    <div className="mb-3">
+      <ContentCard title={`${UI_COPY.normalizedAwaitingSirTitle} (${total})`}>
+        <p className="text-body-secondary small px-3 pt-3 pb-2 mb-0">
+          {UI_COPY.normalizedAwaitingSdhLead}
+        </p>
         <SdhRecordsTable
           rows={rows}
           variant="normalized"

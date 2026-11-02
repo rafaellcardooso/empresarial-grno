@@ -309,4 +309,10 @@ export async function recordSdhAcionamento(input: {
   );
 }
 
-export { SdhTratativaConflictError, updateSdhTratativaStatus } from "@/lib/queries/sdh-tratativa";
+export {
+  SdhTratativaConclusionError,
+  SdhTratativaConflictError,
+  SdhTratativaForbiddenError,
+  concludeSdhTratativa,
+  updateSdhTratativaStatus,
+} from "@/lib/queries/sdh-tratativa";

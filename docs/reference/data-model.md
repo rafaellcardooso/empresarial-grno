@@ -6,11 +6,12 @@ Schema versionado em `migrations/sir/`. Fronteiras: [../architecture/data-and-wr
 
 ## Tabelas-fonte (workers)
 
-| Tabela       | Writer         | Notas                                                   |
-| ------------ | -------------- | ------------------------------------------------------- |
-| `rals`       | sir-ingest RAL | Status ATIVO/ENCERRADO                                  |
-| `recs`       | sir-ingest REC | Prefixo REC/DSR/TCQ                                     |
-| `sdh_alarms` | tmip           | `is_active`; colunas de tratativa atualizadas pelo Next |
+| Tabela                 | Writer         | Notas                                                                                                  |
+| ---------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
+| `rals`                 | sir-ingest RAL | Status ATIVO/ENCERRADO                                                                                 |
+| `recs`                 | sir-ingest REC | Prefixo REC/DSR/TCQ                                                                                    |
+| `sdh_alarms`           | tmip           | `is_active`; colunas de tratativa atualizadas pelo Next                                                |
+| `tbl_planta_instalada` | planta         | Espelho diário de `db_planta.planta_instalada`; `designacao_circuito` não é única; `synced_at` = ciclo |
 
 ### BSOD (SIR — writer `workers/bsod`)
 

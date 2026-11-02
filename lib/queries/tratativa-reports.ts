@@ -15,6 +15,7 @@ import type {
   TratativaReportRankRow,
   TratativaReportSummary,
 } from "@/lib/models/tratativa-report";
+import { loadBsodReportBacklog } from "@/lib/queries/bsod-report-backlog";
 import { parseBsodAcionamentoAnalytics } from "@/lib/tratativa/parse-acionamento-message";
 
 type DailyRow = RowDataPacket & { day: Date | string; total: number };
@@ -69,25 +70,37 @@ export async function getTratativaReport(
   const kindEvents = kindClause("e", kind);
   const kindTratativas = kindClause("t", kind);
 
-  const [summary, durationRow, daily, operators, acionamentos] = await Promise.all([
+  const [
+    backlog,
+    summary,
+    durationRow,
+    daily,
+    dailyStarts,
+    dailyConclusions,
+    operators,
+    acionamentos,
+  ] = await Promise.all([
+    loadBsodReportBacklog(),
     loadCohortSummary(from, toExclusive, kindTratativas),
     sirQuery<DurationRow[]>(
       `SELECT AVG(TIMESTAMPDIFF(MINUTE, t.started_at, concluded.concluded_at)) AS avg_minutes
-       FROM app_tratativas t
-       INNER JOIN (
-         SELECT e.tratativa_id, MIN(e.created_at) AS concluded_at
-         FROM app_tratativa_events e
-         WHERE e.event_type = 'CONCLUIDA'
-           AND e.created_at < ?
-           ${kindEvents.sql}
-         GROUP BY e.tratativa_id
-       ) concluded ON concluded.tratativa_id = t.id
-       WHERE t.started_at >= ?
-         AND t.started_at < ?
-         ${kindTratativas.sql}`,
+         FROM app_tratativas t
+         INNER JOIN (
+           SELECT e.tratativa_id, MIN(e.created_at) AS concluded_at
+           FROM app_tratativa_events e
+           WHERE e.event_type = 'CONCLUIDA'
+             AND e.created_at < ?
+             ${kindEvents.sql}
+           GROUP BY e.tratativa_id
+         ) concluded ON concluded.tratativa_id = t.id
+         WHERE t.started_at >= ?
+           AND t.started_at < ?
+           ${kindTratativas.sql}`,
       [toExclusive, ...kindEvents.params, from, toExclusive, ...kindTratativas.params],
     ).then((rows) => rows[0]),
     loadDailySeries(from, toExclusive, kindEvents),
+    loadDailyEventSeries(from, toExclusive, kindEvents, "START"),
+    loadDailyEventSeries(from, toExclusive, kindEvents, "CONCLUIDA"),
     includeOperators
       ? loadOperators(from, toExclusive, kindEvents)
       : Promise.resolve([] as TratativaReportOperatorRow[]),
@@ -100,8 +113,11 @@ export async function getTratativaReport(
   const { bySymptom, topClients } = buildAcionamentoRankings(acionamentos);
 
   return {
+    backlog,
     summary,
     daily,
+    dailyStarts,
+    dailyConclusions,
     byEvent: buildEventDistribution(summary),
     operators,
     bySymptom,
@@ -189,6 +205,30 @@ async function loadDailySeries(
      GROUP BY DATE(e.created_at)
      ORDER BY day ASC`,
     [from, toExclusive, ...kindEvents.params],
+  );
+
+  return rows.map((row) => ({
+    date: formatRelatorioDateParam(new Date(row.day)),
+    total: Number(row.total),
+  }));
+}
+
+/** Série diária de um tipo de evento específico. */
+async function loadDailyEventSeries(
+  from: Date,
+  toExclusive: Date,
+  kindEvents: { sql: string; params: unknown[] },
+  eventType: "START" | "CONCLUIDA",
+): Promise<TratativaReportDailyPoint[]> {
+  const rows = await sirQuery<DailyRow[]>(
+    `SELECT DATE(e.created_at) AS day, COUNT(*) AS total
+     FROM app_tratativa_events e
+     WHERE e.created_at >= ? AND e.created_at < ?
+       AND e.event_type = ?
+       ${kindEvents.sql}
+     GROUP BY DATE(e.created_at)
+     ORDER BY day ASC`,
+    [from, toExclusive, eventType, ...kindEvents.params],
   );
 
   return rows.map((row) => ({

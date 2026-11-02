@@ -71,11 +71,11 @@ export function deriveTratativaWorkflowStatus(events: WorkflowEvent[]): Tratativ
   return status;
 }
 
-/** Anexa workflowStatus às tratativas BSOD para exibição na UI. */
+/** Anexa workflowStatus às tratativas ativas (BSOD completo; SIR/SDH via ACIONAMENTO). */
 export async function enrichTratativasWorkflow(
   tratativas: Record<string, TratativaPublic>,
 ): Promise<Record<string, TratativaPublic>> {
-  const items = Object.values(tratativas).filter((item) => item.recordKind === "BSOD");
+  const items = Object.values(tratativas);
   if (items.length === 0) return tratativas;
 
   const ids = items.map((item) => item.id);
@@ -99,9 +99,15 @@ export async function enrichTratativasWorkflow(
   const enriched = { ...tratativas };
   for (const item of items) {
     const events = eventsByTratativa.get(item.id) ?? [];
+    const workflowStatus =
+      item.recordKind === "BSOD"
+        ? deriveTratativaWorkflowStatus(events)
+        : events.some((event) => event.event_type === "ACIONAMENTO")
+          ? "acionado"
+          : "em_tratativa";
     enriched[item.recordKey] = {
       ...item,
-      workflowStatus: deriveTratativaWorkflowStatus(events),
+      workflowStatus,
     };
   }
 

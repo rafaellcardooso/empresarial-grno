@@ -177,6 +177,23 @@ export default async function Page({ searchParams }: PageProps) {
         activeQ={activeQ}
       />
 
+      <SirNormalizedTreatments
+        domain="REC"
+        rows={normalizedRows}
+        tratativasByKey={normalizedTratativasByKey}
+        total={normalizedTotal}
+        currentPage={currentNormalizedPage}
+        pageSize={pageSize}
+        listFilters={{
+          status: activeStatus,
+          tipo: activeTipo,
+          cf: activeCf,
+          ddd: activeDdd,
+          tratativa: activeTreatment,
+          q: activeQ,
+          page: currentPage > 1 ? currentPage : undefined,
+        }}
+      />
       <RecPanel
         rows={rows}
         tratativasByKey={tratativasByKey}
@@ -198,23 +215,6 @@ export default async function Page({ searchParams }: PageProps) {
           tratativa: activeTreatment,
           q: activeQ,
         })}
-      />
-      <SirNormalizedTreatments
-        domain="REC"
-        rows={normalizedRows}
-        tratativasByKey={normalizedTratativasByKey}
-        total={normalizedTotal}
-        currentPage={currentNormalizedPage}
-        pageSize={pageSize}
-        listFilters={{
-          status: activeStatus,
-          tipo: activeTipo,
-          cf: activeCf,
-          ddd: activeDdd,
-          tratativa: activeTreatment,
-          q: activeQ,
-          page: currentPage > 1 ? currentPage : undefined,
-        }}
       />
     </>
   );

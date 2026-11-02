@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { OpenInSirButton } from "@/components/sir/OpenInSirButton";
-import { AcionamentoForm } from "@/components/tratativa/AcionamentoForm";
+import { AcionamentoModal } from "@/components/tratativa/AcionamentoModal";
+import { SirConcludeFcaModal } from "@/components/tratativa/SirConcludeFcaModal";
+import { SirPrepModal } from "@/components/tratativa/SirPrepModal";
 import { TratativaBsodWorkflow } from "@/components/tratativa/TratativaBsodWorkflow";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
 import { UI_COPY } from "@/lib/config/ui-copy";
 import type { TratativaPublic } from "@/lib/models/tratativa";
+import type { ValidacaoFcaInput } from "@/lib/models/validacao";
 import type { TreatmentDomain, TreatmentSession } from "@/lib/tratativa/treatment-types";
 import { TREATMENT_EVENT_LABELS } from "@/lib/tratativa/treatment-types";
 import { apiFetch } from "@/lib/config/base-path";
@@ -19,7 +22,7 @@ type TratativaPanelProps = {
   onChanged?: () => void;
 };
 
-/** Painel lateral unificado de tratativa com observação, WhatsApp e cronologia. */
+/** Painel lateral unificado de tratativa (SIR, BSOD WhatsApp, SDH). */
 export function TratativaPanel({
   open,
   domain,
@@ -32,6 +35,49 @@ export function TratativaPanel({
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [session, setSession] = useState<TreatmentSession | null>(null);
+  const [concludeOpen, setConcludeOpen] = useState(false);
+  const [acionamentoOpen, setAcionamentoOpen] = useState(false);
+  const [prepOpen, setPrepOpen] = useState(false);
+
+  const isSirDomain = domain === "RAL" || domain === "REC";
+  const isSdhDomain = domain === "SDH";
+  const isAwaitingConclude = Boolean(session?.canConclude);
+  const sirUnlocked = Boolean(session?.sirPortalUnlocked);
+  const bsodWorkflowStatus =
+    session?.workflowStatus ?? session?.tratativa?.workflowStatus ?? "em_tratativa";
+  const bsodAfterAcionamento = session?.domain === "BSOD" && bsodWorkflowStatus !== "em_tratativa";
+  const showBsodAcionamento =
+    !isAwaitingConclude &&
+    session?.canManage === true &&
+    session?.domain === "BSOD" &&
+    bsodWorkflowStatus === "em_tratativa";
+  /** Validação BSOD só na fila de conclusão (modem já saiu de offline). */
+  const showBsodWorkflow =
+    isAwaitingConclude &&
+    session?.canManage === true &&
+    session?.domain === "BSOD" &&
+    session.tratativa != null &&
+    bsodAfterAcionamento &&
+    bsodWorkflowStatus !== "validado";
+  const showBsodFcaConclude =
+    isAwaitingConclude &&
+    session?.canManage === true &&
+    session?.domain === "BSOD" &&
+    (bsodWorkflowStatus === "validado" || bsodWorkflowStatus === "em_tratativa");
+  const showSourceFcaConclude =
+    isAwaitingConclude && session?.canManage === true && session?.domain !== "BSOD";
+  const showInternalAcionamentoEntry =
+    !isAwaitingConclude &&
+    session?.canManage === true &&
+    (session?.domain === "RAL" || session?.domain === "REC" || session?.domain === "SDH") &&
+    !sirUnlocked;
+  const showUpdateSection =
+    !isAwaitingConclude &&
+    (session?.domain === "BSOD"
+      ? bsodAfterAcionamento
+      : session?.domain === "RAL" || session?.domain === "REC" || session?.domain === "SDH"
+        ? sirUnlocked
+        : true);
 
   const loadSession = useCallback(async () => {
     if (!domain || !recordKey) return;
@@ -76,6 +122,14 @@ export function TratativaPanel({
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) {
+      setConcludeOpen(false);
+      setAcionamentoOpen(false);
+      setPrepOpen(false);
+    }
+  }, [open]);
+
   const refreshAfterAction = useCallback(async () => {
     await loadSession();
     onChanged?.();
@@ -83,7 +137,7 @@ export function TratativaPanel({
 
   const handleSaveObservation = useCallback(async () => {
     if (!session || !note.trim()) {
-      setError("Informe a observação.");
+      setError(UI_COPY.tratativaUpdateEmpty);
       return;
     }
     setBusy(true);
@@ -97,7 +151,7 @@ export function TratativaPanel({
         });
         const payload = (await response.json()) as { error?: string };
         if (!response.ok) {
-          setError(payload.error ?? "Falha ao salvar observação.");
+          setError(payload.error ?? UI_COPY.tratativaUpdateError);
           return;
         }
       } else {
@@ -112,77 +166,85 @@ export function TratativaPanel({
         });
         const payload = (await response.json()) as { error?: string };
         if (!response.ok) {
-          setError(payload.error ?? "Falha ao salvar observação.");
+          setError(payload.error ?? UI_COPY.tratativaUpdateError);
           return;
         }
       }
       setNote("");
       await refreshAfterAction();
     } catch {
-      setError("Falha ao salvar observação.");
+      setError(UI_COPY.tratativaUpdateError);
     } finally {
       setBusy(false);
     }
   }, [note, refreshAfterAction, session]);
 
-  const handleEndTreatment = useCallback(
-    async (action: "release" | "conclude") => {
-      if (!session) return;
-      if (action === "conclude" && !note.trim()) {
-        setError("Informe a observação de encerramento.");
-        return;
+  const handleRelease = useCallback(async () => {
+    if (!session) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (session.domain === "SDH") {
+        const observacao = note.trim() || "Encerramento via painel Tratar.";
+        const response = await apiFetch(`/api/sdh/${session.recordKey}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emTratativa: false, observacao }),
+        });
+        const payload = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          setError(payload.error ?? UI_COPY.tratativaReleaseError);
+          return;
+        }
+      } else {
+        const response = await apiFetch("/api/tratativas/release", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recordKind: session.domain,
+            recordKey: session.recordKey,
+          }),
+        });
+        const payload = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          setError(payload.error ?? UI_COPY.tratativaReleaseError);
+          return;
+        }
       }
+      onChanged?.();
+      onClose();
+    } catch {
+      setError(UI_COPY.tratativaReleaseError);
+    } finally {
+      setBusy(false);
+    }
+  }, [note, onChanged, onClose, session]);
+
+  const handleConcludeWithFca = useCallback(
+    async (fca: ValidacaoFcaInput): Promise<string | null> => {
+      if (!session) return UI_COPY.tratativaCloseError;
       setBusy(true);
       setError(null);
       try {
-        if (action === "conclude") {
-          const response = await apiFetch("/api/tratativas/concluir", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              recordKind: session.domain,
-              recordKey: session.recordKey,
-              note: note.trim(),
-            }),
-          });
-          const payload = (await response.json()) as { error?: string };
-          if (!response.ok) {
-            setError(payload.error ?? UI_COPY.tratativaCloseError);
-            return;
-          }
-        } else if (session.domain === "SDH") {
-          const observacao = note.trim() || "Encerramento via painel Tratar.";
-          const response = await apiFetch(`/api/sdh/${session.recordKey}/status`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ emTratativa: false, observacao }),
-          });
-          const payload = (await response.json()) as { error?: string };
-          if (!response.ok) {
-            setError(payload.error ?? UI_COPY.tratativaReleaseError);
-            return;
-          }
-        } else {
-          const response = await apiFetch("/api/tratativas/release", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              recordKind: session.domain,
-              recordKey: session.recordKey,
-            }),
-          });
-          const payload = (await response.json()) as { error?: string };
-          if (!response.ok) {
-            setError(payload.error ?? UI_COPY.tratativaReleaseError);
-            return;
-          }
+        const response = await apiFetch("/api/tratativas/concluir", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recordKind: session.domain,
+            recordKey: session.recordKey,
+            note: note.trim() || null,
+            fca,
+          }),
+        });
+        const payload = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          return payload.error ?? UI_COPY.tratativaCloseError;
         }
         onChanged?.();
         onClose();
+        return null;
       } catch {
-        setError(
-          action === "conclude" ? UI_COPY.tratativaCloseError : UI_COPY.tratativaReleaseError,
-        );
+        return UI_COPY.tratativaCloseError;
       } finally {
         setBusy(false);
       }
@@ -212,8 +274,13 @@ export function TratativaPanel({
             ) : null}
           </div>
           <div className="d-flex align-items-center gap-2">
-            {domain === "RAL" || domain === "REC" ? (
-              <OpenInSirButton domain={domain} numRecup={recordKey} />
+            {isSirDomain && !isAwaitingConclude ? (
+              <OpenInSirButton
+                domain={domain}
+                numRecup={recordKey}
+                locked={!sirUnlocked}
+                lockedTitle={UI_COPY.sirOpenInPortalLocked}
+              />
             ) : null}
             <button type="button" className="btn-close" aria-label="Fechar" onClick={onClose} />
           </div>
@@ -240,64 +307,76 @@ export function TratativaPanel({
                 </dl>
               </section>
 
-              <section className="tratativa-panel__section">
-                <h3 className="h6">Observação</h3>
-                <textarea
-                  className="form-control"
-                  rows={3}
-                  maxLength={500}
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  disabled={!session.canManage || busy}
-                  placeholder="Registre a atualização operacional"
-                />
-                <div className="d-flex gap-2 mt-2">
+              {showSourceFcaConclude || showBsodFcaConclude ? (
+                <section className="tratativa-panel__section">
+                  <h3 className="h6">{UI_COPY.sirConcludeSectionTitle}</h3>
+                  <p className="small text-body-secondary">
+                    {isSdhDomain
+                      ? UI_COPY.sdhConcludeSectionLead
+                      : session.domain === "BSOD"
+                        ? UI_COPY.bsodConcludeSectionLead
+                        : UI_COPY.sirConcludeSectionLead}
+                  </p>
                   <button
                     type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => void handleSaveObservation()}
-                    disabled={!session.canManage || busy}
-                  >
-                    Salvar observação
-                  </button>
-                  {session.canManage ? (
-                    <>
-                      {session.canConclude ? (
-                        <button
-                          type="button"
-                          className="btn btn-danger btn-sm"
-                          onClick={() => void handleEndTreatment("conclude")}
-                          disabled={busy || !note.trim()}
-                        >
-                          {UI_COPY.tratativaClose}
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={() => void handleEndTreatment("release")}
-                        disabled={busy}
-                      >
-                        {session.domain === "SDH" ? "Encerrar" : UI_COPY.tratativaRelease}
-                      </button>
-                    </>
-                  ) : null}
-                </div>
-              </section>
-
-              {session.canManage ? (
-                <section className="tratativa-panel__section">
-                  <h3 className="h6">Acionamento WhatsApp</h3>
-                  <AcionamentoForm
-                    recordKind={session.domain}
-                    recordKey={session.recordKey}
+                    className="btn btn-danger btn-sm"
+                    onClick={() => setConcludeOpen(true)}
                     disabled={busy}
-                    onRegistered={() => void refreshAfterAction()}
-                  />
+                  >
+                    {UI_COPY.tratativaConcluir}
+                  </button>
                 </section>
               ) : null}
 
-              {session.domain === "BSOD" && session.canManage && session.tratativa ? (
+              {showInternalAcionamentoEntry ? (
+                <section className="tratativa-panel__section">
+                  <h3 className="h6">{UI_COPY.acionamentoTitle}</h3>
+                  <div className="d-flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => setPrepOpen(true)}
+                      disabled={busy}
+                    >
+                      {UI_COPY.acionamentoOpen}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => void handleRelease()}
+                      disabled={busy}
+                    >
+                      {UI_COPY.tratativaRelease}
+                    </button>
+                  </div>
+                </section>
+              ) : null}
+
+              {showBsodAcionamento ? (
+                <section className="tratativa-panel__section">
+                  <h3 className="h6">{UI_COPY.acionamentoTitle}</h3>
+                  <div className="d-flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => setAcionamentoOpen(true)}
+                      disabled={busy}
+                    >
+                      {UI_COPY.acionamentoOpen}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => void handleRelease()}
+                      disabled={busy}
+                    >
+                      {UI_COPY.tratativaRelease}
+                    </button>
+                  </div>
+                </section>
+              ) : null}
+
+              {showBsodWorkflow && session.tratativa ? (
                 <section className="tratativa-panel__section">
                   <h3 className="h6">Fluxo BSOD</h3>
                   <div className="d-flex flex-wrap gap-2">
@@ -318,6 +397,31 @@ export function TratativaPanel({
                         void refreshAfterAction();
                       }}
                     />
+                  </div>
+                </section>
+              ) : null}
+
+              {showUpdateSection ? (
+                <section className="tratativa-panel__section">
+                  <h3 className="h6">{UI_COPY.tratativaUpdateTitle}</h3>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    maxLength={500}
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    disabled={!session.canManage || busy}
+                    placeholder={UI_COPY.tratativaUpdatePlaceholder}
+                  />
+                  <div className="d-flex flex-wrap gap-2 mt-2">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => void handleSaveObservation()}
+                      disabled={!session.canManage || busy}
+                    >
+                      {UI_COPY.tratativaUpdateSave}
+                    </button>
                   </div>
                 </section>
               ) : null}
@@ -356,6 +460,44 @@ export function TratativaPanel({
         aria-hidden="true"
         onClick={onClose}
       />
+      {session &&
+      (session.domain === "RAL" ||
+        session.domain === "REC" ||
+        session.domain === "SDH" ||
+        session.domain === "BSOD") ? (
+        <SirConcludeFcaModal
+          open={concludeOpen}
+          recordKey={session.recordKey}
+          onClose={() => setConcludeOpen(false)}
+          onSubmit={handleConcludeWithFca}
+        />
+      ) : null}
+      {session?.domain === "BSOD" ? (
+        <AcionamentoModal
+          open={acionamentoOpen}
+          recordKind={session.domain}
+          recordKey={session.recordKey}
+          onClose={() => setAcionamentoOpen(false)}
+          onRegistered={() => {
+            setAcionamentoOpen(false);
+            void refreshAfterAction();
+          }}
+        />
+      ) : null}
+      {session &&
+      (session.domain === "RAL" || session.domain === "REC" || session.domain === "SDH") ? (
+        <SirPrepModal
+          open={prepOpen}
+          recordKind={session.domain}
+          recordKey={session.recordKey}
+          unlocked={sirUnlocked}
+          onClose={() => setPrepOpen(false)}
+          onRegistered={() => {
+            setPrepOpen(false);
+            void refreshAfterAction();
+          }}
+        />
+      ) : null}
     </>
   );
 }

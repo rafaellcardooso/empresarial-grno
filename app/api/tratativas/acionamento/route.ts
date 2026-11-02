@@ -17,9 +17,12 @@ type AcionamentoBody = {
   recordKind?: string;
   recordKey?: string;
   technician?: Partial<AcionamentoTechnicianInput>;
+  /** Texto já montado (preparação SIR/SDH sem WhatsApp). */
+  messageText?: string;
+  mode?: "whatsapp" | "sir-prep";
 };
 
-/** Monta mensagem de acionamento, registra evento e retorna texto para WhatsApp. */
+/** Monta/registra acionamento WhatsApp ou preparação interna (SIR/SDH) e retorna o texto. */
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session || session.status !== "ACTIVE") {
@@ -29,25 +32,42 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as AcionamentoBody | null;
   const recordKind = parseAcionamentoRecordKind(body?.recordKind);
   const recordKey = body?.recordKey?.trim();
-  const technician = normalizeTechnicianInput(body?.technician);
+  const isPrepMode =
+    body?.mode === "sir-prep" ||
+    (Boolean(body?.messageText?.trim()) &&
+      (recordKind === "RAL" || recordKind === "REC" || recordKind === "SDH"));
 
   if (!recordKind || !recordKey) {
     return NextResponse.json({ error: "Parâmetros inválidos" }, { status: 400 });
   }
 
-  const validationError = getAcionamentoTechnicianValidationError(technician);
-  if (validationError) {
-    return NextResponse.json({ error: validationError }, { status: 400 });
-  }
-
   const normalizedKey =
     recordKind === "SDH" ? recordKey : normalizeTratativaKey(recordKind, recordKey);
-  const context = await getAcionamentoContext(recordKind, normalizedKey);
-  if (!context) {
-    return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
-  }
 
-  const message = buildAcionamentoMessage(context, technician);
+  let message = "";
+  if (isPrepMode) {
+    if (recordKind !== "RAL" && recordKind !== "REC" && recordKind !== "SDH") {
+      return NextResponse.json(
+        { error: "Acionamento interno só para RAL, REC ou SDH." },
+        { status: 400 },
+      );
+    }
+    message = String(body?.messageText ?? "").trim();
+    if (!message) {
+      return NextResponse.json({ error: "Informe o texto do acionamento." }, { status: 400 });
+    }
+  } else {
+    const technician = normalizeTechnicianInput(body?.technician);
+    const validationError = getAcionamentoTechnicianValidationError(technician);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+    const context = await getAcionamentoContext(recordKind, normalizedKey);
+    if (!context) {
+      return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
+    }
+    message = buildAcionamentoMessage(context, technician);
+  }
 
   try {
     if (recordKind === "SDH") {

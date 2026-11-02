@@ -36,16 +36,24 @@ export function sirReportDddClause(ddd?: string): { sql: string; params: string[
   };
 }
 
-/** Escopo comum ATIVO + tratativa + DDD. */
+/** Cláusula opcional por prefixo de num_recup (REC-/DSR-/TCQ-). */
+export function sirReportPrefixClause(prefix?: string): { sql: string; params: string[] } {
+  if (!prefix) return { sql: "", params: [] };
+  return { sql: " AND num_recup LIKE ?", params: [`${prefix}-%`] };
+}
+
+/** Escopo comum ATIVO + tratativa + DDD (+ prefixo opcional). */
 export function sirReportActiveScope(
   table: typeof SIR_TABLES.rals | typeof SIR_TABLES.recs,
   kind: "RAL" | "REC",
   filters: SirReportFilters,
+  prefix?: string,
 ): { sql: string; params: string[] } {
   const treatment = sirReportTreatmentClause(table, kind, filters.tratativa);
   const ddd = sirReportDddClause(filters.ddd);
+  const byPrefix = sirReportPrefixClause(prefix);
   return {
-    sql: ` WHERE status = 'ATIVO' ${treatment.sql} ${ddd.sql}`,
-    params: [...treatment.params, ...ddd.params],
+    sql: ` WHERE status = 'ATIVO' ${treatment.sql} ${ddd.sql}${byPrefix.sql}`,
+    params: [...treatment.params, ...ddd.params, ...byPrefix.params],
   };
 }

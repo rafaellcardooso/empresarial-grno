@@ -13,17 +13,20 @@ export function buildSirInsightHighlights(data: SirReportData): SirInsightHighli
   const { summary, byDdd, byTipo, ageBuckets } = data;
   const highlights: SirInsightHighlight[] = [];
 
-  if (summary.ral.totalActive > 0 || summary.rec.totalActive > 0) {
+  const backlogParts = summary.scopes
+    .filter((scope) => scope.totalActive > 0)
+    .map((scope) => `${scope.key} ${scope.totalActive}`);
+  if (backlogParts.length > 0) {
     highlights.push({
       id: "backlog",
       icon: "bi-diagram-3",
       label: "Backlog ativo",
-      value: `RAL ${summary.ral.totalActive} · REC ${summary.rec.totalActive}`,
+      value: backlogParts.join(" · "),
       tone: "default",
     });
   }
 
-  const pending = summary.ral.pending + summary.rec.pending;
+  const pending = summary.scopes.reduce((sum, scope) => sum + scope.pending, 0);
   if (pending > 0) {
     highlights.push({
       id: "pending",
@@ -31,6 +34,19 @@ export function buildSirInsightHighlights(data: SirReportData): SirInsightHighli
       label: "Pendentes (sem tratativa)",
       value: String(pending),
       tone: "warning",
+    });
+  }
+
+  const concludedParts = summary.scopes
+    .filter((scope) => scope.conclusionsInPeriod > 0)
+    .map((scope) => `${scope.key} ${scope.conclusionsInPeriod}`);
+  if (concludedParts.length > 0) {
+    highlights.push({
+      id: "concluded",
+      icon: "bi-check2-circle",
+      label: "Concluídos no período",
+      value: concludedParts.join(" · "),
+      tone: "success",
     });
   }
 

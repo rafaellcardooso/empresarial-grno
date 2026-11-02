@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { parseTratativaRecordKind } from "@/lib/tratativa/keys";
+import type { ValidacaoFcaInput } from "@/lib/models/validacao";
+import { parseAcionamentoRecordKind } from "@/lib/tratativa/keys";
 import {
   concludeSirTratativa,
   TratativaConclusionError,
@@ -9,14 +10,24 @@ import {
   TratativaRequiredError,
 } from "@/lib/queries/tratativas";
 import { TratativaWorkflowError, concludeTratativa } from "@/lib/queries/tratativa-workflow";
+import {
+  concludeSdhTratativa,
+  SdhTratativaConclusionError,
+  SdhTratativaForbiddenError,
+} from "@/lib/queries/sdh";
+import {
+  formatValidacaoFcaMessage,
+  getValidacaoFcaValidationError,
+} from "@/lib/tratativa/validate-validacao-fca";
 
 type ConcluirBody = {
   recordKind?: string;
   recordKey?: string;
   note?: string | null;
+  fca?: Partial<ValidacaoFcaInput> | null;
 };
 
-/** Conclui tratativa BSOD validada ou SIR já encerrada na fonte. */
+/** Conclui tratativa BSOD/SIR/SDH normalizada na fonte com FCA, ou BSOD validada no fluxo legado. */
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session || session.status !== "ACTIVE") {
@@ -24,7 +35,7 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => null)) as ConcluirBody | null;
-  const recordKind = parseTratativaRecordKind(body?.recordKind);
+  const recordKind = parseAcionamentoRecordKind(body?.recordKind);
   const recordKey = body?.recordKey?.trim();
 
   if (!recordKind || !recordKey) {
@@ -32,14 +43,46 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (recordKind === "RAL" || recordKind === "REC") {
-      await concludeSirTratativa({
-        recordKind,
-        recordKey,
-        userId: session.userId,
-        userRole: session.role,
-        note: body?.note ?? "",
-      });
+    const hasFcaPayload = Boolean(body?.fca);
+    if (
+      recordKind === "RAL" ||
+      recordKind === "REC" ||
+      recordKind === "SDH" ||
+      (recordKind === "BSOD" && hasFcaPayload)
+    ) {
+      const fca: ValidacaoFcaInput = {
+        fato: String(body?.fca?.fato ?? "").trim(),
+        causa: String(body?.fca?.causa ?? "").trim(),
+        acao: String(body?.fca?.acao ?? "").trim(),
+      };
+      const fcaError = getValidacaoFcaValidationError(fca);
+      if (fcaError) {
+        return NextResponse.json({ error: fcaError }, { status: 400 });
+      }
+      const messageText = formatValidacaoFcaMessage(fca);
+
+      if (recordKind === "SDH") {
+        const alarmId = Number(recordKey);
+        if (!Number.isInteger(alarmId) || alarmId <= 0) {
+          return NextResponse.json({ error: "Alarme SDH inválido." }, { status: 400 });
+        }
+        await concludeSdhTratativa({
+          alarmId,
+          userId: session.userId,
+          userRole: session.role,
+          messageText,
+          note: body?.note ?? null,
+        });
+      } else {
+        await concludeSirTratativa({
+          recordKind,
+          recordKey,
+          userId: session.userId,
+          userRole: session.role,
+          note: body?.note ?? null,
+          messageText,
+        });
+      }
     } else {
       await concludeTratativa({
         recordKind,
@@ -60,11 +103,12 @@ function workflowErrorResponse(error: unknown) {
   if (
     error instanceof TratativaRequiredError ||
     error instanceof TratativaNotFoundError ||
-    error instanceof TratativaConclusionError
+    error instanceof TratativaConclusionError ||
+    error instanceof SdhTratativaConclusionError
   ) {
     return NextResponse.json({ error: error.message }, { status: 409 });
   }
-  if (error instanceof TratativaForbiddenError) {
+  if (error instanceof TratativaForbiddenError || error instanceof SdhTratativaForbiddenError) {
     return NextResponse.json({ error: error.message }, { status: 403 });
   }
   if (error instanceof TratativaWorkflowError) {

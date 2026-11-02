@@ -62,6 +62,7 @@ LAB_DETECT=(
   bsod-ingest-snmp-lab.timer
   bsod-ingest-ldap-lab.timer
   bsod-ingest-crm-lab.timer
+  planta-sync-lab.timer
 )
 PROD_DETECT=(
   empresarial-next
@@ -74,6 +75,7 @@ PROD_DETECT=(
   bsod-ingest-snmp.timer
   bsod-ingest-ldap.timer
   bsod-ingest-crm.timer
+  planta-sync.timer
 )
 
 detect_profile() {
@@ -117,6 +119,7 @@ EXPECTED_LAB=(
   "bsod-ingest-snmp-lab.timer|timer|BSOD SNMP a cada 10 min"
   "bsod-ingest-ldap-lab.timer|timer|BSOD LDAP a cada 3 h"
   "bsod-ingest-crm-lab.timer|timer|BSOD CRM a cada 6 h"
+  "planta-sync-lab.timer|timer|Planta instalada diário 03:30"
 )
 
 EXPECTED_PROD=(
@@ -130,10 +133,11 @@ EXPECTED_PROD=(
   "bsod-ingest-snmp.timer|timer|BSOD SNMP a cada 10 min"
   "bsod-ingest-ldap.timer|timer|BSOD LDAP a cada 3 h"
   "bsod-ingest-crm.timer|timer|BSOD CRM a cada 6 h"
+  "planta-sync.timer|timer|Planta instalada diário 03:30"
 )
 
-OTHER_PROFILE_LAB=(empresarial-next sir-ingest-ral sir-ingest-rec tmip-ingest.timer bsod-ingest-xpertrak.timer bsod-ingest-snmp.timer bsod-ingest-ldap.timer bsod-ingest-crm.timer)
-OTHER_PROFILE_PROD=(empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab tmip-ingest-lab.timer bsod-ingest-xpertrak-lab.timer bsod-ingest-snmp-lab.timer bsod-ingest-ldap-lab.timer bsod-ingest-crm-lab.timer)
+OTHER_PROFILE_LAB=(empresarial-next sir-ingest-ral sir-ingest-rec tmip-ingest.timer bsod-ingest-xpertrak.timer bsod-ingest-snmp.timer bsod-ingest-ldap.timer bsod-ingest-crm.timer planta-sync.timer)
+OTHER_PROFILE_PROD=(empresarial-next-lab sir-ingest-ral-lab sir-ingest-rec-lab tmip-ingest-lab.timer bsod-ingest-xpertrak-lab.timer bsod-ingest-snmp-lab.timer bsod-ingest-ldap-lab.timer bsod-ingest-crm-lab.timer planta-sync-lab.timer)
 
 timer_next() {
   systemctl list-timers --all --no-pager --no-legend 2>/dev/null \

@@ -4,6 +4,22 @@ import { getSirPool, sirQuery } from "@/lib/db/sir";
 import { serializeRows } from "@/lib/serialize";
 import type { RowDataPacket } from "mysql2";
 
+/** Alarme SDH ainda ativo — conclusão com FCA só após normalização no TMIP. */
+export class SdhTratativaConclusionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SdhTratativaConclusionError";
+  }
+}
+
+/** Sem ownership/STAFF para concluir tratativa SDH. */
+export class SdhTratativaForbiddenError extends Error {
+  constructor(message = "Sem permissão para concluir esta tratativa.") {
+    super(message);
+    this.name = "SdhTratativaForbiddenError";
+  }
+}
+
 type MarkSdhStatusInput = {
   id: number;
   emTratativa: boolean;
@@ -112,4 +128,88 @@ export async function updateSdhTratativaStatus(
   }
 
   return readAlarm(input.id);
+}
+
+/**
+ * Conclui tratativa SDH de alarme já normalizado (is_active=0),
+ * gravando FCA no evento CLOSE.
+ */
+export async function concludeSdhTratativa(input: {
+  alarmId: number;
+  userId: number;
+  userRole: AppUserRole;
+  messageText: string;
+  note?: string | null;
+}): Promise<SdhAlarmListItem> {
+  const messageText = input.messageText.trim();
+  if (!messageText) {
+    throw new SdhTratativaConclusionError("FCA obrigatório para concluir a tratativa.");
+  }
+
+  const isStaff = input.userRole === "STAFF";
+  const note = input.note?.trim();
+  const observacao = note ? `${messageText}\n\n${note}` : messageText;
+
+  const connection = await getSirPool().getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [rows] = await connection.execute<SdhRow[]>(
+      `SELECT a.*, u.corporate_id AS tratativa_user_login
+       FROM sdh_alarms a
+       LEFT JOIN app_users u ON u.id = a.tratativa_user_id
+       WHERE a.id = ?
+       LIMIT 1
+       FOR UPDATE`,
+      [input.alarmId],
+    );
+    const alarm = rows[0];
+    if (!alarm) {
+      throw new SdhTratativaConclusionError("Alarme SDH não encontrado.");
+    }
+    if (Number(alarm.em_tratativa) !== 1) {
+      throw new SdhTratativaConclusionError("Alarme SDH sem tratativa ativa.");
+    }
+    if (Number(alarm.is_active) === 1) {
+      throw new SdhTratativaConclusionError(
+        "Conclua somente após o alarme ser normalizado no TMIP.",
+      );
+    }
+    if (!isStaff && alarm.tratativa_user_id !== input.userId) {
+      throw new SdhTratativaForbiddenError();
+    }
+
+    const [result] = await connection.execute(
+      `UPDATE sdh_alarms
+       SET em_tratativa = 0,
+           tratativa_user_id = NULL,
+           tratativa_marked_at = NOW(),
+           tratativa_observacao = ?
+       WHERE id = ? AND em_tratativa = 1
+         AND (tratativa_user_id = ? OR ? = 1)`,
+      [observacao, input.alarmId, input.userId, isStaff ? 1 : 0],
+    );
+    if ("affectedRows" in result && result.affectedRows === 0) {
+      throw new SdhTratativaForbiddenError();
+    }
+
+    await connection.execute(
+      `INSERT INTO sdh_tratativa_events
+         (alarm_id, user_id, event_type, observacao)
+       VALUES (?, ?, 'CLOSE', ?)`,
+      [input.alarmId, input.userId, observacao],
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+  const closed = await readAlarm(input.alarmId);
+  if (!closed) {
+    throw new SdhTratativaConclusionError("Alarme SDH não encontrado após conclusão.");
+  }
+  return closed;
 }

@@ -18,7 +18,11 @@ import { getPmeBsodByMac } from "@/lib/queries/bsod";
 import { getRalByNum, getRecByNum } from "@/lib/queries/sir";
 import { recGroupDisplayLabel } from "@/lib/config/rec-types";
 import { normalizeTratativaKey } from "@/lib/tratativa/keys";
-import type { TreatmentDomain, TreatmentSession } from "@/lib/tratativa/treatment-types";
+import {
+  hasAcionamentoInCurrentCycle,
+  type TreatmentDomain,
+  type TreatmentSession,
+} from "@/lib/tratativa/treatment-types";
 import { enrichTratativasWorkflow } from "@/lib/queries/tratativa-workflow";
 
 type OpenTreatmentInput = {
@@ -75,12 +79,16 @@ async function openSharedSession(
     }
   }
 
-  if (tratativa && input.domain === "BSOD") {
+  if (tratativa) {
     const enriched = await enrichTratativasWorkflow({ [tratativa.recordKey]: tratativa });
     tratativa = enriched[tratativa.recordKey] ?? tratativa;
   }
   const sirStatus = summary.find((item) => item.label === "Status SIR")?.value;
   const displayLabel = input.domain === "REC" ? recGroupDisplayLabel(key) : input.domain;
+  const history = tratativa?.history ?? [];
+  const isSir = input.domain === "RAL" || input.domain === "REC";
+  const bsodOnline =
+    input.domain === "BSOD" && String((await getPmeBsodByMac(key))?.monitor_status ?? "") === "1";
 
   return {
     domain: input.domain,
@@ -92,11 +100,11 @@ async function openSharedSession(
     canManage,
     readOnlyReason,
     tratativa,
-    history: tratativa?.history ?? [],
+    history,
     workflowStatus: tratativa?.workflowStatus,
-    canConclude:
-      (input.domain === "RAL" || input.domain === "REC") &&
-      sirStatus?.trim().toUpperCase() === "ENCERRADO",
+    canConclude: (isSir && sirStatus?.trim().toUpperCase() === "ENCERRADO") || bsodOnline,
+    // Fase da tratativa ativa (por id), não a cronologia histórica do record_key.
+    sirPortalUnlocked: isSir && tratativa?.workflowStatus === "acionado",
   };
 }
 
@@ -162,6 +170,8 @@ async function openSdhSession(input: OpenTreatmentInput): Promise<TreatmentSessi
     createdAt: event.created_at,
   }));
 
+  const awaitingConclude = Number(alarm.is_active) !== 1 && Number(alarm.em_tratativa) === 1;
+
   return {
     domain: "SDH",
     recordKey: String(alarmId),
@@ -176,11 +186,17 @@ async function openSdhSession(input: OpenTreatmentInput): Promise<TreatmentSessi
       { label: "Circuito", value: alarm.circuito?.trim() || "—" },
       { label: "SIR", value: alarm.sir?.trim() || "—" },
       { label: "IP", value: alarm.ip?.trim() || "—" },
+      {
+        label: "Status TMIP",
+        value: Number(alarm.is_active) === 1 ? "Ativo" : "Normalizado",
+      },
     ],
     canManage,
     readOnlyReason,
     sdhAlarm: alarm,
     history,
+    canConclude: awaitingConclude,
+    sirPortalUnlocked: hasAcionamentoInCurrentCycle(history),
   };
 }
 

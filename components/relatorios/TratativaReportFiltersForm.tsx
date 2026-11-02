@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   buildTratativaReportHref,
   formatRelatorioDateParam,
@@ -13,48 +13,69 @@ type TratativaReportFiltersFormProps = {
   filters: TratativaReportFilters;
 };
 
-/** Formulário de período para relatório de tratativas BSOD. */
+const PRESETS = [7, 30, 90] as const;
+
+/** Formulário de período do relatório BSOD. */
 export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFormProps) {
   const router = useRouter();
   const [from, setFrom] = useState(formatRelatorioDateParam(filters.from));
   const [to, setTo] = useState(formatRelatorioDateParam(filters.to));
+
+  useEffect(() => {
+    setFrom(formatRelatorioDateParam(filters.from));
+    setTo(formatRelatorioDateParam(filters.to));
+  }, [filters.from, filters.to]);
+
+  function pushFilters(next: { from: Date; to: Date }) {
+    router.push(
+      buildTratativaReportHref({
+        from: next.from,
+        to: next.to,
+        recordKind: "BSOD",
+        status: filters.status,
+        page: 1,
+      }),
+    );
+  }
 
   const applyPreset = (days: number) => {
     const end = new Date();
     end.setHours(0, 0, 0, 0);
     const start = new Date(end);
     start.setDate(start.getDate() - (days - 1));
-    router.push(
-      buildTratativaReportHref({
-        from: start,
-        to: end,
-        recordKind: "BSOD",
-        status: filters.status,
-        page: 1,
-      }),
-    );
+    setFrom(formatRelatorioDateParam(start));
+    setTo(formatRelatorioDateParam(end));
+    pushFilters({ from: start, to: end });
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const fromDate = new Date(`${from}T00:00:00`);
-    const toDate = new Date(`${to}T00:00:00`);
-    router.push(
-      buildTratativaReportHref({
-        from: fromDate,
-        to: toDate,
-        recordKind: "BSOD",
-        status: filters.status,
-        page: 1,
-      }),
-    );
+    pushFilters({
+      from: new Date(`${from}T00:00:00`),
+      to: new Date(`${to}T00:00:00`),
+    });
   };
 
+  const activePreset = PRESETS.find((days) => isPresetActive(from, to, days));
+
   return (
-    <form className="relatorio-tratativa-filters" onSubmit={handleSubmit}>
-      <div className="row g-2 align-items-end">
-        <div className="col-sm-6 col-md-4">
-          <label className="form-label relatorio-export__label" htmlFor="tratativa-de">
+    <form className="report-toolbar" onSubmit={handleSubmit}>
+      <div className="report-toolbar__presets" role="group" aria-label="Período rápido">
+        {PRESETS.map((days) => (
+          <button
+            key={days}
+            type="button"
+            className={`report-toolbar__preset${activePreset === days ? " is-active" : ""}`}
+            onClick={() => applyPreset(days)}
+          >
+            {days}d
+          </button>
+        ))}
+      </div>
+
+      <div className="report-toolbar__fields">
+        <div className="report-toolbar__field">
+          <label className="report-toolbar__label" htmlFor="tratativa-de">
             De
           </label>
           <input
@@ -65,8 +86,8 @@ export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFo
             onChange={(event) => setFrom(event.target.value)}
           />
         </div>
-        <div className="col-sm-6 col-md-4">
-          <label className="form-label relatorio-export__label" htmlFor="tratativa-ate">
+        <div className="report-toolbar__field">
+          <label className="report-toolbar__label" htmlFor="tratativa-ate">
             Até
           </label>
           <input
@@ -77,36 +98,21 @@ export function TratativaReportFiltersForm({ filters }: TratativaReportFiltersFo
             onChange={(event) => setTo(event.target.value)}
           />
         </div>
-        <div className="col-sm-6 col-md-4 d-flex gap-2">
-          <button type="submit" className="btn btn-primary btn-sm flex-grow-1">
+        <div className="report-toolbar__actions">
+          <button type="submit" className="btn btn-primary btn-sm">
             {RELATORIOS_COPY.applyFilters}
           </button>
         </div>
       </div>
-
-      <div className="relatorio-tratativa-filters__presets">
-        <button
-          type="button"
-          className="btn btn-outline-secondary btn-sm"
-          onClick={() => applyPreset(7)}
-        >
-          {RELATORIOS_COPY.presetDays(7)}
-        </button>
-        <button
-          type="button"
-          className="btn btn-outline-secondary btn-sm"
-          onClick={() => applyPreset(30)}
-        >
-          {RELATORIOS_COPY.presetDays(30)}
-        </button>
-        <button
-          type="button"
-          className="btn btn-outline-secondary btn-sm"
-          onClick={() => applyPreset(90)}
-        >
-          {RELATORIOS_COPY.presetDays(90)}
-        </button>
-      </div>
     </form>
   );
+}
+
+/** Indica se o intervalo atual corresponde a um preset de N dias até hoje. */
+function isPresetActive(from: string, to: string, days: number): boolean {
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+  const start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
+  return from === formatRelatorioDateParam(start) && to === formatRelatorioDateParam(end);
 }

@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { formatDateTimeDisplay } from "@/components/ui/DateTimeStacked";
 import { OpenInSirButton } from "@/components/sir/OpenInSirButton";
 import { RalTipoBadge } from "@/components/sir/RalTipoBadge";
+import { SirIncidentDetailsView } from "@/components/sir/SirIncidentDetailsView";
 import { SirStatusBadge } from "@/components/sir/SirStatusBadge";
 import type { TratativaPublic } from "@/lib/models/tratativa";
 
@@ -63,7 +64,7 @@ export function SirDetalhesPanel({
             <SirDetalhesMeta recordLabel={recordLabel} row={row} tratativa={tratativa} />
           ) : null}
           <p className="sir-detalhes-offcanvas__label mb-2">Detalhes</p>
-          <div className="sir-detalhes-offcanvas__text">{text}</div>
+          <SirIncidentDetailsView text={text} className="sir-detalhes-offcanvas__text" />
         </div>
       </div>
 

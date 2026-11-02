@@ -1,89 +1,127 @@
-import { RelatorioInsightKpi } from "@/components/relatorios/RelatorioInsightKpi";
-import { RELATORIOS_COPY } from "@/lib/config/relatorios-copy";
-import type { SirReportSummary } from "@/lib/models/sir-report";
+"use client";
+
+import Link from "next/link";
+import { buildSirConclusionsHref, buildSirScopeListHref } from "@/lib/config/sir-report-drilldown";
+import type {
+  SirReportFilters,
+  SirReportKpiScopeKey,
+  SirReportSummary,
+} from "@/lib/models/sir-report";
+import { scrollToReportSectionWhenReady } from "@/lib/relatorios/scroll-to-section";
 
 type SirReportKpisProps = {
   summary: SirReportSummary;
-  showRal: boolean;
-  showRec: boolean;
+  filters: SirReportFilters;
 };
 
-/** Grade de KPIs por domínio RAL/REC. */
-export function SirReportKpis({ summary, showRal, showRec }: SirReportKpisProps) {
+/** Resumo por tipo: backlog à esquerda, atividade do período à direita. */
+export function SirReportKpis({ summary, filters }: SirReportKpisProps) {
+  if (summary.scopes.length === 0) return null;
+
   return (
-    <div className="row g-3 relatorio-dashboard__kpis">
-      {showRal ? (
-        <>
-          <div className="col-6 col-xl-3">
-            <RelatorioInsightKpi
-              icon="bi-exclamation-octagon"
-              label={RELATORIOS_COPY.sirKpiRalTotal}
-              value={summary.ral.totalActive}
-              tone="primary"
-            />
-          </div>
-          <div className="col-6 col-xl-3">
-            <RelatorioInsightKpi
-              icon="bi-hourglass-split"
-              label={RELATORIOS_COPY.sirKpiRalPending}
-              value={summary.ral.pending}
-              tone="warning"
-            />
-          </div>
-          <div className="col-6 col-xl-3">
-            <RelatorioInsightKpi
-              icon="bi-tools"
-              label={RELATORIOS_COPY.sirKpiRalTreatment}
-              value={summary.ral.inTreatment}
-              tone="success"
-            />
-          </div>
-          <div className="col-6 col-xl-3">
-            <RelatorioInsightKpi
-              icon="bi-calendar-plus"
-              label={RELATORIOS_COPY.sirKpiRalOpenings}
-              value={summary.ral.openingsInPeriod}
-              tone="info"
-            />
-          </div>
-        </>
-      ) : null}
-      {showRec ? (
-        <>
-          <div className="col-6 col-xl-3">
-            <RelatorioInsightKpi
-              icon="bi-hdd-rack"
-              label={RELATORIOS_COPY.sirKpiRecTotal}
-              value={summary.rec.totalActive}
-              tone="primary"
-            />
-          </div>
-          <div className="col-6 col-xl-3">
-            <RelatorioInsightKpi
-              icon="bi-hourglass"
-              label={RELATORIOS_COPY.sirKpiRecPending}
-              value={summary.rec.pending}
-              tone="warning"
-            />
-          </div>
-          <div className="col-6 col-xl-3">
-            <RelatorioInsightKpi
-              icon="bi-wrench"
-              label={RELATORIOS_COPY.sirKpiRecTreatment}
-              value={summary.rec.inTreatment}
-              tone="success"
-            />
-          </div>
-          <div className="col-6 col-xl-3">
-            <RelatorioInsightKpi
-              icon="bi-calendar-event"
-              label={RELATORIOS_COPY.sirKpiRecOpenings}
-              value={summary.rec.openingsInPeriod}
-              tone="info"
-            />
-          </div>
-        </>
-      ) : null}
+    <section className="report-kpi-board" aria-label="Resumo por tipo">
+      <div className="report-kpi-board__grid">
+        {summary.scopes.map((scope) => (
+          <article
+            key={scope.key}
+            className={`report-kpi-card report-kpi-card--${scopeKeyClass(scope.key)}`}
+          >
+            <header className="report-kpi-card__head">
+              <Link
+                href={buildSirScopeListHref(filters, scope.key)}
+                className="report-kpi-card__badge"
+                title={`Abrir monitoramento ${scope.label}`}
+              >
+                {scope.label}
+              </Link>
+              <Link
+                href={buildSirScopeListHref(filters, scope.key)}
+                className="report-kpi-card__hero"
+                title={`Abrir ${scope.label} ativos`}
+              >
+                <span className="report-kpi-card__hero-value">{scope.totalActive}</span>
+                <span className="report-kpi-card__hero-label">ativos</span>
+              </Link>
+            </header>
+
+            <div className="report-kpi-card__groups">
+              <div className="report-kpi-card__group">
+                <span className="report-kpi-card__group-label">Agora</span>
+                <div className="report-kpi-card__metrics">
+                  <MetricLink
+                    href={buildSirScopeListHref(filters, scope.key, "pendente")}
+                    title={`Abrir ${scope.label} pendentes`}
+                    value={scope.pending}
+                    label="Pendentes"
+                  />
+                  <MetricLink
+                    href={buildSirScopeListHref(filters, scope.key, "em-tratativa")}
+                    title={`Abrir ${scope.label} em tratativa`}
+                    value={scope.inTreatment}
+                    label="Em tratativa"
+                  />
+                </div>
+              </div>
+
+              <div className="report-kpi-card__group">
+                <span className="report-kpi-card__group-label">Período</span>
+                <div className="report-kpi-card__metrics">
+                  <MetricStatic value={scope.openingsInPeriod} label="Aberturas" />
+                  <MetricLink
+                    href={buildSirConclusionsHref(filters, scope.key)}
+                    title={`Ver concluídos de ${scope.label}`}
+                    value={scope.conclusionsInPeriod}
+                    label="Conclusões"
+                  />
+                </div>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+type MetricProps = {
+  value: number;
+  label: string;
+  href?: string;
+  title?: string;
+};
+
+/** Métrica clicável do card de KPI. */
+function MetricLink({ value, label, href, title }: MetricProps & { href: string }) {
+  const isConclusions = href.includes("#sir-concluidos");
+  return (
+    <Link
+      href={href}
+      className="report-kpi-metric"
+      title={title}
+      scroll={!isConclusions}
+      onClick={() => {
+        if (isConclusions) {
+          scrollToReportSectionWhenReady("sir-concluidos");
+        }
+      }}
+    >
+      <span className="report-kpi-metric__value">{value}</span>
+      <span className="report-kpi-metric__label">{label}</span>
+    </Link>
+  );
+}
+
+/** Métrica sem link. */
+function MetricStatic({ value, label }: MetricProps) {
+  return (
+    <div className="report-kpi-metric report-kpi-metric--static">
+      <span className="report-kpi-metric__value">{value}</span>
+      <span className="report-kpi-metric__label">{label}</span>
     </div>
   );
+}
+
+/** Classe CSS estável a partir da chave do escopo. */
+function scopeKeyClass(key: SirReportKpiScopeKey): string {
+  return key.toLowerCase();
 }

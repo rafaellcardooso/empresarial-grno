@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { RELATORIOS_COPY } from "@/lib/config/relatorios-copy";
 import { formatRelatorioDateParam } from "@/lib/config/relatorios-filters";
 import { parseSdhReportParams } from "@/lib/config/sdh-report-filters";
+import { sdhConcludedPageFromParam } from "@/lib/config/sdh-report-pagination";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "SDH" };
@@ -17,6 +18,7 @@ type PageProps = {
     ate?: string;
     vendor?: string;
     ddd?: string;
+    concluidosPage?: string;
   }>;
 };
 
@@ -24,11 +26,13 @@ type PageProps = {
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters = parseSdhReportParams(params);
+  const concluidosPage = sdhConcludedPageFromParam(params.concluidosPage);
   const reportCacheKey = [
     formatRelatorioDateParam(filters.from),
     formatRelatorioDateParam(filters.to),
     filters.vendor ?? "all",
     filters.ddd ?? "all",
+    String(concluidosPage),
   ].join(":");
 
   return (
@@ -45,7 +49,7 @@ export default async function Page({ searchParams }: PageProps) {
       <SdhReportFiltersForm filters={filters} />
 
       <Suspense key={reportCacheKey} fallback={<SdhReportLoading />}>
-        <SdhReportAsync filters={filters} />
+        <SdhReportAsync filters={filters} concluidosPage={concluidosPage} />
       </Suspense>
     </>
   );

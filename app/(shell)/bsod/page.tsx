@@ -94,6 +94,14 @@ export default async function Page({ searchParams }: PageProps) {
           nodeOptions={data.nodeOptions}
           activeState={urlState}
         />
+        <BsodNormalizedTreatments
+          rows={data.normalizedRows}
+          tratativasByKey={normalizedTratativasByKey}
+          total={data.normalizedTotal}
+          currentPage={normalizedPage}
+          pageSize={pageSize}
+          activeUrlState={urlState}
+        />
         <BsodInventoryTable
           rows={data.rows}
           tratativasByKey={tratativasByKey}
@@ -105,14 +113,6 @@ export default async function Page({ searchParams }: PageProps) {
           exportHref={buildBsodExportHref(urlState, { scope: "alarms" })}
           variant="alarms"
           basePath="/bsod"
-        />
-        <BsodNormalizedTreatments
-          rows={data.normalizedRows}
-          tratativasByKey={normalizedTratativasByKey}
-          total={data.normalizedTotal}
-          currentPage={normalizedPage}
-          pageSize={pageSize}
-          activeUrlState={urlState}
         />
       </>
     );

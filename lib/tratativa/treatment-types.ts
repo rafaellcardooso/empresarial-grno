@@ -19,6 +19,11 @@ export type TreatmentSession = {
   history: TratativaHistoryEntry[];
   workflowStatus?: string;
   canConclude?: boolean;
+  /**
+   * Preparação registrada (evento ACIONAMENTO).
+   * Em RAL/REC libera Abrir no SIR; em SDH só indica preparação concluída.
+   */
+  sirPortalUnlocked?: boolean;
 };
 
 /** Rótulos de eventos para cronologia. */
@@ -33,3 +38,18 @@ export const TREATMENT_EVENT_LABELS: Record<string, string> = {
   UPDATE: "Atualização (legado)",
   CLOSE: "Encerramento",
 };
+
+/**
+ * Indica se há ACIONAMENTO no ciclo atual (após o último START).
+ * Evita liberar o fluxo com acionamento de tratativas anteriores no mesmo registro.
+ */
+export function hasAcionamentoInCurrentCycle(history: TratativaHistoryEntry[]): boolean {
+  let cycleStart = 0;
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    if (history[index]?.eventType === "START") {
+      cycleStart = index;
+      break;
+    }
+  }
+  return history.slice(cycleStart).some((entry) => entry.eventType === "ACIONAMENTO");
+}

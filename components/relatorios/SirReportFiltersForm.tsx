@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { listOperationalDdds, operationalDddLabel } from "@/lib/config/locations";
 import { formatRelatorioDateParam } from "@/lib/config/relatorios-filters";
 import { RELATORIOS_COPY } from "@/lib/config/relatorios-copy";
@@ -22,6 +22,8 @@ const DDD_OPTIONS = [
   ...listOperationalDdds().map((ddd) => ({ value: ddd, label: operationalDddLabel(ddd) })),
 ];
 
+const PRESETS = [7, 30, 90] as const;
+
 /** Formulário de período, domínio, tratativa e DDD do relatório SIR. */
 export function SirReportFiltersForm({ filters }: SirReportFiltersFormProps) {
   const router = useRouter();
@@ -30,6 +32,14 @@ export function SirReportFiltersForm({ filters }: SirReportFiltersFormProps) {
   const [domain, setDomain] = useState<SirReportDomain>(filters.domain);
   const [tratativa, setTratativa] = useState(filters.tratativa ?? "");
   const [ddd, setDdd] = useState(filters.ddd ?? "");
+
+  useEffect(() => {
+    setFrom(formatRelatorioDateParam(filters.from));
+    setTo(formatRelatorioDateParam(filters.to));
+    setDomain(filters.domain);
+    setTratativa(filters.tratativa ?? "");
+    setDdd(filters.ddd ?? "");
+  }, [filters.from, filters.to, filters.domain, filters.tratativa, filters.ddd]);
 
   function pushFilters(next: SirReportFilters) {
     router.push(buildSirReportHref(next));
@@ -40,13 +50,16 @@ export function SirReportFiltersForm({ filters }: SirReportFiltersFormProps) {
     end.setHours(0, 0, 0, 0);
     const start = new Date(end);
     start.setDate(start.getDate() - (days - 1));
-    pushFilters({
+    const next: SirReportFilters = {
       from: start,
       to: end,
       domain,
       tratativa: (tratativa || undefined) as SirTreatmentFilter | undefined,
       ddd: ddd || undefined,
-    });
+    };
+    setFrom(formatRelatorioDateParam(start));
+    setTo(formatRelatorioDateParam(end));
+    pushFilters(next);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -60,11 +73,26 @@ export function SirReportFiltersForm({ filters }: SirReportFiltersFormProps) {
     });
   };
 
+  const activePreset = PRESETS.find((days) => isPresetActive(from, to, days));
+
   return (
-    <form className="relatorio-tratativa-filters" onSubmit={handleSubmit}>
-      <div className="row g-2 align-items-end">
-        <div className="col-sm-6 col-md-2">
-          <label className="form-label relatorio-export__label" htmlFor="sir-report-de">
+    <form className="report-toolbar" onSubmit={handleSubmit}>
+      <div className="report-toolbar__presets" role="group" aria-label="Período rápido">
+        {PRESETS.map((days) => (
+          <button
+            key={days}
+            type="button"
+            className={`report-toolbar__preset${activePreset === days ? " is-active" : ""}`}
+            onClick={() => applyPreset(days)}
+          >
+            {days}d
+          </button>
+        ))}
+      </div>
+
+      <div className="report-toolbar__fields">
+        <div className="report-toolbar__field">
+          <label className="report-toolbar__label" htmlFor="sir-report-de">
             De
           </label>
           <input
@@ -75,8 +103,8 @@ export function SirReportFiltersForm({ filters }: SirReportFiltersFormProps) {
             onChange={(event) => setFrom(event.target.value)}
           />
         </div>
-        <div className="col-sm-6 col-md-2">
-          <label className="form-label relatorio-export__label" htmlFor="sir-report-ate">
+        <div className="report-toolbar__field">
+          <label className="report-toolbar__label" htmlFor="sir-report-ate">
             Até
           </label>
           <input
@@ -87,8 +115,8 @@ export function SirReportFiltersForm({ filters }: SirReportFiltersFormProps) {
             onChange={(event) => setTo(event.target.value)}
           />
         </div>
-        <div className="col-sm-6 col-md-2">
-          <label className="form-label relatorio-export__label" htmlFor="sir-report-domain">
+        <div className="report-toolbar__field">
+          <label className="report-toolbar__label" htmlFor="sir-report-domain">
             {RELATORIOS_COPY.sirDomainLabel}
           </label>
           <select
@@ -104,8 +132,8 @@ export function SirReportFiltersForm({ filters }: SirReportFiltersFormProps) {
             ))}
           </select>
         </div>
-        <div className="col-sm-6 col-md-2">
-          <label className="form-label relatorio-export__label" htmlFor="sir-report-tratativa">
+        <div className="report-toolbar__field">
+          <label className="report-toolbar__label" htmlFor="sir-report-tratativa">
             {RELATORIOS_COPY.sirTreatmentLabel}
           </label>
           <select
@@ -121,8 +149,8 @@ export function SirReportFiltersForm({ filters }: SirReportFiltersFormProps) {
             ))}
           </select>
         </div>
-        <div className="col-sm-6 col-md-2">
-          <label className="form-label relatorio-export__label" htmlFor="sir-report-ddd">
+        <div className="report-toolbar__field">
+          <label className="report-toolbar__label" htmlFor="sir-report-ddd">
             {RELATORIOS_COPY.dddLabel}
           </label>
           <select
@@ -138,36 +166,21 @@ export function SirReportFiltersForm({ filters }: SirReportFiltersFormProps) {
             ))}
           </select>
         </div>
-        <div className="col-sm-6 col-md-2">
-          <button type="submit" className="btn btn-primary btn-sm w-100">
+        <div className="report-toolbar__actions">
+          <button type="submit" className="btn btn-primary btn-sm">
             {RELATORIOS_COPY.applyFilters}
           </button>
         </div>
       </div>
-
-      <div className="relatorio-tratativa-filters__presets">
-        <button
-          type="button"
-          className="btn btn-outline-secondary btn-sm"
-          onClick={() => applyPreset(7)}
-        >
-          {RELATORIOS_COPY.presetDays(7)}
-        </button>
-        <button
-          type="button"
-          className="btn btn-outline-secondary btn-sm"
-          onClick={() => applyPreset(30)}
-        >
-          {RELATORIOS_COPY.presetDays(30)}
-        </button>
-        <button
-          type="button"
-          className="btn btn-outline-secondary btn-sm"
-          onClick={() => applyPreset(90)}
-        >
-          {RELATORIOS_COPY.presetDays(90)}
-        </button>
-      </div>
     </form>
   );
+}
+
+/** Indica se o intervalo atual corresponde a um preset de N dias até hoje. */
+function isPresetActive(from: string, to: string, days: number): boolean {
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+  const start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
+  return from === formatRelatorioDateParam(start) && to === formatRelatorioDateParam(end);
 }

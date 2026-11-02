@@ -1,3 +1,7 @@
+import {
+  TRATATIVA_AWAITING_CONCLUSION_LABEL,
+  TRATATIVA_WORKFLOW_LABELS,
+} from "@/lib/config/tratativa-workflow";
 import type { TratativaHistoryEntry, TratativaPublic } from "@/lib/models/tratativa";
 import { formatDateTimePtBr } from "@/lib/format/datetime";
 
@@ -6,24 +10,42 @@ type TratativaStatusCellProps = {
   isRecordOpen?: boolean;
 };
 
-/** Exibe o status padronizado de uma tratativa simples. */
-export function TratativaStatusCell({ tratativa, isRecordOpen = true }: TratativaStatusCellProps) {
-  if (!isRecordOpen) {
-    return (
-      <span className="tratativa-workflow-badge tratativa-workflow-badge--validado">Encerrado</span>
-    );
+/** Classe CSS do badge conforme a fase da tratativa. */
+function workflowBadgeClass(status: string): string {
+  if (status === "acionado") return "tratativa-workflow-badge tratativa-workflow-badge--acionado";
+  if (status === "validacao_pendente") {
+    return "tratativa-workflow-badge tratativa-workflow-badge--pendente";
   }
+  if (status === "validacao_reprovada") {
+    return "tratativa-workflow-badge tratativa-workflow-badge--reprovada";
+  }
+  if (status === "validado" || status === "aguardando_conclusao") {
+    return "tratativa-workflow-badge tratativa-workflow-badge--validado";
+  }
+  return "tratativa-workflow-badge tratativa-workflow-badge--em-tratativa";
+}
+
+/** Exibe o status padronizado de uma tratativa (SIR) com responsável no title. */
+export function TratativaStatusCell({ tratativa, isRecordOpen = true }: TratativaStatusCellProps) {
   if (!tratativa) {
     return (
       <span className="tratativa-workflow-badge tratativa-workflow-badge--pendente">Pendente</span>
     );
   }
+
+  const who = `${tratativa.userName} · ${tratativa.userCorporateId}`;
+  if (!isRecordOpen) {
+    return (
+      <span className={workflowBadgeClass("aguardando_conclusao")} title={who}>
+        {TRATATIVA_AWAITING_CONCLUSION_LABEL}
+      </span>
+    );
+  }
+
+  const status = tratativa.workflowStatus ?? "em_tratativa";
   return (
-    <span
-      className="tratativa-workflow-badge tratativa-workflow-badge--em-tratativa"
-      title={`${tratativa.userName} · ${tratativa.userCorporateId}`}
-    >
-      Em tratativa
+    <span className={workflowBadgeClass(status)} title={who}>
+      {TRATATIVA_WORKFLOW_LABELS[status] ?? TRATATIVA_WORKFLOW_LABELS.em_tratativa}
     </span>
   );
 }

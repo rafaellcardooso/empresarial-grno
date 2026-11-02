@@ -67,6 +67,14 @@ export async function PATCH(request: Request, context: RouteContext) {
       if (!inTreatment) {
         return NextResponse.json({ error: "Alarme sem tratativa ativa." }, { status: 409 });
       }
+      if (!isActive) {
+        return NextResponse.json(
+          {
+            error: "Alarme já normalizado no TMIP. Conclua a tratativa com FCA pelo painel Tratar.",
+          },
+          { status: 409 },
+        );
+      }
     } else if (!inTreatment && !isActive) {
       return NextResponse.json(
         { error: "Não é possível assumir alarme SDH já normalizado." },

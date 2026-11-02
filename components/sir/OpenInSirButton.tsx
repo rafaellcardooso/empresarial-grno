@@ -12,6 +12,9 @@ type OpenInSirButtonProps = {
   numRecup: string | null | undefined;
   className?: string;
   size?: "sm" | "md";
+  /** Bloqueia o link (ex.: preparação SIR ainda não registrada). */
+  locked?: boolean;
+  lockedTitle?: string;
 };
 
 /** Link para a tarefa exata no portal SIR oficial (`target=_blank`). */
@@ -20,19 +23,25 @@ export function OpenInSirButton({
   numRecup,
   className = "",
   size = "sm",
+  locked = false,
+  lockedTitle,
 }: OpenInSirButtonProps) {
   const portalDomain =
     domain === "RAL" || domain === "REC" ? domain : sirPortalDomainFromLabel(domain);
   const href = buildSirPortalTarefaUrl(portalDomain, numRecup);
   const sizeClass = size === "sm" ? "btn-sm" : "";
 
-  if (!href) {
+  if (!href || locked) {
     return (
       <button
         type="button"
         className={`btn btn-outline-secondary ${sizeClass} ${className}`.trim()}
         disabled
-        title={UI_COPY.sirOpenInPortalUnavailable}
+        title={
+          locked
+            ? (lockedTitle ?? UI_COPY.sirOpenInPortalLocked)
+            : UI_COPY.sirOpenInPortalUnavailable
+        }
       >
         <i className="bi bi-box-arrow-up-right me-1" aria-hidden="true" />
         {UI_COPY.sirOpenInPortal}

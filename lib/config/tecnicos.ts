@@ -4,11 +4,12 @@ export const TECNICO_SKILLS = [
   { code: "GPON", label: "GPON", shortLabel: "GPON", icon: "bi-diagram-3" },
   { code: "HFC", label: "HFC / Coaxial", shortLabel: "HFC", icon: "bi-tv" },
   { code: "METALICO", label: "Cabo metálico", shortLabel: "Metálico", icon: "bi-ethernet" },
-  { code: "RADIO", label: "Rádio / MW", shortLabel: "Rádio", icon: "bi-broadcast-pin" },
+  { code: "RADIO", label: "Rádio", shortLabel: "Rádio", icon: "bi-broadcast-pin" },
   { code: "SDH", label: "SDH / Transmissão", shortLabel: "SDH", icon: "bi-hdd-network" },
   { code: "DADOS", label: "Dados / IP", shortLabel: "Dados", icon: "bi-router" },
   { code: "VOZ", label: "Voz / PABX", shortLabel: "Voz", icon: "bi-telephone" },
   { code: "DATACENTER", label: "Datacenter", shortLabel: "Datacenter", icon: "bi-hdd-rack" },
+  { code: "TORRE", label: "Torre", shortLabel: "Torre", icon: "bi-broadcast" },
 ] as const;
 
 export type TecnicoSkill = (typeof TECNICO_SKILLS)[number]["code"];

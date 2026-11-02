@@ -22,3 +22,17 @@ export function sdhLimitFromParam(param?: string | null): number {
 export function sdhListOffset(page: number, pageSize: number): number {
   return (page - 1) * pageSize;
 }
+
+/** Total de páginas para um conjunto paginado SDH. */
+export function sdhTotalPages(totalItems: number, pageSize: number): number {
+  if (totalItems <= 0) return 1;
+  return Math.ceil(totalItems / pageSize);
+}
+
+/** Rótulo "início–fim de total" para listagens paginadas SDH. */
+export function sdhListRangeLabel(page: number, pageSize: number, totalItems: number): string {
+  if (totalItems <= 0) return "Nenhum registro";
+  const start = sdhListOffset(page, pageSize) + 1;
+  const end = Math.min(page * pageSize, totalItems);
+  return `${start}–${end} de ${totalItems}`;
+}

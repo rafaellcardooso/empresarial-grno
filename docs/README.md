@@ -14,6 +14,7 @@ Mapa único da documentação. Conteúdo vivo **não** usa data no nome; datas f
 | **Atualizar produção** | [runbooks/production-release.md](runbooks/production-release.md)                                                        |
 | **Verificar o host**   | [runbooks/production-inventory.md](runbooks/production-inventory.md)                                                    |
 | **Ingest BSOD**        | [runbooks/bsod-ingest.md](runbooks/bsod-ingest.md)                                                                      |
+| **Sync Planta**        | [runbooks/planta-sync.md](runbooks/planta-sync.md)                                                                      |
 | **Arquitetura**        | [architecture/overview.md](architecture/overview.md)                                                                    |
 | **Config / APIs**      | [reference/configuration.md](reference/configuration.md) · [reference/routes-and-apis.md](reference/routes-and-apis.md) |
 | **Contribuir**         | [../CONTRIBUTING.md](../CONTRIBUTING.md)                                                                                |
@@ -54,6 +55,7 @@ Co-localizado:
 | [workers/sir-ingest/README.md](../workers/sir-ingest/README.md) | Contrato do scraper SIR      |
 | [workers/tmip/README.md](../workers/tmip/README.md)             | Contrato do ingest TMIP/SDH  |
 | [workers/bsod/README.md](../workers/bsod/README.md)             | Contrato do ingest PME/BSoD  |
+| [workers/planta/README.md](../workers/planta/README.md)         | Contrato do sync Planta      |
 
 ---
 

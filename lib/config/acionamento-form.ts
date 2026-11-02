@@ -88,3 +88,11 @@ export const ACIONAMENTO_SINTOMA_FIELD_SIR: AcionamentoFormField = {
   hint: "Preenchido a partir dos detalhes SIR; ajuste se necessário.",
   col: 12,
 };
+
+export const ACIONAMENTO_SINTOMA_FIELD_SDH: AcionamentoFormField = {
+  key: "sintoma",
+  label: "Sintoma",
+  placeholder: "Digite o sintoma",
+  hint: "Descreva o sintoma do alarme SDH.",
+  col: 12,
+};

@@ -18,6 +18,14 @@ export type TratativaReportFilters = {
   page?: number;
 };
 
+/** Contagens do backlog BSOD atual. */
+export type TratativaReportBacklog = {
+  totalOffline: number;
+  pending: number;
+  inProgress: number;
+  awaitingConclude: number;
+};
+
 /** Contagens agregadas da coorte (chamados iniciados no período). */
 export type TratativaReportSummary = {
   /** Chamados iniciados no período (denominador do funil). */
@@ -69,8 +77,11 @@ export type TratativaReportRankRow = {
 
 /** Payload completo do painel analítico de tratativas. */
 export type TratativaReportData = {
+  backlog: TratativaReportBacklog;
   summary: TratativaReportSummary;
   daily: TratativaReportDailyPoint[];
+  dailyStarts: TratativaReportDailyPoint[];
+  dailyConclusions: TratativaReportDailyPoint[];
   byEvent: TratativaReportEventSlice[];
   operators: TratativaReportOperatorRow[];
   bySymptom: TratativaReportRankRow[];

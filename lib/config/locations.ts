@@ -3,7 +3,7 @@ export const OPERATIONAL_DDD_UF: Record<string, string> = {
   "68": "AC",
   "69": "RO",
   "91": "PA",
-  "92": "AM/RR",
+  "92": "AM",
   "95": "RR",
   "96": "AP",
   "97": "AM",
@@ -40,7 +40,7 @@ export function listOperationalDdds(): string[] {
     .sort((a, b) => Number(a) - Number(b));
 }
 
-/** Lista UFs dos DDDs exibidos (valores únicos; `AM/RR` vira AM e RR). */
+/** Lista UFs dos DDDs exibidos (valores únicos; entradas compostas com `/` são separadas). */
 export function listOperationalUfs(): string[] {
   const ufs = new Set<string>();
   for (const ddd of listOperationalDdds()) {

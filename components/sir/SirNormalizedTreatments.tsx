@@ -21,6 +21,8 @@ type SirNormalizedTreatmentsProps = {
   currentPage: number;
   pageSize: number;
   listFilters: SirCfFilterParams | SirRecFilterParams;
+  /** Sobrescreve o título do card (padrão: Pendentes de conclusão). */
+  title?: string;
 };
 
 /** Exibe registros encerrados na fonte com tratativa ainda ativa. */
@@ -32,11 +34,13 @@ export function SirNormalizedTreatments({
   currentPage,
   pageSize,
   listFilters,
+  title,
 }: SirNormalizedTreatmentsProps) {
   if (total === 0) return null;
 
   const basePath = domain === "RAL" ? "/sir/rals" : "/sir/recs";
   const columns = domain === "RAL" ? RAL_TABLE_COLUMNS : REC_TABLE_COLUMNS;
+  const cardTitle = title ?? UI_COPY.normalizedAwaitingSirTitle;
 
   function buildHref(normalizedPage: number): string {
     const next = {
@@ -49,9 +53,11 @@ export function SirNormalizedTreatments({
   }
 
   return (
-    <div className="mt-3">
-      <ContentCard title={`${UI_COPY.normalizedAwaitingTitle} (${total})`}>
-        <p className="text-body-secondary small mb-3">{UI_COPY.normalizedAwaitingSirLead}</p>
+    <div className="mb-3">
+      <ContentCard title={`${cardTitle} (${total})`}>
+        <p className="text-body-secondary small px-3 pt-3 pb-2 mb-0">
+          {UI_COPY.normalizedAwaitingSirLead}
+        </p>
         <SirRecordsTable
           columns={columns}
           rows={rows}

@@ -24,6 +24,7 @@ Este arquivo **não** é o checklist de instalação. Use:
 | `bsod-ingest-snmp.timer`          | `workers/bsod/deploy/systemd/`            |
 | `bsod-ingest-ldap.timer`          | `workers/bsod/deploy/systemd/`            |
 | `bsod-ingest-crm.timer`           | `workers/bsod/deploy/systemd/`            |
+| `planta-sync.timer`               | `workers/planta/deploy/systemd/`          |
 
 ## Lab
 
@@ -35,5 +36,5 @@ Units `*-lab` em `deploy/systemd/lab/` e `workers/*/deploy/systemd/lab/`.
 cd /usr/local/empresarial
 npm run deploy:next              # build + restart da unit Next ativa
 sudo journalctl -u empresarial-next -f
-sudo systemctl list-timers 'tmip-ingest*' 'bsod-ingest*'
+sudo systemctl list-timers 'tmip-ingest*' 'bsod-ingest*' 'planta-sync*'
 ```
