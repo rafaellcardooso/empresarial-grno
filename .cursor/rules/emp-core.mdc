@@ -14,14 +14,13 @@ Monorepo em `/usr/local/empresarial`. Workers gravam tabelas-fonte; Next lê SIR
 | Migrations SIR           | `migrations/sir/`, `scripts/db/`               | DDL (+ seed/import só lab)                                                                                    |
 | Ingest SIR               | `workers/sir-ingest/sources/`                  | `rals` / `recs`                                                                                               |
 | Ingest TMIP              | `workers/tmip/`                                | `sdh_alarms`                                                                                                  |
-| Ingest Planta            | `workers/planta/`                              | `tbl_planta_instalada` (lê `db_planta` no MySQL Terminal, somente leitura)                                    |
 | Bot Telegram             | `workers/sir-ingest/telegram/`                 | Não (HTTP → Next `/api`)                                                                                      |
 | Systemd                  | `deploy/systemd/`, `workers/*/deploy/systemd/` | —                                                                                                             |
 
 ## Fronteiras
 
 - **Não** colocar Selenium, scrapers ou bots dentro de `app/`.
-- **Não** escrever no MySQL do `hfc-sls` nem no MySQL Terminal (`db_planta`) a partir deste repo.
+- **Não** escrever no MySQL do `hfc-sls` a partir deste repo.
 - Detalhe: `docs/architecture/data-and-write-boundaries.md`.
 - Porta Next: **4001** · basePath **`/empresarial`** (Nginx no portal).
 - Documentação: `docs/README.md` · deploy: `docs/runbooks/production-*.md` + `docs/operations/`.

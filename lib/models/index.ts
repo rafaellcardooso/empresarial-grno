@@ -28,7 +28,6 @@ export {
   type SdhTratativaEvent,
   type SdhVendorCounts,
 } from "@/lib/models/sdh";
-export { type PlantaInstaladaRecord } from "@/lib/models/planta";
 export {
   type FcaHeaderFields,
   type FcaRecord,

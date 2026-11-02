@@ -9,7 +9,6 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 
 ### Added
 
-- Worker `workers/planta` (timer diário 03:30) que espelha `db_planta.planta_instalada` na tabela `tbl_planta_instalada` (migration `029`).
 - Badges de pendentes (BSOD, SDH, SIR) no menu e pop-up de chamados SIR `/NET/FO`, com notificação do navegador quando a aba está em segundo plano.
 - Alarme de SLA SIR no shell (pop-up + cor na tabela): REC 2h, RAL 6h — verde dentro do SLA, vermelho e aviso ao estourar.
 - Badge do menu **SIR** com dois contadores: abertos (ATIVO) e SLA estourado.

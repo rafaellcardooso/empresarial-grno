@@ -7,12 +7,11 @@ alwaysApply: true
 
 ## Pares espelhados (obrigatório)
 
-| Template (commitado)              | Local (gitignored)        | Projeto                   |
-| --------------------------------- | ------------------------- | ------------------------- |
-| `.env.example`                    | `.env.local`              | Next.js (raiz)            |
-| `workers/sir-ingest/.env.example` | `workers/sir-ingest/.env` | Worker Playwright         |
-| `workers/tmip/.env.example`       | `workers/tmip/.env`       | Worker TMIP/SDH (SFTP)    |
-| `workers/planta/.env.example`     | `workers/planta/.env`     | Worker Planta (db_planta) |
+| Template (commitado)              | Local (gitignored)        | Projeto                |
+| --------------------------------- | ------------------------- | ---------------------- |
+| `.env.example`                    | `.env.local`              | Next.js (raiz)         |
+| `workers/sir-ingest/.env.example` | `workers/sir-ingest/.env` | Worker Playwright      |
+| `workers/tmip/.env.example`       | `workers/tmip/.env`       | Worker TMIP/SDH (SFTP) |
 
 **Não usar** `conexao-db.json` — credenciais MySQL do worker vêm de `SIR_DB_*` (mesmas chaves do Next).
 
@@ -22,7 +21,7 @@ alwaysApply: true
 
 1. Atualizar o `.env.example` (placeholder — nunca segredo real).
 2. Atualizar o `.env` / `.env.local` do desenvolvedor **na mesma posição, bloco e comentários**.
-3. Se for `SIR_DB_*`, replicar **igual** na raiz, no `sir-ingest`, no `tmip` e no `planta`.
+3. Se for `SIR_DB_*`, replicar **igual** na raiz, no `sir-ingest` e no `tmip`.
 4. Rodar `npm run env:check` na raiz.
 
 ## Chaves SIR compartilhadas
@@ -40,7 +39,7 @@ SIR_DB_SOCKET
 
 `SIR_DB_SOCKET` vazio usa `HOST`/`PORT` (produção). Em WSL com MariaDB só via socket, preencher o path (ex.: `/var/lib/mysql/mysql.sock`).
 
-Valores devem ser idênticos em `.env.local`, `workers/sir-ingest/.env`, `workers/tmip/.env` e `workers/planta/.env`.
+Valores devem ser idênticos em `.env.local`, `workers/sir-ingest/.env` e `workers/tmip/.env`.
 
 ## Placeholders no example
 
@@ -60,4 +59,4 @@ Verifica example ↔ local (chaves, ordem **e comentários**) e paridade `SIR_DB
 
 ## Nunca commitar
 
-`.env.local`, `workers/sir-ingest/.env`, `workers/tmip/.env`, `workers/planta/.env`
+`.env.local`, `workers/sir-ingest/.env`, `workers/tmip/.env`
