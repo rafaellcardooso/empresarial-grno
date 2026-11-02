@@ -7,7 +7,7 @@ import { countTecnicosByDdd, countTecnicosBySkill, listTecnicos } from "@/lib/qu
 import { tecnicoFiltersFromParams } from "@/lib/tecnicos/filters";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Acionamento" };
+export const metadata = { title: "Técnicos" };
 
 type PageProps = {
   searchParams: Promise<{
@@ -42,7 +42,7 @@ export default async function Page({ searchParams }: PageProps) {
 
     return (
       <>
-        <PageHeader title="Acionamento" description={TECNICO_COPY.pageDescription} />
+        <PageHeader title="Técnicos" description={TECNICO_COPY.pageDescription} />
         <TecnicoFilterCard state={state} dddCounts={dddCounts} skillCounts={skillCounts} />
         <TecnicosPanel
           items={list.items}

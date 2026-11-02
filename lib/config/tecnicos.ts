@@ -92,7 +92,7 @@ export const TECNICO_COPY = {
   hideInactive: "Ocultar inativos",
   inactive: "Inativo",
   edit: "Editar",
-  drawerEyebrow: "Acionamento",
+  drawerEyebrow: "Técnicos",
   drawerNew: "Novo técnico",
   drawerEdit: "Editar técnico",
   save: "Salvar",
