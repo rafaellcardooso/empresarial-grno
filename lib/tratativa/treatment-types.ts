@@ -1,5 +1,9 @@
 import type { AcionamentoRecordKind } from "@/lib/models/acionamento";
-import type { TratativaHistoryEntry, TratativaPublic } from "@/lib/models/tratativa";
+import type {
+  TratativaHistoryEntry,
+  TratativaPublic,
+  TratativaWorkflowStatus,
+} from "@/lib/models/tratativa";
 import type { SdhAlarmListItem } from "@/lib/models/sdh";
 
 /** Domínios cobertos pelo painel unificado de tratativa. */
@@ -17,7 +21,7 @@ export type TreatmentSession = {
   tratativa?: TratativaPublic | null;
   sdhAlarm?: SdhAlarmListItem | null;
   history: TratativaHistoryEntry[];
-  workflowStatus?: string;
+  workflowStatus?: TratativaWorkflowStatus;
   canConclude?: boolean;
   /**
    * Preparação registrada (evento ACIONAMENTO).
