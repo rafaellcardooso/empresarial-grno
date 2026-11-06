@@ -21,4 +21,4 @@ export const PUBLIC_AUTH_API_PATHS = [
 ] as const;
 
 /** Versão atual do tour (incrementar ao alterar passos). */
-export const APP_TOUR_VERSION = Number(process.env.APP_TOUR_VERSION || "1");
+export const APP_TOUR_VERSION = Number(process.env.APP_TOUR_VERSION || "2");

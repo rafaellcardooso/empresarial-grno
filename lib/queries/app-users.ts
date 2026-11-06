@@ -1,12 +1,19 @@
 import type { RowDataPacket } from "mysql2/promise";
 import { normalizeCorporateId } from "@/lib/auth/validation";
+import {
+  needsRegionSetup,
+  parseAlertUfs,
+  parseUserRegionUf,
+  serializeAlertUfs,
+  type UserRegionUf,
+} from "@/lib/config/user-regions";
 import { sirExecute, sirQuery } from "@/lib/db/sir";
 import type { AppUserPublic, AppUserRecord, AppUserStatus } from "@/lib/models/app-user";
 
 type UserRow = AppUserRecord & RowDataPacket;
 
 const USER_SELECT = `
-  id, corporate_id, email, name, password_hash, role, status,
+  id, corporate_id, email, name, home_uf, password_hash, role, status,
   created_at, updated_at, approved_by, approved_at
 `;
 
@@ -17,6 +24,7 @@ export function toPublicUser(row: AppUserRecord): AppUserPublic {
     corporateId: row.corporate_id,
     email: row.email,
     name: row.name,
+    homeUf: parseUserRegionUf(row.home_uf),
     role: row.role,
     status: row.status,
     created_at: row.created_at.toISOString(),
@@ -48,18 +56,23 @@ export async function createPendingUser(input: {
   name: string;
   passwordHash: string;
   email?: string | null;
+  homeUf: UserRegionUf;
 }): Promise<number> {
   const result = await sirExecute(
-    `INSERT INTO app_users (corporate_id, email, name, password_hash, role, status)
-     VALUES (?, ?, ?, ?, 'USER', 'PENDING')`,
+    `INSERT INTO app_users (corporate_id, email, name, home_uf, password_hash, role, status)
+     VALUES (?, ?, ?, ?, ?, 'USER', 'PENDING')`,
     [
       normalizeCorporateId(input.corporateId),
       input.email?.trim().toLowerCase() || null,
       input.name.trim(),
+      input.homeUf,
       input.passwordHash,
     ],
   );
-  return result.insertId;
+  const userId = result.insertId;
+  await ensureUserSettings(userId);
+  await setUserAlertUfs(userId, [input.homeUf]);
+  return userId;
 }
 
 /** Lista usuários pendentes de aprovação. */
@@ -130,7 +143,12 @@ export async function isCorporateIdTaken(
 /** Atualiza dados cadastrais do usuário. */
 export async function updateUserProfile(
   userId: number,
-  input: { corporateId?: string; name?: string; email?: string | null },
+  input: {
+    corporateId?: string;
+    name?: string;
+    email?: string | null;
+    homeUf?: UserRegionUf | null;
+  },
 ): Promise<void> {
   const sets: string[] = [];
   const params: unknown[] = [];
@@ -146,6 +164,10 @@ export async function updateUserProfile(
   if (input.email !== undefined) {
     sets.push("email = ?");
     params.push(input.email?.trim().toLowerCase() || null);
+  }
+  if (input.homeUf !== undefined) {
+    sets.push("home_uf = ?");
+    params.push(input.homeUf);
   }
 
   if (sets.length === 0) {
@@ -178,20 +200,56 @@ export async function ensureUserSettings(userId: number): Promise<void> {
   );
 }
 
-/** Preferências do usuário (tema + tour) em uma única leitura. */
+/** Preferências do usuário (tema + tour + alertas) em uma única leitura. */
 export async function getUserSettings(userId: number): Promise<{
   theme: "light" | "dark";
   tourCompletedVersion: number;
+  alertUfs: UserRegionUf[];
 }> {
   await ensureUserSettings(userId);
   const rows = await sirQuery<RowDataPacket[]>(
-    `SELECT theme, tour_completed_version FROM app_user_settings WHERE user_id = ?`,
+    `SELECT theme, tour_completed_version, alert_ufs FROM app_user_settings WHERE user_id = ?`,
     [userId],
   );
   return {
     theme: rows[0]?.theme === "dark" ? "dark" : "light",
     tourCompletedVersion: Number(rows[0]?.tour_completed_version ?? 0),
+    alertUfs: parseAlertUfs(rows[0]?.alert_ufs == null ? "" : String(rows[0].alert_ufs)),
   };
+}
+
+/** Persiste a lista de UFs dos alertas do usuário. */
+export async function setUserAlertUfs(userId: number, ufs: UserRegionUf[]): Promise<void> {
+  await ensureUserSettings(userId);
+  await sirQuery(`UPDATE app_user_settings SET alert_ufs = ? WHERE user_id = ?`, [
+    serializeAlertUfs(ufs),
+    userId,
+  ]);
+}
+
+/** Lotação + preferência de alertas para o shell e APIs. */
+export async function getUserRegionPrefs(userId: number): Promise<{
+  homeUf: UserRegionUf | null;
+  alertUfs: UserRegionUf[];
+  needsRegionSetup: boolean;
+}> {
+  const [user, settings] = await Promise.all([getUserById(userId), getUserSettings(userId)]);
+  const homeUf = parseUserRegionUf(user?.home_uf);
+  return {
+    homeUf,
+    alertUfs: settings.alertUfs,
+    needsRegionSetup: needsRegionSetup(homeUf, settings.alertUfs),
+  };
+}
+
+/** Completa lotação e preferência de alertas (onboarding ou conta). */
+export async function saveUserRegionSetup(
+  userId: number,
+  homeUf: UserRegionUf,
+  alertUfs: UserRegionUf[],
+): Promise<void> {
+  await updateUserProfile(userId, { homeUf });
+  await setUserAlertUfs(userId, alertUfs);
 }
 
 /** Retorna versão do tour concluída pelo usuário. */

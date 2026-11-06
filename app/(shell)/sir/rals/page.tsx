@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RalFilterPanel } from "@/components/sir/RalFilterPanel";
 import { RalPanel } from "@/components/sir/RalPanel";
+import { SirAgeLegend } from "@/components/sir/SirAgeLegend";
 import { SirNormalizedTreatments } from "@/components/sir/SirNormalizedTreatments";
 import { SirScopeNav } from "@/components/sir/SirScopeNav";
 import {
@@ -160,6 +161,7 @@ export default async function Page({ searchParams }: PageProps) {
         breadcrumbs={[{ label: "SIR", href: "/sir" }, { label: "RAL" }]}
       />
       <SirScopeNav active="rals" />
+      <SirAgeLegend domains={["RAL"]} />
       <RalFilterPanel
         treatmentTotal={treatmentTotal}
         activeTreatmentCount={activeTreatmentCount}

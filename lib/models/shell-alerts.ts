@@ -1,12 +1,13 @@
-/** Contadores SIR no badge do menu: abertos e com SLA estourado. */
+/** Contadores SIR no badge do menu por faixa de idade (verde / amarelo / vermelho). */
 export type NavSirCounts = {
-  open: number;
+  ok: number;
+  warn: number;
   over: number;
 };
 
 /**
  * Contadores do badge no menu lateral.
- * BSOD/SDH: pendentes sem tratativa. SIR: abertos + estouros de SLA.
+ * BSOD/SDH: pendentes sem tratativa. SIR: faixas de idade dos ativos.
  */
 export type NavPendingCounts = {
   bsod: number;

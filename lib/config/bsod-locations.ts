@@ -78,6 +78,13 @@ export function listBsodOpes(): string[] {
   return BSOD_LOCATIONS.map((item) => item.ope);
 }
 
+/** Lista operações PME cujo UF está no conjunto informado. */
+export function listBsodOpesForUfs(ufs: Iterable<string>): string[] {
+  const wanted = new Set([...ufs].map((uf) => uf.trim().toUpperCase()).filter(Boolean));
+  if (wanted.size === 0) return [];
+  return BSOD_LOCATIONS.filter((item) => wanted.has(item.uf)).map((item) => item.ope);
+}
+
 /** Resolve operações PME para um DDD configurado. */
 export function bsodOpesForDdd(ddd: string | null | undefined): string[] {
   if (!ddd) return [];

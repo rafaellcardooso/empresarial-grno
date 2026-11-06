@@ -34,8 +34,16 @@ type SdhRow = RowDataPacket & SdhAlarmListItem;
 
 /** Concorrência de assunção SDH — alarme já sob outro responsável. */
 export class SdhTratativaConflictError extends Error {
-  constructor(public readonly ownerLogin: string | null) {
-    super(`Em tratativa por ${ownerLogin ?? "outro usuário"}.`);
+  constructor(
+    public readonly ownerLogin: string | null,
+    public readonly ownerName: string | null = null,
+  ) {
+    const who =
+      [ownerName, ownerLogin]
+        .map((part) => part?.trim())
+        .filter(Boolean)
+        .join(" · ") || "outro usuário";
+    super(`Em tratativa por ${who}.`);
     this.name = "SdhTratativaConflictError";
   }
 }
@@ -43,7 +51,7 @@ export class SdhTratativaConflictError extends Error {
 /** Lê alarme por id para checagem pós-update (ativo ou inativo). */
 async function readAlarm(id: number): Promise<SdhAlarmListItem | null> {
   const rows = await sirQuery<SdhRow[]>(
-    `SELECT a.*, u.corporate_id AS tratativa_user_login
+    `SELECT a.*, u.corporate_id AS tratativa_user_login, u.name AS tratativa_user_name
      FROM sdh_alarms a
      LEFT JOIN app_users u ON u.id = a.tratativa_user_id
      WHERE a.id = ?
@@ -106,7 +114,10 @@ export async function updateSdhTratativaStatus(
       if (mode === "claim") {
         const current = await readAlarm(input.id);
         if (current && Number(current.em_tratativa) === 1) {
-          throw new SdhTratativaConflictError(current.tratativa_user_login ?? null);
+          throw new SdhTratativaConflictError(
+            current.tratativa_user_login ?? null,
+            current.tratativa_user_name ?? null,
+          );
         }
       }
       return null;
@@ -155,7 +166,7 @@ export async function concludeSdhTratativa(input: {
     await connection.beginTransaction();
 
     const [rows] = await connection.execute<SdhRow[]>(
-      `SELECT a.*, u.corporate_id AS tratativa_user_login
+      `SELECT a.*, u.corporate_id AS tratativa_user_login, u.name AS tratativa_user_name
        FROM sdh_alarms a
        LEFT JOIN app_users u ON u.id = a.tratativa_user_id
        WHERE a.id = ?

@@ -2,15 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { HomeUfSelect } from "@/components/account/HomeUfSelect";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { CORPORATE_ID_HINT } from "@/lib/auth/validation";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { apiFetch } from "@/lib/config/base-path";
+import type { UserRegionUf } from "@/lib/config/user-regions";
 
 type AccountProfileFormProps = {
   initialCorporateId: string;
   initialName: string;
   initialEmail: string | null;
+  initialHomeUf: UserRegionUf | null;
 };
 
 /** Formulário de edição dos dados cadastrais na Minha conta. */
@@ -18,16 +21,18 @@ export function AccountProfileForm({
   initialCorporateId,
   initialName,
   initialEmail,
+  initialHomeUf,
 }: AccountProfileFormProps) {
   const router = useRouter();
   const [corporateId, setCorporateId] = useState(initialCorporateId);
   const [name, setName] = useState(initialName);
   const [email, setEmail] = useState(initialEmail ?? "");
+  const [homeUf, setHomeUf] = useState<UserRegionUf | "">(initialHomeUf ?? "");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  /** Salva matrícula, nome e e-mail do usuário autenticado. */
+  /** Salva matrícula, nome, e-mail e lotação do usuário autenticado. */
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -42,6 +47,7 @@ export function AccountProfileForm({
           corporateId,
           name,
           email: email.trim() === "" ? null : email.trim(),
+          homeUf: homeUf || null,
         }),
       });
       const data = (await response.json()) as { error?: string; message?: string };
@@ -119,6 +125,8 @@ export function AccountProfileForm({
         />
         <div className="form-text">Opcional.</div>
       </div>
+
+      <HomeUfSelect id="account-home-uf" value={homeUf} onChange={setHomeUf} />
 
       <LoadingButton
         type="submit"

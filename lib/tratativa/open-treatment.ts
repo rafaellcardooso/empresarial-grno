@@ -66,7 +66,9 @@ async function openSharedSession(
     if (error instanceof TratativaConflictError) {
       tratativa = error.existing;
       canManage = input.userRole === "STAFF";
-      readOnlyReason = canManage ? undefined : `Em tratativa por ${error.existing.userName}.`;
+      readOnlyReason = canManage
+        ? undefined
+        : `Em tratativa por ${error.existing.userName} (${error.existing.userCorporateId}).`;
     } else if (error instanceof TratativaClosedError) {
       const existing = await listActiveTratativas(input.domain, [key]);
       tratativa = existing[0] ?? null;
@@ -89,6 +91,15 @@ async function openSharedSession(
   const isSir = input.domain === "RAL" || input.domain === "REC";
   const bsodOnline =
     input.domain === "BSOD" && String((await getPmeBsodByMac(key))?.monitor_status ?? "") === "1";
+  const summaryWithOwner = tratativa
+    ? [
+        ...summary,
+        {
+          label: "Responsável",
+          value: `${tratativa.userName} · ${tratativa.userCorporateId}`,
+        },
+      ]
+    : summary;
 
   return {
     domain: input.domain,
@@ -96,7 +107,7 @@ async function openSharedSession(
     title: `${displayLabel} · ${key}`,
     subtitle: summary.find((item) => item.label === "Designação" || item.label === "Contrato")
       ?.value,
-    summary,
+    summary: summaryWithOwner,
     canManage,
     readOnlyReason,
     tratativa,
@@ -130,7 +141,12 @@ async function openSdhSession(input: OpenTreatmentInput): Promise<TreatmentSessi
     if (alarm.tratativa_user_id === input.userId || input.userRole === "STAFF") {
       canManage = true;
     } else {
-      readOnlyReason = `Em tratativa por ${alarm.tratativa_user_login ?? "outro usuário"}.`;
+      const who =
+        [alarm.tratativa_user_name, alarm.tratativa_user_login]
+          .map((part) => part?.trim())
+          .filter(Boolean)
+          .join(" · ") || "outro usuário";
+      readOnlyReason = `Em tratativa por ${who}.`;
     }
   } else if (!inTreatment) {
     try {
@@ -159,7 +175,12 @@ async function openSdhSession(input: OpenTreatmentInput): Promise<TreatmentSessi
   } else if (alarm.tratativa_user_id === input.userId || input.userRole === "STAFF") {
     canManage = true;
   } else {
-    readOnlyReason = `Em tratativa por ${alarm.tratativa_user_login ?? "outro usuário"}.`;
+    const who =
+      [alarm.tratativa_user_name, alarm.tratativa_user_login]
+        .map((part) => part?.trim())
+        .filter(Boolean)
+        .join(" · ") || "outro usuário";
+    readOnlyReason = `Em tratativa por ${who}.`;
   }
 
   const events = await listSdhTratativaEvents(alarmId);
@@ -171,6 +192,11 @@ async function openSdhSession(input: OpenTreatmentInput): Promise<TreatmentSessi
   }));
 
   const awaitingConclude = Number(alarm.is_active) !== 1 && Number(alarm.em_tratativa) === 1;
+  const ownerLabel =
+    [alarm.tratativa_user_name, alarm.tratativa_user_login]
+      .map((part) => part?.trim())
+      .filter(Boolean)
+      .join(" · ") || "—";
 
   return {
     domain: "SDH",
@@ -190,6 +216,7 @@ async function openSdhSession(input: OpenTreatmentInput): Promise<TreatmentSessi
         label: "Status TMIP",
         value: Number(alarm.is_active) === 1 ? "Ativo" : "Normalizado",
       },
+      ...(Number(alarm.em_tratativa) === 1 ? [{ label: "Responsável", value: ownerLabel }] : []),
     ],
     canManage,
     readOnlyReason,

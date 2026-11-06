@@ -23,6 +23,7 @@ type PutBody = {
   corporateId?: string;
   name?: string;
   email?: string | null;
+  homeUf?: string | null;
 };
 
 const STATUS_ACTIONS = new Set<NonNullable<PatchBody["action"]>>([

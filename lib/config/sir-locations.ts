@@ -63,6 +63,15 @@ export function sirLocationCodesForDdd(ddd: string | null | undefined): string[]
   );
 }
 
+/** Lista códigos geográficos de CF vinculados a uma ou mais UFs. */
+export function sirLocationCodesForUfs(ufs: Iterable<string>): string[] {
+  const wanted = new Set([...ufs].map((uf) => uf.trim().toUpperCase()).filter(Boolean));
+  if (wanted.size === 0) return [];
+  return SIR_LOCATIONS.filter((location) => wanted.has(location.uf)).map(
+    (location) => location.code,
+  );
+}
+
 /** Formata o agrupamento DDD de um CF como `91 - PA`. */
 export function sirDddLabelFromCf(cf: string | null | undefined): string {
   const ddd = sirDddFromCf(cf);

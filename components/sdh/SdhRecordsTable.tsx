@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SdhDetalhesPanel } from "@/components/sdh/SdhDetalhesPanel";
+import { TratativaOperatorStack } from "@/components/tratativa/TratativaOperatorStack";
 import { TratativaPanel } from "@/components/tratativa/TratativaPanel";
 import { TratativaTreatButton } from "@/components/tratativa/TratativaTreatButton";
 import { SortableDataTable } from "@/components/ui/SortableDataTable";
@@ -64,11 +65,6 @@ export function SdhRecordsTable({
             const active = Number(alarm.em_tratativa) === 1;
             const awaitingConclusion = active && Number(alarm.is_active) !== 1;
             const acionado = hasAcionamentoInCurrentCycle(alarm.tratativa_history ?? []);
-            const who = active
-              ? `${alarm.tratativa_user_login ?? "—"} · ${formatDateTimePtBr(
-                  typeof alarm.tratativa_marked_at === "string" ? alarm.tratativa_marked_at : null,
-                )}`
-              : "Sem tratativa ativa";
             const label = !active
               ? "Pendente"
               : awaitingConclusion
@@ -83,10 +79,17 @@ export function SdhRecordsTable({
                 : acionado
                   ? "tratativa-workflow-badge tratativa-workflow-badge--acionado"
                   : "tratativa-workflow-badge tratativa-workflow-badge--em-tratativa";
+            if (!active) {
+              return <span className={className}>{label}</span>;
+            }
             return (
-              <span className={className} title={who}>
-                {label}
-              </span>
+              <div className="tratativa-status-cell">
+                <span className={className}>{label}</span>
+                <TratativaOperatorStack
+                  name={alarm.tratativa_user_name}
+                  corporateId={alarm.tratativa_user_login}
+                />
+              </div>
             );
           }
           if (key === "tratativa_actions") {

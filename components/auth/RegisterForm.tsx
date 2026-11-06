@@ -7,6 +7,7 @@ import { PasswordInput } from "@/components/auth/PasswordInput";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { CORPORATE_ID_HINT, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 import { apiFetch } from "@/lib/config/base-path";
+import { USER_REGION_OPTIONS, type UserRegionUf } from "@/lib/config/user-regions";
 
 /** Formulário de cadastro (conta pendente). */
 export function RegisterForm() {
@@ -14,6 +15,7 @@ export function RegisterForm() {
   const [corporateId, setCorporateId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [homeUf, setHomeUf] = useState<UserRegionUf | "">("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export function RegisterForm() {
           corporateId,
           name,
           email: email || undefined,
+          homeUf: homeUf || undefined,
           password,
           confirmPassword,
         }),
@@ -114,6 +117,27 @@ export function RegisterForm() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
+        </div>
+
+        <div className="auth-field">
+          <label htmlFor="register-home-uf">{AUTH_COPY.homeUfLabel}</label>
+          <select
+            id="register-home-uf"
+            className="auth-input"
+            required
+            value={homeUf}
+            onChange={(event) =>
+              setHomeUf(event.target.value === "" ? "" : (event.target.value as UserRegionUf))
+            }
+          >
+            <option value="">Selecione…</option>
+            {USER_REGION_OPTIONS.map((item) => (
+              <option key={item.uf} value={item.uf}>
+                {item.label} ({item.uf})
+              </option>
+            ))}
+          </select>
+          <p className="auth-hint">{AUTH_COPY.homeUfHint}</p>
         </div>
 
         <div className="auth-field">

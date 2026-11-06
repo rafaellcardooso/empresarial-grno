@@ -97,7 +97,7 @@ export async function listActiveSdhAlarms(
       ? { clause: "", params: [] as number[] }
       : { clause: "LIMIT ? OFFSET ?", params: [filters.limit, filters.offset ?? 0] };
   const rows = await sirQuery<SdhRow[]>(
-    `SELECT a.*, u.corporate_id AS tratativa_user_login
+    `SELECT a.*, u.corporate_id AS tratativa_user_login, u.name AS tratativa_user_name
      FROM sdh_alarms a
      LEFT JOIN app_users u ON u.id = a.tratativa_user_id
      WHERE a.is_active = 1
@@ -148,7 +148,7 @@ export async function listInactiveSdhTreatments(
       ? { clause: "", params: [] as number[] }
       : { clause: "LIMIT ? OFFSET ?", params: [filters.limit, filters.offset ?? 0] };
   const rows = await sirQuery<SdhRow[]>(
-    `SELECT a.*, u.corporate_id AS tratativa_user_login
+    `SELECT a.*, u.corporate_id AS tratativa_user_login, u.name AS tratativa_user_name
      FROM sdh_alarms a
      LEFT JOIN app_users u ON u.id = a.tratativa_user_id
      WHERE a.is_active = 0 AND a.em_tratativa = 1
@@ -277,7 +277,7 @@ export async function getActiveSdhAlarmById(id: number): Promise<SdhAlarmListIte
 /** Retorna um alarme SDH pelo id, ativo ou inativo. */
 export async function getSdhAlarmById(id: number): Promise<SdhAlarmListItem | null> {
   const rows = await sirQuery<SdhRow[]>(
-    `SELECT a.*, u.corporate_id AS tratativa_user_login
+    `SELECT a.*, u.corporate_id AS tratativa_user_login, u.name AS tratativa_user_name
      FROM sdh_alarms a
      LEFT JOIN app_users u ON u.id = a.tratativa_user_id
      WHERE a.id = ?

@@ -1,3 +1,5 @@
+import type { UserRegionUf } from "@/lib/config/user-regions";
+
 /** Papel do usuário no aplicativo. */
 export type AppUserRole = "STAFF" | "USER";
 
@@ -10,6 +12,7 @@ export type AppUserRecord = {
   corporate_id: string;
   email: string | null;
   name: string;
+  home_uf: UserRegionUf | null;
   password_hash: string;
   role: AppUserRole;
   status: AppUserStatus;
@@ -25,6 +28,7 @@ export type AppUserPublic = {
   corporateId: string;
   email: string | null;
   name: string;
+  homeUf: UserRegionUf | null;
   role: AppUserRole;
   status: AppUserStatus;
   created_at: string;

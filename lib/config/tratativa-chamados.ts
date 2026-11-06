@@ -9,7 +9,7 @@ export type TratativaChamadoStatusFilter = TratativaChamadoStatus | "all";
 /** Rótulos alinhados ao pipeline operacional (evita colidir com KPI “coorte”). */
 export const TRATATIVA_CHAMADO_STATUS_LABELS: Record<TratativaChamadoStatus, string> = {
   em_tratativa: "Aguardando acionamento",
-  acionado: "Acionado",
+  acionado: "VT acionada",
   validacao_pendente: "Validação pendente",
   validacao_reprovada: "Reprovada",
   validado: "Validados",

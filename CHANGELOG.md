@@ -25,7 +25,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 ### Changed
 
 - Tratativa SIR sem WhatsApp: preparação (acionamento ou FCA) libera Abrir no SIR; concluir exige FCA com chamado ENCERRADO.
-- Cores e alertas por idade: REC verde ate 1h / amarelo 1-2h / vermelho >=2h; RAL verde ate 2h / amarelo 2-6h / vermelho >=6h.
+- Cores e alertas por idade: REC verde ate 2h / amarelo 2-4h / vermelho >=4h; RAL verde ate 2h / amarelo 2-6h / vermelho >=6h.
 - BSOD abre com todos os DDDs; o filtro por DDD só se aplica ao clicar no chip (como em SDH e SIR).
 - Página BSOD usa cache de inventário mesclado e `bsod_monitor_latest` (evita GROUP BY no histórico a cada request).
 - Ingest BSOD em cadências distintas: Xpertrak 10 min, SNMP 10 min, LDAP 3 h, CRM 6 h.

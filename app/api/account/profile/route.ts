@@ -15,6 +15,7 @@ type PutBody = {
   corporateId?: string;
   name?: string;
   email?: string | null;
+  homeUf?: string | null;
 };
 
 /** Atualiza matrícula, nome e e-mail do usuário autenticado. */

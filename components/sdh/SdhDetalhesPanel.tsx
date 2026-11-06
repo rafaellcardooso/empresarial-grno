@@ -70,7 +70,11 @@ function SdhDetalhesBody({ alarm }: { alarm: SdhAlarmListItem }) {
       : acionado
         ? TRATATIVA_WORKFLOW_LABELS.acionado
         : TRATATIVA_WORKFLOW_LABELS.em_tratativa;
-  const tratativaLabel = active ? `${phase} · ${alarm.tratativa_user_login ?? "—"}` : phase;
+  const who = [alarm.tratativa_user_name, alarm.tratativa_user_login]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" · ");
+  const tratativaLabel = active ? `${phase} · ${who || "—"}` : phase;
   const dataAlarme =
     formatDateTimePtBr(
       typeof alarm.data_alarme === "string"

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { APP_TOUR_VERSION } from "@/lib/auth/constants";
 import { getSession } from "@/lib/auth/session";
-import { countPendingUsers, getUserSettings } from "@/lib/queries/app-users";
+import { countPendingUsers, getUserRegionPrefs, getUserSettings } from "@/lib/queries/app-users";
 import { countUnreadNotifications } from "@/lib/queries/notifications";
 
 /** Retorna usuário logado, contagem de notificações e estado do tour. */
@@ -11,9 +11,10 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
-  const [unreadCount, settings, pendingUsersCount] = await Promise.all([
+  const [unreadCount, settings, regionPrefs, pendingUsersCount] = await Promise.all([
     countUnreadNotifications(session.userId),
     getUserSettings(session.userId),
+    getUserRegionPrefs(session.userId),
     session.role === "STAFF" ? countPendingUsers() : Promise.resolve(0),
   ]);
 
@@ -28,6 +29,9 @@ export async function GET() {
     unreadNotifications: unreadCount,
     pendingUsersCount,
     theme: settings.theme,
+    homeUf: regionPrefs.homeUf,
+    alertUfs: regionPrefs.alertUfs,
+    needsRegionSetup: regionPrefs.needsRegionSetup,
     tour: {
       currentVersion: APP_TOUR_VERSION,
       completedVersion: settings.tourCompletedVersion,

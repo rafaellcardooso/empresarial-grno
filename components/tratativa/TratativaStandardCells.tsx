@@ -1,3 +1,4 @@
+import { TratativaOperatorStack } from "@/components/tratativa/TratativaOperatorStack";
 import {
   TRATATIVA_AWAITING_CONCLUSION_LABEL,
   TRATATIVA_WORKFLOW_LABELS,
@@ -25,7 +26,7 @@ function workflowBadgeClass(status: string): string {
   return "tratativa-workflow-badge tratativa-workflow-badge--em-tratativa";
 }
 
-/** Exibe o status padronizado de uma tratativa (SIR) com responsável no title. */
+/** Exibe o status padronizado de uma tratativa (SIR) com nome e login do responsável. */
 export function TratativaStatusCell({ tratativa, isRecordOpen = true }: TratativaStatusCellProps) {
   if (!tratativa) {
     return (
@@ -33,20 +34,18 @@ export function TratativaStatusCell({ tratativa, isRecordOpen = true }: Tratativ
     );
   }
 
-  const who = `${tratativa.userName} · ${tratativa.userCorporateId}`;
-  if (!isRecordOpen) {
-    return (
-      <span className={workflowBadgeClass("aguardando_conclusao")} title={who}>
-        {TRATATIVA_AWAITING_CONCLUSION_LABEL}
-      </span>
-    );
-  }
+  const status = !isRecordOpen
+    ? "aguardando_conclusao"
+    : (tratativa.workflowStatus ?? "em_tratativa");
+  const label = !isRecordOpen
+    ? TRATATIVA_AWAITING_CONCLUSION_LABEL
+    : (TRATATIVA_WORKFLOW_LABELS[status] ?? TRATATIVA_WORKFLOW_LABELS.em_tratativa);
 
-  const status = tratativa.workflowStatus ?? "em_tratativa";
   return (
-    <span className={workflowBadgeClass(status)} title={who}>
-      {TRATATIVA_WORKFLOW_LABELS[status] ?? TRATATIVA_WORKFLOW_LABELS.em_tratativa}
-    </span>
+    <div className="tratativa-status-cell">
+      <span className={workflowBadgeClass(status)}>{label}</span>
+      <TratativaOperatorStack name={tratativa.userName} corporateId={tratativa.userCorporateId} />
+    </div>
   );
 }
 

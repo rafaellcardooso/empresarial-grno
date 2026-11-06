@@ -1,10 +1,20 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { RegionSetupModal } from "@/components/account/RegionSetupModal";
 import type { ShellSessionData } from "@/lib/auth/shell-session";
 import { applyClientTheme } from "@/lib/auth/theme-client";
 import type { AppTheme } from "@/lib/auth/theme";
 import { apiFetch } from "@/lib/config/base-path";
+import type { UserRegionUf } from "@/lib/config/user-regions";
 
 type SessionContextValue = ShellSessionData & {
   setTheme: (theme: AppTheme) => void;
@@ -31,6 +41,15 @@ type SessionProviderProps = {
 export function SessionProvider({ initial, children }: SessionProviderProps) {
   const [theme, setThemeState] = useState<AppTheme>(initial.theme);
   const [unreadNotifications, setUnreadNotifications] = useState(initial.unreadNotifications);
+  const [homeUf, setHomeUf] = useState<UserRegionUf | null>(initial.homeUf);
+  const [alertUfs, setAlertUfs] = useState<UserRegionUf[]>(initial.alertUfs);
+  const [needsRegionSetup, setNeedsRegionSetup] = useState(initial.needsRegionSetup);
+
+  useEffect(() => {
+    setHomeUf(initial.homeUf);
+    setAlertUfs(initial.alertUfs);
+    setNeedsRegionSetup(initial.needsRegionSetup);
+  }, [initial.homeUf, initial.alertUfs, initial.needsRegionSetup]);
 
   const setTheme = useCallback((nextTheme: AppTheme) => {
     setThemeState(nextTheme);
@@ -42,18 +61,42 @@ export function SessionProvider({ initial, children }: SessionProviderProps) {
     }).catch(() => undefined);
   }, []);
 
+  /** Atualiza preferências regionais após o modal de onboarding. */
+  const handleRegionSetupCompleted = useCallback(
+    (nextHomeUf: UserRegionUf, nextAlertUfs: UserRegionUf[]) => {
+      setHomeUf(nextHomeUf);
+      setAlertUfs(nextAlertUfs);
+      setNeedsRegionSetup(false);
+    },
+    [],
+  );
+
   const value = useMemo<SessionContextValue>(
     () => ({
       user: initial.user,
       pendingUsersCount: initial.pendingUsersCount,
-      tourShouldRun: initial.tourShouldRun,
+      tourShouldRun: initial.tourShouldRun && !needsRegionSetup,
       theme,
       unreadNotifications,
+      homeUf,
+      alertUfs,
+      needsRegionSetup,
       setTheme,
       setUnreadNotifications,
     }),
-    [initial, theme, unreadNotifications, setTheme],
+    [initial, theme, unreadNotifications, homeUf, alertUfs, needsRegionSetup, setTheme],
   );
 
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={value}>
+      {children}
+      {needsRegionSetup ? (
+        <RegionSetupModal
+          initialHomeUf={homeUf}
+          initialAlertUfs={alertUfs}
+          onCompleted={handleRegionSetupCompleted}
+        />
+      ) : null}
+    </SessionContext.Provider>
+  );
 }

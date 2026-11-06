@@ -1,8 +1,9 @@
 import { APP_TOUR_VERSION } from "@/lib/auth/constants";
 import { getSession } from "@/lib/auth/session";
 import type { AppTheme } from "@/lib/auth/theme";
+import type { UserRegionUf } from "@/lib/config/user-regions";
 import type { AppUserRole, AppUserStatus } from "@/lib/models/app-user";
-import { countPendingUsers, getUserSettings } from "@/lib/queries/app-users";
+import { countPendingUsers, getUserRegionPrefs, getUserSettings } from "@/lib/queries/app-users";
 import { countUnreadNotifications } from "@/lib/queries/notifications";
 
 /** Usuário resumido para o shell (navbar/sidebar). */
@@ -21,6 +22,9 @@ export type ShellSessionData = {
   pendingUsersCount: number;
   theme: AppTheme;
   tourShouldRun: boolean;
+  homeUf: UserRegionUf | null;
+  alertUfs: UserRegionUf[];
+  needsRegionSetup: boolean;
 };
 
 /** Carrega contexto do shell no servidor (uma query batch por request). */
@@ -30,9 +34,10 @@ export async function loadShellSession(): Promise<ShellSessionData | null> {
     return null;
   }
 
-  const [unreadNotifications, settings, pendingUsersCount] = await Promise.all([
+  const [unreadNotifications, settings, regionPrefs, pendingUsersCount] = await Promise.all([
     countUnreadNotifications(session.userId),
     getUserSettings(session.userId),
+    getUserRegionPrefs(session.userId),
     session.role === "STAFF" ? countPendingUsers() : Promise.resolve(0),
   ]);
 
@@ -48,5 +53,8 @@ export async function loadShellSession(): Promise<ShellSessionData | null> {
     pendingUsersCount,
     theme: settings.theme,
     tourShouldRun: settings.tourCompletedVersion < APP_TOUR_VERSION,
+    homeUf: regionPrefs.homeUf,
+    alertUfs: regionPrefs.alertUfs,
+    needsRegionSetup: regionPrefs.needsRegionSetup,
   };
 }

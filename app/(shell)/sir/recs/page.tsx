@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RecFilterPanel } from "@/components/sir/RecFilterPanel";
 import { RecPanel } from "@/components/sir/RecPanel";
+import { SirAgeLegend } from "@/components/sir/SirAgeLegend";
 import { SirNormalizedTreatments } from "@/components/sir/SirNormalizedTreatments";
 import { SirScopeNav } from "@/components/sir/SirScopeNav";
 import {
@@ -162,6 +163,7 @@ export default async function Page({ searchParams }: PageProps) {
         breadcrumbs={[{ label: "SIR", href: "/sir" }, { label: scopeLabel }]}
       />
       <SirScopeNav active={activeTipo} />
+      <SirAgeLegend domains={["REC"]} />
       <RecFilterPanel
         treatmentTotal={treatmentTotal}
         activeTreatmentCount={activeTreatmentCount}

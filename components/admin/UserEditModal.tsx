@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import type { AppUserPublic } from "@/lib/models/app-user";
+import { HomeUfSelect } from "@/components/account/HomeUfSelect";
 import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { CORPORATE_ID_HINT, isValidPassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/validation";
 import { apiFetch } from "@/lib/config/base-path";
+import type { UserRegionUf } from "@/lib/config/user-regions";
 
 type UserEditModalProps = {
   user: AppUserPublic;
@@ -21,6 +23,7 @@ export function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEdi
   const [corporateId, setCorporateId] = useState(user.corporateId);
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email ?? "");
+  const [homeUf, setHomeUf] = useState<UserRegionUf | "">(user.homeUf ?? "");
   const [role, setRole] = useState(user.role);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,6 +44,7 @@ export function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEdi
     setCorporateId(user.corporateId);
     setName(user.name);
     setEmail(user.email ?? "");
+    setHomeUf(user.homeUf ?? "");
     setRole(user.role);
     setNewPassword("");
     setConfirmPassword("");
@@ -93,6 +97,7 @@ export function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEdi
           corporateId,
           name,
           email: email.trim() === "" ? null : email.trim(),
+          homeUf: homeUf || null,
         }),
       });
       const data = (await response.json()) as { error?: string };
@@ -286,6 +291,9 @@ export function UserEditModal({ user, currentUserId, onClose, onSaved }: UserEdi
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="Opcional"
                   />
+                </div>
+                <div className="user-edit-drawer__field user-edit-drawer__field--full">
+                  <HomeUfSelect id="edit-home-uf" value={homeUf} onChange={setHomeUf} />
                 </div>
               </div>
               <div className="user-edit-drawer__actions">

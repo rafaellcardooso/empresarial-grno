@@ -6,6 +6,7 @@ import {
   CardHeaderLink,
   ExportCsvLink,
 } from "@/components/ui/CardHeaderActions";
+import { SirAgeLegend } from "@/components/sir/SirAgeLegend";
 import { SirRecordsTable } from "@/components/sir/SirRecordsTable";
 import { SirTreatmentKpis } from "@/components/sir/SirTreatmentKpis";
 import { TablePagination } from "@/components/ui/TablePagination";
@@ -65,6 +66,8 @@ export function SirPanel({
         pendingHref="/sir?tratativa=pendente"
         activeHref="/sir?tratativa=em-tratativa"
       />
+
+      <SirAgeLegend />
 
       <div className="mb-3">
         <ContentCard

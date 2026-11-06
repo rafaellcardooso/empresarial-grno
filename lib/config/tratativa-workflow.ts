@@ -3,7 +3,7 @@ import type { TratativaWorkflowStatus } from "@/lib/models/tratativa";
 /** Rótulos UI do status operacional da tratativa. */
 export const TRATATIVA_WORKFLOW_LABELS: Record<TratativaWorkflowStatus, string> = {
   em_tratativa: "Aguardando acionamento",
-  acionado: "Acionado",
+  acionado: "VT acionada",
   validacao_pendente: "Validar sinal",
   validacao_reprovada: "Reprovada",
   validado: "Validado",
@@ -12,8 +12,8 @@ export const TRATATIVA_WORKFLOW_LABELS: Record<TratativaWorkflowStatus, string> 
 /** Rótulo quando a fonte já normalizou e a tratativa aguarda FCA/conclusão. */
 export const TRATATIVA_AWAITING_CONCLUSION_LABEL = "Aguardando conclusão";
 
-/** Rótulo BSOD após VT (mais específico que o genérico Acionado). */
-export const TRATATIVA_BSOD_ACIONADO_LABEL = "VT acionada";
+/** Alias histórico — mesmo texto de `TRATATIVA_WORKFLOW_LABELS.acionado`. */
+export const TRATATIVA_BSOD_ACIONADO_LABEL = TRATATIVA_WORKFLOW_LABELS.acionado;
 
 /** Resultado registrado na validação pós-VT. */
 export type ValidacaoOutcome = "aprovada" | "reprovada";

@@ -24,9 +24,10 @@ export type SdhAlarmRecord = {
   tratativa_observacao: string | null;
 };
 
-/** Alarme SDH enriquecido com login do último usuário que atualizou a tratativa. */
+/** Alarme SDH enriquecido com responsável da tratativa ativa. */
 export type SdhAlarmListItem = SdhAlarmRecord & {
   tratativa_user_login: string | null;
+  tratativa_user_name: string | null;
   tratativa_history?: TratativaHistoryEntry[];
 };
 

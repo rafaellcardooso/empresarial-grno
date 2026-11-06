@@ -1,5 +1,6 @@
 "use client";
 
+import { TratativaOperatorStack } from "@/components/tratativa/TratativaOperatorStack";
 import {
   TRATATIVA_AWAITING_CONCLUSION_LABEL,
   TRATATIVA_BSOD_ACIONADO_LABEL,
@@ -37,7 +38,7 @@ function bsodStatusLabel(status: TratativaWorkflowStatus, awaitingConclusion: bo
   return TRATATIVA_WORKFLOW_LABELS[status];
 }
 
-/** Badge somente leitura do status operacional da tratativa BSOD. */
+/** Badge de status BSOD com nome e login do responsável. */
 export function TratativaBsodStatusCell({
   tratativa,
   awaitingConclusion = false,
@@ -49,7 +50,6 @@ export function TratativaBsodStatusCell({
   }
 
   const status = tratativa.workflowStatus ?? "em_tratativa";
-  const who = `${tratativa.userName} · ${tratativa.userCorporateId}`;
   const label = bsodStatusLabel(status, awaitingConclusion);
   const badgeStatus =
     awaitingConclusion && (status === "em_tratativa" || status === "validado")
@@ -57,8 +57,9 @@ export function TratativaBsodStatusCell({
       : status;
 
   return (
-    <span className={workflowBadgeClass(badgeStatus)} title={who}>
-      {label}
-    </span>
+    <div className="tratativa-status-cell">
+      <span className={workflowBadgeClass(badgeStatus)}>{label}</span>
+      <TratativaOperatorStack name={tratativa.userName} corporateId={tratativa.userCorporateId} />
+    </div>
   );
 }

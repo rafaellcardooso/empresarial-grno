@@ -19,6 +19,7 @@ export const SDH_EXPORT_COLUMNS: CsvColumn<Record<string, unknown>>[] = [
     format: (value) => formatDateTimePtBr(typeof value === "string" ? value : undefined),
   },
   { key: "tratativa_observacao", label: "OBSERVAÇÃO" },
+  { key: "tratativa_user_name", label: "RESPONSÁVEL" },
   { key: "tratativa_user_login", label: "LOGIN" },
   {
     key: "em_tratativa",

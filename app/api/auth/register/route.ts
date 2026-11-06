@@ -9,6 +9,8 @@ import {
   parseJsonBody,
   PASSWORD_REQUIREMENTS,
 } from "@/lib/auth/validation";
+import { AUTH_COPY } from "@/lib/config/auth-copy";
+import { parseUserRegionUf } from "@/lib/config/user-regions";
 import { createPendingUser, getUserByCorporateId } from "@/lib/queries/app-users";
 import { notifyActiveStaff } from "@/lib/queries/notifications";
 
@@ -18,6 +20,7 @@ type RegisterBody = {
   password?: string;
   confirmPassword?: string;
   email?: string;
+  homeUf?: string;
 };
 
 /** Cria conta pendente de aprovação staff. */
@@ -28,6 +31,7 @@ export async function POST(request: Request) {
   const password = body?.password ?? "";
   const confirmPassword = body?.confirmPassword ?? "";
   const email = body?.email?.trim() ?? "";
+  const homeUf = parseUserRegionUf(body?.homeUf);
 
   if (!isValidCorporateId(corporateId)) {
     return NextResponse.json({ error: CORPORATE_ID_HINT }, { status: 400 });
@@ -35,6 +39,10 @@ export async function POST(request: Request) {
 
   if (!name || name.length < 2) {
     return NextResponse.json({ error: "Informe seu nome completo." }, { status: 400 });
+  }
+
+  if (!homeUf) {
+    return NextResponse.json({ error: AUTH_COPY.homeUfRequired }, { status: 400 });
   }
 
   if (email && !isValidEmail(email)) {
@@ -62,6 +70,7 @@ export async function POST(request: Request) {
     name,
     passwordHash,
     email: email || null,
+    homeUf,
   });
 
   await notifyActiveStaff(

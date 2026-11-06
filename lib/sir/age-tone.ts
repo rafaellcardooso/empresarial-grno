@@ -5,7 +5,7 @@ export type SirAgeTone = "ok" | "warn" | "over";
 
 /**
  * Classifica a idade do chamado para colorir a linha da tabela.
- * REC: verde abaixo de 1h, amarelo de 1h a 2h, vermelho a partir de 2h.
+ * REC: verde abaixo de 2h, amarelo de 2h a 4h, vermelho a partir de 4h.
  * RAL: verde abaixo de 2h, amarelo de 2h a 6h, vermelho a partir de 6h.
  * Retorna null quando a data é inválida ou o registro não está ATIVO.
  */

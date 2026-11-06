@@ -33,6 +33,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/relatorios/exportacao": "Exportação CSV",
   "/configuracoes": AUTH_COPY.settingsTitle,
   "/conta": AUTH_COPY.accountTitle,
+  "/ajuda": "Ajuda",
   "/admin/usuarios": AUTH_COPY.adminUsersTitle,
   "/admin/notificacoes": AUTH_COPY.adminNotificationsTitle,
 };
@@ -54,6 +55,7 @@ const NAV_SECTIONS_RAW: NavItem[] = [
   { href: "/relatorios", label: "Relatórios", icon: "bi-file-earmark-bar-graph" },
   { href: "/conta", label: AUTH_COPY.accountTitle, icon: "bi-person" },
   { href: "/configuracoes", label: AUTH_COPY.settingsTitle, icon: "bi-gear" },
+  { href: "/ajuda", label: "Ajuda", icon: "bi-question-circle" },
   { header: true, label: "Administração", staffOnly: true },
   {
     href: "/admin/usuarios",

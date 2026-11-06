@@ -1,18 +1,24 @@
 import { AccountProfileForm } from "@/components/account/AccountProfileForm";
+import { AlertPrefsForm } from "@/components/account/AlertPrefsForm";
 import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm";
 import { TourRestartButton } from "@/components/tour/AppTour";
 import { ContentCard } from "@/components/ui/ContentCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireAuth } from "@/lib/auth/guards";
 import { AUTH_COPY } from "@/lib/config/auth-copy";
-import { getUserById, toPublicUser } from "@/lib/queries/app-users";
+import { TUTORIAL_COPY } from "@/lib/config/tutorial-copy";
+import { getUserById, getUserRegionPrefs, toPublicUser } from "@/lib/queries/app-users";
+import Link from "next/link";
 
 export const metadata = { title: AUTH_COPY.accountTitle };
 
 /** Página de conta: dados cadastrais, senha e tour. */
 export default async function Page() {
   const session = await requireAuth();
-  const user = await getUserById(session.userId);
+  const [user, regionPrefs] = await Promise.all([
+    getUserById(session.userId),
+    getUserRegionPrefs(session.userId),
+  ]);
 
   if (!user) {
     return null;
@@ -38,6 +44,7 @@ export default async function Page() {
             initialCorporateId={publicUser.corporateId}
             initialName={publicUser.name}
             initialEmail={publicUser.email}
+            initialHomeUf={publicUser.homeUf}
           />
         </ContentCard>
 
@@ -46,9 +53,21 @@ export default async function Page() {
         </ContentCard>
 
         <div className="content-card-grid__full">
+          <ContentCard title={AUTH_COPY.accountAlertsTitle} bodyClassName="p-3">
+            <p className="text-body-secondary mb-3">{AUTH_COPY.settingsAlertsLead}</p>
+            <AlertPrefsForm initialAlertUfs={regionPrefs.alertUfs} idPrefix="conta-alert" />
+          </ContentCard>
+        </div>
+
+        <div className="content-card-grid__full">
           <ContentCard title={AUTH_COPY.accountTourTitle} bodyClassName="p-3">
             <p className="text-body-secondary mb-3">{AUTH_COPY.accountTourLead}</p>
-            <TourRestartButton />
+            <div className="d-flex flex-wrap gap-2 align-items-center">
+              <TourRestartButton />
+              <Link href="/ajuda" className="btn btn-sm btn-shell-outline">
+                {TUTORIAL_COPY.accountLinkLabel}
+              </Link>
+            </div>
           </ContentCard>
         </div>
       </div>
