@@ -33,8 +33,15 @@ TX_CSV_FILE=fixtures/potencia_optica_de_transmissao.csv node ingest.mjs
 
 ```bash
 sudo cp workers/tx-ingest/deploy/systemd/tx-ingest.{service,timer} /etc/systemd/system/
+# Node via nvm (web-app): copiar o binário absoluto do sir-ingest-ral
+NODE_BIN=$(systemctl show sir-ingest-ral -p ExecStart --value | awk '{print $1}')
+# ex.: /home/datacenter/.nvm/versions/node/v20.*/bin/node
+sudo sed -i "s|^ExecStart=.*|ExecStart=${NODE_BIN} ingest.mjs|" /etc/systemd/system/tx-ingest.service
+NVM_BIN=$(dirname "$NODE_BIN")
+sudo sed -i "s|^Environment=PATH=.*|Environment=PATH=${NVM_BIN}:/usr/bin:/usr/local/bin|" /etc/systemd/system/tx-ingest.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now tx-ingest.timer
+sudo systemctl start tx-ingest.service
 journalctl -u tx-ingest.service -n 50 --no-pager
 ```
 

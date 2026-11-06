@@ -9,6 +9,8 @@ Group=datacenter
 WorkingDirectory=/usr/local/empresarial/workers/tx-ingest
 Environment=PATH=/usr/bin:/usr/local/bin
 EnvironmentFile=/usr/local/empresarial/workers/tx-ingest/.env
+# Hosts com Node via nvm: alinhar PATH + ExecStart ao node absoluto
+# (ver sir-ingest-ral instalado — não usar /usr/bin/node se não existir).
 ExecStart=/usr/bin/node ingest.mjs
 StandardOutput=journal
 StandardError=journal

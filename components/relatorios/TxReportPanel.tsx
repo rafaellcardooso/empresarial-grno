@@ -34,17 +34,21 @@ const DIF_TONE_CHART: Record<TxDifRefTone, "default" | "success" | "danger" | "w
 
 const DIF_INSIGHT_META: Record<
   TxDifRefTone,
-  {
-    icon: string;
-    tone: "default" | "success" | "warning" | "danger";
-    labelKey: keyof typeof RELATORIOS_COPY;
-  }
+  { icon: string; tone: "default" | "success" | "warning" | "danger"; label: string }
 > = {
-  critical: { icon: "bi-exclamation-triangle", tone: "danger", labelKey: "txKpiCritical" },
-  warn: { icon: "bi-exclamation-circle", tone: "warning", labelKey: "txKpiWarn" },
-  ok: { icon: "bi-check-circle", tone: "success", labelKey: "txKpiOk" },
-  high: { icon: "bi-arrow-up-circle", tone: "default", labelKey: "txKpiHigh" },
-  undefined: { icon: "bi-question-circle", tone: "default", labelKey: "txKpiUndefined" },
+  critical: {
+    icon: "bi-exclamation-triangle",
+    tone: "danger",
+    label: RELATORIOS_COPY.txKpiCritical,
+  },
+  warn: { icon: "bi-exclamation-circle", tone: "warning", label: RELATORIOS_COPY.txKpiWarn },
+  ok: { icon: "bi-check-circle", tone: "success", label: RELATORIOS_COPY.txKpiOk },
+  high: { icon: "bi-arrow-up-circle", tone: "default", label: RELATORIOS_COPY.txKpiHigh },
+  undefined: {
+    icon: "bi-question-circle",
+    tone: "default",
+    label: RELATORIOS_COPY.txKpiUndefined,
+  },
 };
 
 /** Painel analítico TX com rankings clicáveis e tabela de fatia. */
@@ -108,15 +112,14 @@ export function TxReportPanel({ summary }: TxReportPanelProps) {
           },
           ...TX_DIF_REF_LEGEND.map((item) => {
             const meta = DIF_INSIGHT_META[item.tone];
-            const label = RELATORIOS_COPY[meta.labelKey];
             return {
               id: item.tone,
               icon: meta.icon,
-              label,
+              label: meta.label,
               value: formatNumberPtBr(countByTone.get(item.tone) ?? 0),
               tone: meta.tone,
               active: selection?.dim === "dif" && selection.key === item.tone,
-              onClick: () => handleDifInsight(item.tone, label),
+              onClick: () => handleDifInsight(item.tone, meta.label),
             };
           }),
         ]}
