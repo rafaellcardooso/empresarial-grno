@@ -3,7 +3,7 @@ import type { SortableColumn } from "@/components/ui/SortableDataTable";
 /** Colunas da listagem TX (detalhes ópticos no drawer). */
 export const TX_TABLE_COLUMNS: SortableColumn[] = [
   { key: "ufs", label: "UF", sortable: true, priority: "core", nowrap: true },
-  { key: "rota", label: "DESIGNACAO", sortable: true, priority: "core", nowrap: true },
+  { key: "rota", label: "DESIGNAÇÃO", sortable: true, priority: "core", nowrap: true },
   {
     key: "extensao_km",
     label: "KM",

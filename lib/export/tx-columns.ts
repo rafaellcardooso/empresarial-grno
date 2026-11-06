@@ -5,7 +5,7 @@ import { formatOpticalValue } from "@/lib/format/tx-optical";
 import type { TxOpticalSpan } from "@/lib/models/tx";
 
 export const TX_EXPORT_COLUMNS: CsvColumn<Record<string, unknown>>[] = [
-  { key: "designacao", label: "DESIGNACAO" },
+  { key: "designacao", label: "DESIGNAÇÃO" },
   { key: "rota", label: "ROTA" },
   { key: "extensao_km", label: "KM" },
   { key: "empresa", label: "EMPRESA" },
