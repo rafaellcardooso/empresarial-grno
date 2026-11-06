@@ -15,6 +15,7 @@ import type {
   SirNetFoRecord,
 } from "@/lib/models/shell-alerts";
 import { getMergedInventoryAll } from "@/lib/queries/bsod-rows";
+import { countSdhByStatus } from "@/lib/queries/sdh";
 import { listActiveBsodKeys } from "@/lib/queries/tratativa-chamados";
 import { countTxDifRefNav } from "@/lib/queries/tx";
 
@@ -65,19 +66,13 @@ async function countBsodPending(ufs: UserRegionUf[]): Promise<number> {
   ).length;
 }
 
-/** Conta alarmes SDH ativos pendentes nas UFs escolhidas. */
-async function countSdhPending(ufs: UserRegionUf[]): Promise<number> {
-  if (ufs.length === 0) return 0;
-  const placeholders = ufs.map(() => "?").join(", ");
-  const rows = await sirQuery<CountRow[]>(
-    `SELECT COUNT(*) AS total
-     FROM sdh_alarms a
-     WHERE a.is_active = 1
-       AND a.em_tratativa = 0
-       AND UPPER(TRIM(COALESCE(a.uf, ''))) IN (${placeholders})`,
-    ufs,
-  );
-  return Number(rows[0]?.total ?? 0);
+/**
+ * Conta alarmes SDH pendentes no mesmo escopo do monitor (`countSdhByStatus`):
+ * UF operacional, DDD não oculto e vendors Datacom/Tellabs/Alcatel.
+ */
+async function countSdhPending(): Promise<number> {
+  const counts = await countSdhByStatus({});
+  return counts.pending;
 }
 
 /** Conta ativos numa faixa de idade restrita às UFs. */
@@ -145,11 +140,12 @@ function emptyTxCounts(): NavTxCounts {
 /** Retorna os contadores de badge filtrados pelas UFs de alerta. */
 export async function getNavPendingCounts(ufs: UserRegionUf[]): Promise<NavPendingCounts> {
   if (ufs.length === 0) {
-    return { bsod: 0, sdh: 0, sir: { ok: 0, warn: 0, over: 0 }, tx: emptyTxCounts() };
+    const sdh = await countSdhPending();
+    return { bsod: 0, sdh, sir: { ok: 0, warn: 0, over: 0 }, tx: emptyTxCounts() };
   }
   const [bsod, sdh, sir, tx] = await Promise.all([
     countBsodPending(ufs),
-    countSdhPending(ufs),
+    countSdhPending(),
     getSirNavCounts(ufs),
     countTxDifRefNav(ufs),
   ]);
@@ -231,19 +227,8 @@ export async function listActiveSirAgeAlerts(ufs: UserRegionUf[]): Promise<SirAg
   return [...rals.map(toRecord("RAL", RAL_SLA_HOURS)), ...recs.map(toRecord("REC", REC_SLA_HOURS))];
 }
 
-/** Payload vazio quando a preferência de alertas ainda não foi definida. */
-function emptyShellAlerts(): ShellAlertsPayload {
-  return {
-    counts: { bsod: 0, sdh: 0, sir: { ok: 0, warn: 0, over: 0 }, tx: emptyTxCounts() },
-    netFo: [],
-    ageAlerts: [],
-    generatedAt: new Date().toISOString(),
-  };
-}
-
 /** Monta o payload de badges e alertas filtrado pelas UFs do usuário. */
 export async function getShellAlerts(ufs: UserRegionUf[]): Promise<ShellAlertsPayload> {
-  if (ufs.length === 0) return emptyShellAlerts();
   const [counts, netFo, ageAlerts] = await Promise.all([
     getNavPendingCounts(ufs),
     listActiveSirNetFo(ufs),
