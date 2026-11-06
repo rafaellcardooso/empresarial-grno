@@ -1,4 +1,5 @@
 import { sirAgeBands, sirSlaHours, sirWarnHours } from "@/lib/config/sir-age";
+import { TX_DIF_REF_LEGEND, type TxDifRefTone } from "@/lib/format/tx-optical";
 import type {
   SirAgeAlertLevel,
   SirAgeAlertRecord,
@@ -46,6 +47,11 @@ export const SHELL_ALERTS_COPY = {
     if (tone === "ok") return `${label} — dentro do limiar`;
     if (tone === "warn") return `${label} — atenção`;
     return `${label} — SLA estourado`;
+  },
+  /** Tooltip do badge TX por faixa de DIF. */
+  txBadgeToneTitle: (tone: TxDifRefTone) => {
+    const label = TX_DIF_REF_LEGEND.find((item) => item.tone === tone)?.label ?? tone;
+    return `TX · Dif. span loss ${label}`;
   },
 };
 

@@ -1,0 +1,15 @@
+[Unit]
+Description=TX ingest — potência óptica GRB CSV → MySQL
+After=network.target mariadb.service
+
+[Service]
+Type=oneshot
+User=datacenter
+Group=datacenter
+WorkingDirectory=/usr/local/empresarial/workers/tx-ingest
+Environment=PATH=/usr/bin:/usr/local/bin
+EnvironmentFile=/usr/local/empresarial/workers/tx-ingest/.env
+ExecStart=/usr/bin/node ingest.mjs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tx-ingest

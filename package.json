@@ -18,6 +18,7 @@
     "db:seed-staff": "node scripts/db/seed-app-staff.mjs",
     "db:test-region-alerts": "node scripts/db/test-region-alerts.mjs",
     "test:region-alerts": "node --test scripts/validate-region-alerts.test.mjs",
+    "test:tx-optical": "node --test scripts/validate-tx-optical.test.mjs",
     "db:setup": "npm run db:migrate && npm run db:seed",
     "db:import": "node scripts/db/import-sir-backup.mjs",
     "db:bootstrap": "node scripts/db/bootstrap-sir.mjs | sudo mariadb",

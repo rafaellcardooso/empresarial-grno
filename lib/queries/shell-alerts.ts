@@ -9,12 +9,14 @@ import { SIR_TABLES } from "@/lib/models";
 import type {
   NavPendingCounts,
   NavSirCounts,
+  NavTxCounts,
   ShellAlertsPayload,
   SirAgeAlertRecord,
   SirNetFoRecord,
 } from "@/lib/models/shell-alerts";
 import { getMergedInventoryAll } from "@/lib/queries/bsod-rows";
 import { listActiveBsodKeys } from "@/lib/queries/tratativa-chamados";
+import { countTxDifRefNav } from "@/lib/queries/tx";
 
 type NetFoRow = RowDataPacket & {
   num_recup: string;
@@ -135,17 +137,23 @@ async function getSirNavCounts(ufs: UserRegionUf[]): Promise<NavSirCounts> {
   return { ok: Math.max(0, open - warn - over), warn, over };
 }
 
+/** Contadores TX vazios (sem UFs ou tabela ausente). */
+function emptyTxCounts(): NavTxCounts {
+  return { critical: 0, warn: 0, ok: 0, high: 0, undefined: 0 };
+}
+
 /** Retorna os contadores de badge filtrados pelas UFs de alerta. */
 export async function getNavPendingCounts(ufs: UserRegionUf[]): Promise<NavPendingCounts> {
   if (ufs.length === 0) {
-    return { bsod: 0, sdh: 0, sir: { ok: 0, warn: 0, over: 0 } };
+    return { bsod: 0, sdh: 0, sir: { ok: 0, warn: 0, over: 0 }, tx: emptyTxCounts() };
   }
-  const [bsod, sdh, sir] = await Promise.all([
+  const [bsod, sdh, sir, tx] = await Promise.all([
     countBsodPending(ufs),
     countSdhPending(ufs),
     getSirNavCounts(ufs),
+    countTxDifRefNav(ufs),
   ]);
-  return { bsod, sdh, sir };
+  return { bsod, sdh, sir, tx };
 }
 
 /**
@@ -226,7 +234,7 @@ export async function listActiveSirAgeAlerts(ufs: UserRegionUf[]): Promise<SirAg
 /** Payload vazio quando a preferência de alertas ainda não foi definida. */
 function emptyShellAlerts(): ShellAlertsPayload {
   return {
-    counts: { bsod: 0, sdh: 0, sir: { ok: 0, warn: 0, over: 0 } },
+    counts: { bsod: 0, sdh: 0, sir: { ok: 0, warn: 0, over: 0 }, tx: emptyTxCounts() },
     netFo: [],
     ageAlerts: [],
     generatedAt: new Date().toISOString(),

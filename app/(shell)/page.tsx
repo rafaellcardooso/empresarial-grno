@@ -45,6 +45,15 @@ export default async function Page() {
             </div>
           </div>
           <div className="col-md-6">
+            <div data-tour="home-tx">
+              <HomeNavCard
+                href="/tx"
+                title={HOME_COPY.tx.title}
+                description={HOME_COPY.tx.description}
+              />
+            </div>
+          </div>
+          <div className="col-md-6">
             <HomeNavCard
               href="/relatorios"
               title={HOME_COPY.relatorios.title}

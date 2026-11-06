@@ -29,6 +29,11 @@ const PAIRS = [
     example: path.join(repoRoot, "workers/tmip/.env.example"),
     local: path.join(repoRoot, "workers/tmip/.env"),
   },
+  {
+    name: "TX ingest worker",
+    example: path.join(repoRoot, "workers/tx-ingest/.env.example"),
+    local: path.join(repoRoot, "workers/tx-ingest/.env"),
+  },
 ];
 
 /** Extrai estrutura de linhas (comentários, chaves, blank) de um arquivo .env. */
@@ -154,6 +159,7 @@ function checkSirDbAlignment() {
   const workerEnvs = [
     { name: "sir-ingest", map: parseEnvMap(path.join(repoRoot, "workers/sir-ingest/.env")) },
     { name: "tmip", map: parseEnvMap(path.join(repoRoot, "workers/tmip/.env")) },
+    { name: "tx-ingest", map: parseEnvMap(path.join(repoRoot, "workers/tx-ingest/.env")) },
   ].filter((item) => item.map.size > 0);
 
   if (!nextEnv.size || workerEnvs.length === 0) {

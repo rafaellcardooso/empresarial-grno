@@ -4,6 +4,8 @@ type RelatorioInsightStripItem = {
   label: string;
   value: string;
   tone: "default" | "success" | "warning" | "danger";
+  active?: boolean;
+  onClick?: () => void;
 };
 
 type RelatorioInsightsStripProps = {
@@ -23,17 +25,42 @@ export function RelatorioInsightsStrip({ items }: RelatorioInsightsStripProps) {
 
   return (
     <div className="relatorio-insights-strip" aria-label="Destaques do período">
-      {items.map((item) => (
-        <div key={item.id} className={`relatorio-insights-strip__item ${TONE_CLASS[item.tone]}`}>
-          <span className="relatorio-insights-strip__icon" aria-hidden="true">
-            <i className={`bi ${item.icon}`} />
-          </span>
-          <div className="relatorio-insights-strip__text">
-            <span className="relatorio-insights-strip__label">{item.label}</span>
-            <strong className="relatorio-insights-strip__value">{item.value}</strong>
-          </div>
-        </div>
-      ))}
+      {items.map((item) => {
+        const className = `relatorio-insights-strip__item ${TONE_CLASS[item.tone]}${
+          item.active ? " relatorio-insights-strip__item--active" : ""
+        }${item.onClick ? " relatorio-insights-strip__item--action" : ""}`;
+        const content = (
+          <>
+            <span className="relatorio-insights-strip__icon" aria-hidden="true">
+              <i className={`bi ${item.icon}`} />
+            </span>
+            <div className="relatorio-insights-strip__text">
+              <span className="relatorio-insights-strip__label">{item.label}</span>
+              <strong className="relatorio-insights-strip__value">{item.value}</strong>
+            </div>
+          </>
+        );
+
+        if (!item.onClick) {
+          return (
+            <div key={item.id} className={className}>
+              {content}
+            </div>
+          );
+        }
+
+        return (
+          <button
+            key={item.id}
+            type="button"
+            className={className}
+            onClick={item.onClick}
+            aria-pressed={item.active === true}
+          >
+            {content}
+          </button>
+        );
+      })}
     </div>
   );
 }

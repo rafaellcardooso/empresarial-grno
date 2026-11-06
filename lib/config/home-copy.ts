@@ -13,9 +13,14 @@ export const HOME_COPY = {
     title: "BSOD",
     description: "Inventário PME, status de conectividade, VLAN e métricas de sinal.",
   },
+  tx: {
+    title: "TX",
+    description:
+      "Potência óptica de transmissão (GRB): enlaces da região, diferença vs referência e detalhes por ponta.",
+  },
   relatorios: {
     title: "Relatórios",
-    description: "Análises operacionais e exportação CSV de RAL, REC e inventário PME.",
+    description: "Análises operacionais e exportação CSV de RAL, REC, inventário PME e TX.",
   },
   configuracoes: {
     title: AUTH_COPY.settingsTitle,

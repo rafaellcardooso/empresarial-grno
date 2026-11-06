@@ -44,4 +44,13 @@ export const RELATORIO_HUB_ITEMS: RelatorioHubItem[] = [
     icon: "bi-broadcast",
     available: true,
   },
+  {
+    id: "tx",
+    href: "/relatorios/tx",
+    title: "TX",
+    description:
+      "Enlaces ópticos GRB na região: distribuição por UF, empresa e faixa de diferença vs referência.",
+    icon: "bi-activity",
+    available: true,
+  },
 ];

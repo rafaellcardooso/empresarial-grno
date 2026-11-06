@@ -10,7 +10,7 @@ export type NavItem = {
 };
 
 /** Origem do contador exibido ao lado do item no menu lateral. */
-export type NavBadgeKey = "pendingUsers" | "bsod" | "sdh" | "sir";
+export type NavBadgeKey = "pendingUsers" | "bsod" | "sdh" | "sir" | "tx";
 
 /** Rotas com título exibido no breadcrumb e metadata. */
 export const PAGE_TITLES: Record<string, string> = {
@@ -23,6 +23,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/sdh": "SDH",
   "/tmip": "SDH",
   "/gpon": "GPON",
+  "/tx": "TX",
   "/grb": "TELNET",
   "/grb/critel": "CRITEL",
   "/acionamento": "Técnicos",
@@ -30,6 +31,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/relatorios": "Relatórios",
   "/relatorios/tratativas": "BSOD",
   "/relatorios/sdh": "SDH",
+  "/relatorios/tx": "TX",
   "/relatorios/exportacao": "Exportação CSV",
   "/configuracoes": AUTH_COPY.settingsTitle,
   "/conta": AUTH_COPY.accountTitle,
@@ -45,6 +47,7 @@ const NAV_SECTIONS_RAW: NavItem[] = [
   { href: "/bsod", label: "BSOD", icon: "bi-hdd-network", badgeKey: "bsod" },
   { href: "/sdh", label: "SDH", icon: "bi-broadcast", badgeKey: "sdh" },
   { href: "/gpon", label: "GPON", icon: "bi-bezier2" },
+  { href: "/tx", label: "TX", icon: "bi-activity", badgeKey: "tx" },
   { header: true, label: "GRB" },
   { href: "/grb", label: "TELNET", icon: "bi-terminal" },
   { href: "/grb/critel", label: "CRITEL", icon: "bi-graph-up" },

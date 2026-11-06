@@ -5,14 +5,25 @@ export type NavSirCounts = {
   over: number;
 };
 
+/** Contadores TX no badge do menu por faixa de DIF (span loss vs referência). */
+export type NavTxCounts = {
+  critical: number;
+  warn: number;
+  ok: number;
+  high: number;
+  undefined: number;
+};
+
 /**
  * Contadores do badge no menu lateral.
  * BSOD/SDH: pendentes sem tratativa. SIR: faixas de idade dos ativos.
+ * TX: faixas de DIF dos enlaces ativos na região.
  */
 export type NavPendingCounts = {
   bsod: number;
   sdh: number;
   sir: NavSirCounts;
+  tx: NavTxCounts;
 };
 
 /** Chamado SIR ativo de CF /NET/FO observado para alertas de chamado novo. */

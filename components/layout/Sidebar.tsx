@@ -9,11 +9,14 @@ import { SidebarUserFooter } from "@/components/layout/SidebarUserFooter";
 import { useSidebarLayout } from "@/components/layout/SidebarLayoutProvider";
 import { SHELL_ALERTS_COPY } from "@/lib/config/shell-alerts";
 import { isNavItemActive, NAV_SECTIONS, type NavItem } from "@/lib/config/navigation";
-import type { NavSirCounts } from "@/lib/models/shell-alerts";
+import type { TxDifRefTone } from "@/lib/format/tx-optical";
+import type { NavSirCounts, NavTxCounts } from "@/lib/models/shell-alerts";
 import type { SirAgeTone } from "@/lib/sir/age-tone";
 
 type SidebarBadge =
-  { kind: "single"; value: number } | { kind: "sir"; ok: number; warn: number; over: number };
+  | { kind: "single"; value: number }
+  | { kind: "sir"; ok: number; warn: number; over: number }
+  | { kind: "tx"; critical: number; warn: number; ok: number; high: number; undefined: number };
 
 type SidebarNavButtonProps = {
   href: string;
@@ -26,11 +29,15 @@ type SidebarNavButtonProps = {
 
 const SIR_BADGE_TONES: SirAgeTone[] = ["ok", "warn", "over"];
 
+/** Badges TX no menu: só faixas operacionais críticas (vermelho / laranja). */
+const TX_MENU_BADGE_TONES: TxDifRefTone[] = ["critical", "warn"];
+
 /** Mapa href → data-tour para o tour guiado. */
 const NAV_TOUR_IDS: Record<string, string> = {
   "/sir": "nav-sir",
   "/bsod": "nav-bsod",
   "/sdh": "nav-sdh",
+  "/tx": "nav-tx",
   "/ajuda": "nav-ajuda",
 };
 
@@ -59,30 +66,55 @@ function badgeAriaLabel(label: string, badge: SidebarBadge | undefined): string 
   if (badge.kind === "single") {
     return badge.value > 0 ? `${label}, ${badge.value}` : undefined;
   }
+  if (badge.kind === "sir") {
+    const parts = [label];
+    for (const tone of SIR_BADGE_TONES) {
+      const value = badge[tone];
+      if (value > 0) parts.push(`${value} ${SHELL_ALERTS_COPY.sirBadgeToneTitle(tone)}`);
+    }
+    return parts.length > 1 ? parts.join(", ") : undefined;
+  }
   const parts = [label];
-  for (const tone of SIR_BADGE_TONES) {
+  for (const tone of TX_MENU_BADGE_TONES) {
     const value = badge[tone];
-    if (value > 0) parts.push(`${value} ${SHELL_ALERTS_COPY.sirBadgeToneTitle(tone)}`);
+    if (value > 0) parts.push(`${value} ${SHELL_ALERTS_COPY.txBadgeToneTitle(tone)}`);
   }
   return parts.length > 1 ? parts.join(", ") : undefined;
 }
 
-/** Renderiza badge simples ou as pills numéricas coloridas do SIR. */
+/** Renderiza badge simples ou as pills coloridas SIR/TX. */
 function SidebarBadges({ badge }: { badge: SidebarBadge | undefined }) {
   if (!badge) return null;
   if (badge.kind === "single") {
     if (badge.value <= 0) return null;
     return <span className="sidebar-nav-btn__badge">{badge.value}</span>;
   }
-  const visible = SIR_BADGE_TONES.filter((tone) => badge[tone] > 0);
+  if (badge.kind === "sir") {
+    const visible = SIR_BADGE_TONES.filter((tone) => badge[tone] > 0);
+    if (visible.length === 0) return null;
+    return (
+      <span className="sidebar-nav-btn__badges">
+        {visible.map((tone) => (
+          <span
+            key={tone}
+            className={`sidebar-nav-btn__badge sidebar-nav-btn__badge--${tone}`}
+            title={SHELL_ALERTS_COPY.sirBadgeToneTitle(tone)}
+          >
+            {badge[tone]}
+          </span>
+        ))}
+      </span>
+    );
+  }
+  const visible = TX_MENU_BADGE_TONES.filter((tone) => badge[tone] > 0);
   if (visible.length === 0) return null;
   return (
     <span className="sidebar-nav-btn__badges">
       {visible.map((tone) => (
         <span
           key={tone}
-          className={`sidebar-nav-btn__badge sidebar-nav-btn__badge--${tone}`}
-          title={SHELL_ALERTS_COPY.sirBadgeToneTitle(tone)}
+          className={`sidebar-nav-btn__badge sidebar-nav-btn__badge--tx-${tone}`}
+          title={SHELL_ALERTS_COPY.txBadgeToneTitle(tone)}
         >
           {badge[tone]}
         </span>
@@ -95,6 +127,19 @@ function SidebarBadges({ badge }: { badge: SidebarBadge | undefined }) {
 function sirBadgeFromCounts(sir: NavSirCounts | undefined): SidebarBadge | undefined {
   if (!sir) return undefined;
   return { kind: "sir", ok: sir.ok, warn: sir.warn, over: sir.over };
+}
+
+/** Converte contagem TX da API em badge do menu. */
+function txBadgeFromCounts(tx: NavTxCounts | undefined): SidebarBadge | undefined {
+  if (!tx) return undefined;
+  return {
+    kind: "tx",
+    critical: tx.critical,
+    warn: tx.warn,
+    ok: tx.ok,
+    high: tx.high,
+    undefined: tx.undefined,
+  };
 }
 
 /** Menu lateral com botões de navegação por seção (staff vê administração). */
@@ -114,7 +159,7 @@ export function Sidebar() {
     return NAV_SECTIONS.filter((item) => !item.staffOnly || isStaff);
   }
 
-  /** Resolve badge do item (usuários, BSOD/SDH pendentes ou faixas SIR). */
+  /** Resolve badge do item (usuários, BSOD/SDH pendentes, faixas SIR/TX). */
   function itemBadge(item: NavItem): SidebarBadge | undefined {
     if (!item.badgeKey) return undefined;
     if (item.badgeKey === "pendingUsers") {
@@ -122,6 +167,9 @@ export function Sidebar() {
     }
     if (item.badgeKey === "sir") {
       return sirBadgeFromCounts(moduleCounts?.sir);
+    }
+    if (item.badgeKey === "tx") {
+      return txBadgeFromCounts(moduleCounts?.tx);
     }
     const value = moduleCounts?.[item.badgeKey];
     return value == null ? undefined : { kind: "single", value };

@@ -55,6 +55,8 @@ workers/sir-ingest/states/telegram-tmp/
 
 # TMIP / SDH ingest
 workers/tmip/.env
+workers/tx-ingest/.env
+workers/tx-ingest/node_modules/
 workers/tmip/venv/
 workers/tmip/**/__pycache__/
 workers/tmip/dados/*.csv

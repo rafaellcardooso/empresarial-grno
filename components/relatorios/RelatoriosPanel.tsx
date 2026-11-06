@@ -1,7 +1,8 @@
 import { RelatorioBsodExportForm } from "@/components/relatorios/RelatorioBsodExportForm";
 import { RelatorioSirExportForm } from "@/components/relatorios/RelatorioSirExportForm";
+import { RelatorioTxExportForm } from "@/components/relatorios/RelatorioTxExportForm";
 
-/** Painel com exportações CSV de SIR e BSOD. */
+/** Painel com exportações CSV de SIR, BSOD e TX. */
 export function RelatoriosPanel() {
   return (
     <div className="row g-3">
@@ -13,6 +14,9 @@ export function RelatoriosPanel() {
       </div>
       <div className="col-12">
         <RelatorioBsodExportForm />
+      </div>
+      <div className="col-12">
+        <RelatorioTxExportForm />
       </div>
     </div>
   );

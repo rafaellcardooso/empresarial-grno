@@ -47,6 +47,7 @@ export {
 export {
   type NavPendingCounts,
   type NavSirCounts,
+  type NavTxCounts,
   type ShellAlertsPayload,
   type SirAgeAlertLevel,
   type SirAgeAlertRecord,
