@@ -34,12 +34,11 @@ export function TratativaStatusCell({ tratativa, isRecordOpen = true }: Tratativ
     );
   }
 
-  const status = !isRecordOpen
-    ? "aguardando_conclusao"
-    : (tratativa.workflowStatus ?? "em_tratativa");
+  const workflowStatus = tratativa.workflowStatus ?? "em_tratativa";
+  const status = !isRecordOpen ? "aguardando_conclusao" : workflowStatus;
   const label = !isRecordOpen
     ? TRATATIVA_AWAITING_CONCLUSION_LABEL
-    : (TRATATIVA_WORKFLOW_LABELS[status] ?? TRATATIVA_WORKFLOW_LABELS.em_tratativa);
+    : (TRATATIVA_WORKFLOW_LABELS[workflowStatus] ?? TRATATIVA_WORKFLOW_LABELS.em_tratativa);
 
   return (
     <div className="tratativa-status-cell">
