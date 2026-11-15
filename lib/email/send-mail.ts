@@ -7,6 +7,15 @@ type SendMailInput = {
   html?: string;
 };
 
+/** Monta o cabeçalho From (nome de exibição opcional via SMTP_FROM_NAME). */
+function formatSmtpFrom(): string {
+  const address = (process.env.SMTP_FROM || "").trim();
+  const name = (process.env.SMTP_FROM_NAME || "").trim();
+  if (!name) return address;
+  const escaped = name.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return `"${escaped}" <${address}>`;
+}
+
 /** Indica se SMTP está configurado no ambiente. */
 export function isSmtpConfigured(): boolean {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_FROM);
@@ -29,7 +38,7 @@ export async function sendMail(input: SendMailInput): Promise<void> {
   });
 
   await transporter.sendMail({
-    from: process.env.SMTP_FROM,
+    from: formatSmtpFrom(),
     to: input.to,
     subject: input.subject,
     text: input.text,
