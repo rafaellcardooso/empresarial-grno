@@ -55,7 +55,7 @@ export function UserApprovalPanel() {
         setMessage(data.error ?? "Falha na operação.");
         return;
       }
-      setMessage(action === "approve" ? "Usuário aprovado." : "Cadastro rejeitado.");
+      setMessage(action === "approve" ? "Usuário aprovado." : "Cadastro rejeitado e removido.");
       await loadUsers(true);
     } finally {
       setPendingAction(null);

@@ -114,6 +114,24 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ error: "Não é possível suspender staff." }, { status: 400 });
   }
 
+  /** Rejeitar remove o cadastro (igual HFC); status REJECTED bloqueava o login e a re-solicitação. */
+  if (action === "reject") {
+    if (userId === session.userId) {
+      return NextResponse.json(
+        { error: "Você não pode rejeitar sua própria conta." },
+        { status: 400 },
+      );
+    }
+    if (user.role === "STAFF") {
+      return NextResponse.json(
+        { error: "Não é possível rejeitar um administrador." },
+        { status: 400 },
+      );
+    }
+    await deleteUser(userId);
+    return NextResponse.json({ ok: true, status: "REJECTED" });
+  }
+
   const status = ACTION_STATUS[action];
   await updateUserStatus(
     userId,
