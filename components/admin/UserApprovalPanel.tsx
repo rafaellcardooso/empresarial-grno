@@ -11,8 +11,15 @@ type PendingAction = {
   action: "approve" | "reject";
 };
 
+type UserApprovalPanelProps = {
+  /** Dispara atualização da tabela geral após aprovar/rejeitar. */
+  onUsersChanged?: () => void;
+  /** Token externo para recarregar a lista pendente. */
+  refreshToken?: number;
+};
+
 /** Painel staff para aprovar/rejeitar usuários pendentes. */
-export function UserApprovalPanel() {
+export function UserApprovalPanel({ onUsersChanged, refreshToken = 0 }: UserApprovalPanelProps) {
   const [users, setUsers] = useState<AppUserPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -36,8 +43,8 @@ export function UserApprovalPanel() {
   }
 
   useEffect(() => {
-    void loadUsers();
-  }, []);
+    void loadUsers(refreshToken > 0);
+  }, [refreshToken]);
 
   /** Executa ação staff sobre usuário. */
   async function handleAction(userId: number, action: "approve" | "reject") {
@@ -56,7 +63,8 @@ export function UserApprovalPanel() {
         return;
       }
       setMessage(action === "approve" ? "Usuário aprovado." : "Cadastro rejeitado e removido.");
-      await loadUsers(true);
+      if (onUsersChanged) onUsersChanged();
+      else await loadUsers(true);
     } finally {
       setPendingAction(null);
     }

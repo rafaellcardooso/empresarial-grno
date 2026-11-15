@@ -13,8 +13,14 @@ const STATUS_LABELS: Record<AppUserPublic["status"], string> = {
   SUSPENDED: "Suspenso",
 };
 
+type UserManagementPanelProps = {
+  currentUserId: number;
+  /** Incrementado pela página/painel de aprovação para forçar reload. */
+  refreshToken?: number;
+};
+
 /** Tabela staff com gestão completa de usuários. */
-export function UserManagementPanel({ currentUserId }: { currentUserId: number }) {
+export function UserManagementPanel({ currentUserId, refreshToken = 0 }: UserManagementPanelProps) {
   const [users, setUsers] = useState<AppUserPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AppUserPublic | null>(null);
@@ -31,7 +37,7 @@ export function UserManagementPanel({ currentUserId }: { currentUserId: number }
       setUsers(nextUsers);
       setEditing((current) => {
         if (!current) return null;
-        return nextUsers.find((user) => user.id === current.id) ?? current;
+        return nextUsers.find((user) => user.id === current.id) ?? null;
       });
     } finally {
       if (!options?.silent) {
@@ -41,8 +47,8 @@ export function UserManagementPanel({ currentUserId }: { currentUserId: number }
   }, []);
 
   useEffect(() => {
-    void loadUsers();
-  }, [loadUsers]);
+    void loadUsers({ silent: refreshToken > 0 });
+  }, [loadUsers, refreshToken]);
 
   if (loading) {
     return <p className="text-body-secondary mb-0">Carregando…</p>;
