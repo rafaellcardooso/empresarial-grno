@@ -2,6 +2,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import { PUBLIC_API_PREFIXES, PUBLIC_AUTH_API_PATHS, PUBLIC_PATHS } from "@/lib/auth/constants";
 import { getSessionFromRequest } from "@/lib/auth/session";
 
+/** Remove basePath do pathname quando vier duplicado na URL. */
+function stripBasePath(pathname: string, basePath: string): string {
+  if (!basePath) return pathname;
+  if (pathname === basePath) return "/";
+  if (pathname.startsWith(`${basePath}/`)) {
+    return pathname.slice(basePath.length) || "/";
+  }
+  return pathname;
+}
+
 /** Indica se pathname é rota pública de página. */
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
@@ -24,19 +34,20 @@ function isStaticAsset(pathname: string): boolean {
   );
 }
 
-/** Monta URL absoluta respeitando `basePath` (evita cair na raiz do host/Nginx). */
+/** Monta URL absoluta; pathname sem basePath (NextURL.href reaplica o prefixo). */
 function appAbsoluteUrl(request: NextRequest, path: string): URL {
   const base = request.nextUrl.basePath || "";
-  const normalized = path.startsWith("/") ? path : `/${path}`;
+  const normalized = stripBasePath(path.startsWith("/") ? path : `/${path}`, base);
   const url = request.nextUrl.clone();
-  url.pathname = normalized === "/" ? base || "/" : `${base}${normalized}`;
+  url.pathname = normalized;
   url.search = "";
   return url;
 }
 
 /** Middleware de autenticação e autorização staff. */
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const base = request.nextUrl.basePath || "";
+  const pathname = stripBasePath(request.nextUrl.pathname, base);
 
   if (isStaticAsset(pathname) || isPublicPath(pathname) || isPublicApi(pathname)) {
     return NextResponse.next();

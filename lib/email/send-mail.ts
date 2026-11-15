@@ -46,11 +46,24 @@ export async function sendMail(input: SendMailInput): Promise<void> {
   });
 }
 
-/** Monta URL absoluta para links em e-mails. */
+/** Monta URL absoluta para links em e-mails (sem duplicar basePath). */
 export function getAppPublicUrl(path: string): string {
   const base = (process.env.APP_PUBLIC_URL || "http://192.168.95.40/empresarial").replace(
     /\/$/,
     "",
   );
-  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+  let normalized = path.startsWith("/") ? path : `/${path}`;
+  try {
+    const basePath = new URL(base).pathname.replace(/\/$/, "");
+    if (
+      basePath &&
+      basePath !== "/" &&
+      (normalized === basePath || normalized.startsWith(`${basePath}/`))
+    ) {
+      normalized = normalized.slice(basePath.length) || "/";
+    }
+  } catch {
+    // base inválida — concatena como está
+  }
+  return `${base}${normalized}`;
 }
