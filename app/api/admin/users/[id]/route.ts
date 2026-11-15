@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { parseProfileUpdateFields } from "@/lib/auth/profile-update";
 import { getSession, setSessionCookie } from "@/lib/auth/session";
 import { parseJsonBody } from "@/lib/auth/validation";
@@ -132,12 +132,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         { status: 400 },
       );
     }
-    await notifyUserRegistrationRejected({
+    const rejected = {
       name: user.name,
       corporateId: user.corporate_id,
       email: user.email,
-    });
+    };
     await deleteUser(userId);
+    after(() => notifyUserRegistrationRejected(rejected));
     return NextResponse.json({ ok: true, status: "REJECTED" });
   }
 
@@ -149,11 +150,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   );
 
   if (action === "approve") {
-    await notifyUserRegistrationApproved({
-      name: user.name,
-      corporateId: user.corporate_id,
-      email: user.email,
-    });
+    after(() =>
+      notifyUserRegistrationApproved({
+        name: user.name,
+        corporateId: user.corporate_id,
+        email: user.email,
+      }),
+    );
   }
 
   return NextResponse.json({ ok: true, status });

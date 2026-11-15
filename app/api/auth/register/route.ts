@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { hashPassword } from "@/lib/auth/password";
 import {
   CORPORATE_ID_HINT,
@@ -79,12 +79,14 @@ export async function POST(request: Request) {
     `${name} (${normalizedId}) solicitou acesso. Aprove em Administração → Usuários.`,
   );
 
-  await notifyAdminsNewRegistration({
-    name,
-    corporateId: normalizedId,
-    email: email || null,
-    homeUf,
-  });
+  after(() =>
+    notifyAdminsNewRegistration({
+      name,
+      corporateId: normalizedId,
+      email: email || null,
+      homeUf,
+    }),
+  );
 
   return NextResponse.json({
     ok: true,
