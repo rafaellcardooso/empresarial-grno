@@ -318,6 +318,16 @@ export async function listActiveStaffUserIds(): Promise<number[]> {
   return rows.map((row) => Number(row.id));
 }
 
+/** Lista e-mails de staff ativos (não vazios). */
+export async function listActiveStaffEmails(): Promise<string[]> {
+  const rows = await sirQuery<(RowDataPacket & { email: string })[]>(
+    `SELECT email FROM app_users
+     WHERE role = 'STAFF' AND status = 'ACTIVE'
+       AND email IS NOT NULL AND TRIM(email) <> ''`,
+  );
+  return rows.map((row) => String(row.email).trim().toLowerCase()).filter(Boolean);
+}
+
 /** Conta cadastros pendentes de aprovação. */
 export async function countPendingUsers(): Promise<number> {
   const rows = await sirQuery<RowDataPacket[]>(

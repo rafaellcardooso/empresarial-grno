@@ -12,6 +12,7 @@ import {
 import { AUTH_COPY } from "@/lib/config/auth-copy";
 import { parseUserRegionUf } from "@/lib/config/user-regions";
 import { createPendingUser, getUserByCorporateId } from "@/lib/queries/app-users";
+import { notifyAdminsNewRegistration } from "@/lib/email/notify-registration";
 import { notifyActiveStaff } from "@/lib/queries/notifications";
 
 type RegisterBody = {
@@ -77,6 +78,13 @@ export async function POST(request: Request) {
     "Nova solicitação de acesso",
     `${name} (${normalizedId}) solicitou acesso. Aprove em Administração → Usuários.`,
   );
+
+  await notifyAdminsNewRegistration({
+    name,
+    corporateId: normalizedId,
+    email: email || null,
+    homeUf,
+  });
 
   return NextResponse.json({
     ok: true,
