@@ -39,7 +39,7 @@ export async function sendMail(input: SendMailInput): Promise<void> {
 
 /** Monta URL absoluta para links em e-mails. */
 export function getAppPublicUrl(path: string): string {
-  const base = (process.env.APP_PUBLIC_URL || "http://127.0.0.1:4001/empresarial").replace(
+  const base = (process.env.APP_PUBLIC_URL || "http://192.168.95.40/empresarial").replace(
     /\/$/,
     "",
   );
