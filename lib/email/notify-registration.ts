@@ -1,4 +1,4 @@
-import { isSmtpConfigured, sendMail } from "@/lib/email/send-mail";
+import { getAppPublicUrl, isSmtpConfigured, sendMail } from "@/lib/email/send-mail";
 import { listActiveStaffEmails } from "@/lib/queries/app-users";
 
 const PORTAL_NAME = "Empresarial";
@@ -16,17 +16,32 @@ type DecisionMailInput = {
   email?: string | null;
 };
 
+/** Escapa texto para uso seguro em HTML de e-mail. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 /** Envia e-mail sem lançar; retorna false se SMTP/destinatário ausente ou falha. */
 async function sendSafeMail(input: {
   to: string;
   subject: string;
   text: string;
+  html?: string;
 }): Promise<boolean> {
   if (!isSmtpConfigured()) return false;
   const to = input.to.trim().toLowerCase();
   if (!to) return false;
   try {
-    await sendMail({ to, subject: input.subject, text: input.text });
+    await sendMail({
+      to,
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
+    });
     return true;
   } catch (error) {
     console.error("[email] falha no envio:", error);
@@ -44,6 +59,7 @@ export async function notifyAdminsNewRegistration(input: RegistrationAlertInput)
     return;
   }
 
+  const approveUrl = getAppPublicUrl("/admin/usuarios");
   const lines = [
     `Novo cadastro pendente em ${PORTAL_NAME}.`,
     "",
@@ -52,13 +68,22 @@ export async function notifyAdminsNewRegistration(input: RegistrationAlertInput)
     `E-mail: ${input.email?.trim() || "(não informado)"}`,
     `UF: ${input.homeUf?.trim() || "(não informada)"}`,
     "",
-    "Aprovar em: Administração → Usuários (acesse o portal pela VPN).",
+    "Aprove em Administração → Usuários (acesse o portal pela VPN).",
   ];
+  const html = [
+    `<p>Novo cadastro pendente em ${escapeHtml(PORTAL_NAME)}.</p>`,
+    `<p>Nome: ${escapeHtml(input.name)}<br>`,
+    `Login: ${escapeHtml(input.corporateId)}<br>`,
+    `E-mail: ${escapeHtml(input.email?.trim() || "(não informado)")}<br>`,
+    `UF: ${escapeHtml(input.homeUf?.trim() || "(não informada)")}</p>`,
+    `<p><a href="${escapeHtml(approveUrl)}">Aprovar cadastro</a></p>`,
+  ].join("");
 
   await sendSafeMail({
     to: recipients.join(", "),
     subject: `[${PORTAL_NAME}] Nova solicitação de acesso — ${input.corporateId}`,
     text: lines.join("\n"),
+    html,
   });
 }
 
@@ -67,19 +92,27 @@ export async function notifyUserRegistrationApproved(input: DecisionMailInput): 
   const email = input.email?.trim() || "";
   if (!email) return;
 
+  const loginUrl = getAppPublicUrl("/login");
   const lines = [
     `Olá, ${input.name}.`,
     "",
     `Seu cadastro em ${PORTAL_NAME} foi aprovado.`,
     `Login: ${input.corporateId}`,
     "",
-    "Acesse o portal pela VPN e faça login.",
+    "Acesse o portal pela VPN.",
   ];
+  const html = [
+    `<p>Olá, ${escapeHtml(input.name)}.</p>`,
+    `<p>Seu cadastro em ${escapeHtml(PORTAL_NAME)} foi aprovado.<br>`,
+    `Login: ${escapeHtml(input.corporateId)}</p>`,
+    `<p><a href="${escapeHtml(loginUrl)}">Acesse o portal</a></p>`,
+  ].join("");
 
   await sendSafeMail({
     to: email,
     subject: `[${PORTAL_NAME}] Cadastro aprovado — ${input.corporateId}`,
     text: lines.join("\n"),
+    html,
   });
 }
 
