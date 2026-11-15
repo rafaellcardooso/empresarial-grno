@@ -1,4 +1,4 @@
-import { getAppPublicUrl, isSmtpConfigured, sendMail } from "@/lib/email/send-mail";
+import { isSmtpConfigured, sendMail } from "@/lib/email/send-mail";
 import { listActiveStaffEmails } from "@/lib/queries/app-users";
 
 const PORTAL_NAME = "Empresarial";
@@ -44,7 +44,6 @@ export async function notifyAdminsNewRegistration(input: RegistrationAlertInput)
     return;
   }
 
-  const approveUrl = getAppPublicUrl("/admin/usuarios");
   const lines = [
     `Novo cadastro pendente em ${PORTAL_NAME}.`,
     "",
@@ -53,7 +52,7 @@ export async function notifyAdminsNewRegistration(input: RegistrationAlertInput)
     `E-mail: ${input.email?.trim() || "(não informado)"}`,
     `UF: ${input.homeUf?.trim() || "(não informada)"}`,
     "",
-    `Aprovar em: ${approveUrl}`,
+    "Aprovar em: Administração → Usuários (acesse o portal pela VPN).",
   ];
 
   await sendSafeMail({
@@ -68,14 +67,13 @@ export async function notifyUserRegistrationApproved(input: DecisionMailInput): 
   const email = input.email?.trim() || "";
   if (!email) return;
 
-  const loginUrl = getAppPublicUrl("/login");
   const lines = [
     `Olá, ${input.name}.`,
     "",
     `Seu cadastro em ${PORTAL_NAME} foi aprovado.`,
     `Login: ${input.corporateId}`,
     "",
-    `Acesse: ${loginUrl}`,
+    "Acesse o portal pela VPN e faça login.",
   ];
 
   await sendSafeMail({

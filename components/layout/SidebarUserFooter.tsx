@@ -34,7 +34,7 @@ export function SidebarUserFooter() {
           <p className="sidebar-account__id" title={user.corporateId}>
             {user.corporateId}
           </p>
-          {isStaff ? <span className="sidebar-account__badge">STAFF</span> : null}
+          {isStaff ? <span className="sidebar-account__badge">Administrador</span> : null}
         </div>
         <button
           type="button"

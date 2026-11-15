@@ -115,7 +115,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 
   if (user.role === "STAFF" && action === "suspend") {
-    return NextResponse.json({ error: "Não é possível suspender staff." }, { status: 400 });
+    return NextResponse.json({ error: "Não é possível suspender administrador." }, { status: 400 });
   }
 
   /** Rejeitar remove o cadastro (igual HFC); status REJECTED bloqueava o login e a re-solicitação. */
