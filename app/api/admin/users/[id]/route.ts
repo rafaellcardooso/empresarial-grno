@@ -13,6 +13,10 @@ import {
   updateUserProfile,
   updateUserStatus,
 } from "@/lib/queries/app-users";
+import {
+  notifyUserRegistrationApproved,
+  notifyUserRegistrationRejected,
+} from "@/lib/email/notify-registration";
 import type { AppUserStatus } from "@/lib/models/app-user";
 
 type PatchBody = {
@@ -128,6 +132,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         { status: 400 },
       );
     }
+    await notifyUserRegistrationRejected({
+      name: user.name,
+      corporateId: user.corporate_id,
+      email: user.email,
+    });
     await deleteUser(userId);
     return NextResponse.json({ ok: true, status: "REJECTED" });
   }
@@ -138,6 +147,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     status,
     action === "approve" || action === "reactivate" ? session.userId : null,
   );
+
+  if (action === "approve") {
+    await notifyUserRegistrationApproved({
+      name: user.name,
+      corporateId: user.corporate_id,
+      email: user.email,
+    });
+  }
 
   return NextResponse.json({ ok: true, status });
 }
