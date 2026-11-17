@@ -1,3 +1,4 @@
+import type { RowDataPacket } from "mysql2";
 import { TX_REGION_UFS } from "@/lib/config/tx-optical";
 import {
   TX_LIST_PAGE_SIZE,
@@ -9,7 +10,8 @@ import type { UserRegionUf } from "@/lib/config/user-regions";
 import { sirQuery } from "@/lib/db/sir";
 import type { TxOpticalSample } from "@/lib/models/tx";
 
-type CountRow = { n: number };
+type CountRow = RowDataPacket & { n: number | string };
+type TxSampleRow = RowDataPacket & TxOpticalSample;
 
 export type TxHistoryFilters = {
   designacao?: string;
@@ -96,7 +98,7 @@ export async function listTxOpticalSamples(
 
   const [countRows, rows] = await Promise.all([
     sirQuery<CountRow[]>(`SELECT COUNT(*) AS n FROM tx_optical_samples WHERE ${whereSql}`, params),
-    sirQuery<TxOpticalSample[]>(
+    sirQuery<TxSampleRow[]>(
       `SELECT ${SAMPLE_COLUMNS}
        FROM tx_optical_samples
        WHERE ${whereSql}
@@ -107,7 +109,7 @@ export async function listTxOpticalSamples(
   ]);
 
   return {
-    rows,
+    rows: rows as TxOpticalSample[],
     total: Number(countRows[0]?.n ?? 0),
     page,
     pageSize,
@@ -128,13 +130,14 @@ export async function listTxOpticalSamplesForExport(
     to: filters.to,
   });
 
-  return sirQuery<TxOpticalSample[]>(
+  const rows = await sirQuery<TxSampleRow[]>(
     `SELECT ${SAMPLE_COLUMNS}
      FROM tx_optical_samples
      WHERE ${whereSql}
      ORDER BY sampled_at DESC, id DESC`,
     params,
   );
+  return rows as TxOpticalSample[];
 }
 
 /** Normaliza page a partir de query string. */
