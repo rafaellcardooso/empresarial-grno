@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Ingest TX — CSV GRB de potência óptica → MySQL SIR (tx_optical_spans).
+ * Ingest TX — CSV GRB de potência óptica → MySQL SIR (tx_optical_spans + samples).
  * Uso: node ingest.mjs
  * Fixture offline: TX_CSV_FILE=fixtures/potencia_optica_de_transmissao.csv node ingest.mjs
  */
@@ -9,7 +9,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { downloadTxCsv } from "./lib/fetch-csv.mjs";
-import { openSirConnection, upsertTxSpans } from "./lib/db.mjs";
+import { openSirConnection, persistTxHistory, upsertTxSpans } from "./lib/db.mjs";
 import { parseTxOpticalCsv } from "./lib/parse-csv.mjs";
 import { parseRegionUfsFromEnv } from "./lib/uf.mjs";
 
@@ -50,8 +50,11 @@ async function main() {
   try {
     await connection.beginTransaction();
     const result = await upsertTxSpans(connection, rows, regionUfs);
+    const history = await persistTxHistory(connection, rows);
     await connection.commit();
-    console.log(`[TX] upserted=${result.upserted} deactivated=${result.deactivated}`);
+    console.log(
+      `[TX] upserted=${result.upserted} deactivated=${result.deactivated} samples_inserted=${history.samplesInserted} purged=${history.purged}`,
+    );
   } catch (error) {
     await connection.rollback();
     throw error;

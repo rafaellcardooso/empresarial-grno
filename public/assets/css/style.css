@@ -4968,7 +4968,129 @@ a.sir-report-summary__metric:focus-visible {
 }
 
 .tx-detalhes-offcanvas {
-  width: min(28rem, 100vw);
+  width: min(36rem, 100vw);
+}
+
+.tx-history {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--line-clr, #dee2e6);
+}
+
+.tx-history__header {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.tx-history__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.tx-history__lead {
+  font-size: 0.75rem;
+  color: var(--secondary-text-clr);
+}
+
+.tx-history__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.tx-history__item {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line-clr, #dee2e6);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--bs-body-bg, #fff) 92%, var(--bs-secondary-bg, #f8f9fa));
+}
+
+.tx-history__item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+}
+
+.tx-history__date {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.tx-history__reason {
+  font-size: 0.72rem;
+  color: var(--secondary-text-clr);
+}
+
+.tx-history__directions {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.tx-history__direction {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--bs-body-bg, #fff) 88%, var(--line-clr, #ced4da));
+}
+
+.tx-history__direction-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tx-history__direction-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.tx-history__direction-sub {
+  font-size: 0.68rem;
+  color: var(--secondary-text-clr);
+}
+
+.tx-history__item-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem 0.5rem;
+}
+
+.tx-history__metric {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.tx-history__metric-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--secondary-text-clr);
+}
+
+.tx-history__metric-value {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.tx-history-report__filters {
+  margin-bottom: 0.75rem;
+}
+
+.tx-history-report__table-wrap {
+  max-height: 28rem;
+  overflow: auto;
 }
 
 .tx-detalhes {

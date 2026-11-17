@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TxHistoryReportPanel } from "@/components/relatorios/TxHistoryReportPanel";
 import { TxReportPanel } from "@/components/relatorios/TxReportPanel";
 import { ContentCard } from "@/components/ui/ContentCard";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -38,6 +39,10 @@ export default async function Page() {
           </p>
         </ContentCard>
       )}
+
+      <div className="mt-4">
+        <TxHistoryReportPanel />
+      </div>
     </>
   );
 }

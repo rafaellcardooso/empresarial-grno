@@ -1,4 +1,5 @@
 import mysql from "mysql2/promise";
+import { decideTxSampleReason, parseHeartbeatHours, parseRetentionDays } from "./history.mjs";
 
 /** Lê env obrigatória. */
 function required(name) {
@@ -94,4 +95,94 @@ export async function upsertTxSpans(connection, rows, regionUfs) {
     upserted: seen.length,
     deactivated: Number(result.affectedRows ?? 0),
   };
+}
+
+const SAMPLE_INSERT_SQL = `
+INSERT INTO tx_optical_samples (
+  designacao, sampled_at, reason, ufs, node_a, port_a, node_b, port_b,
+  txpower_a, rxpower_b, span_loss_a_to_b, ref_span_loss_a_to_b, dif_ref_span_loss_a_to_b,
+  txpower_b, rxpower_a, span_loss_b_to_a, ref_span_loss_b_to_a, dif_ref_span_loss_b_to_a
+) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+/** Carrega a última amostra por designacao (mapa). */
+export async function loadLatestTxSamples(connection, designacoes) {
+  const map = new Map();
+  if (designacoes.length === 0) return map;
+
+  const placeholders = designacoes.map(() => "?").join(", ");
+  const [rows] = await connection.execute(
+    `SELECT s.*
+     FROM tx_optical_samples s
+     INNER JOIN (
+       SELECT designacao, MAX(id) AS max_id
+       FROM tx_optical_samples
+       WHERE designacao IN (${placeholders})
+       GROUP BY designacao
+     ) latest ON latest.max_id = s.id`,
+    designacoes,
+  );
+
+  for (const row of rows) {
+    map.set(row.designacao, row);
+  }
+  return map;
+}
+
+/**
+ * Insere amostras first/change/heartbeat e purge amostras fora da retenção.
+ * Compara cada span atual com a última amostra persistida.
+ */
+export async function persistTxHistory(connection, rows) {
+  if (rows.length === 0) {
+    const purged = await purgeTxSamples(connection);
+    return { samplesInserted: 0, purged };
+  }
+
+  const designacoes = rows.map((row) => row.designacao);
+  const latestByDesignacao = await loadLatestTxSamples(connection, designacoes);
+  const heartbeatMs = parseHeartbeatHours(process.env.TX_HISTORY_HEARTBEAT_HOURS) * 60 * 60 * 1000;
+  const nowMs = Date.now();
+  let samplesInserted = 0;
+
+  for (const row of rows) {
+    const previous = latestByDesignacao.get(row.designacao) ?? null;
+    const reason = decideTxSampleReason(row, previous, nowMs, heartbeatMs);
+    if (!reason) continue;
+
+    await connection.execute(SAMPLE_INSERT_SQL, [
+      row.designacao,
+      reason,
+      row.ufs,
+      row.node_a,
+      row.port_a,
+      row.node_b,
+      row.port_b,
+      row.txpower_a,
+      row.rxpower_b,
+      row.span_loss_a_to_b,
+      row.ref_span_loss_a_to_b,
+      row.dif_ref_span_loss_a_to_b,
+      row.txpower_b,
+      row.rxpower_a,
+      row.span_loss_b_to_a,
+      row.ref_span_loss_b_to_a,
+      row.dif_ref_span_loss_b_to_a,
+    ]);
+    samplesInserted += 1;
+  }
+
+  const purged = await purgeTxSamples(connection);
+  return { samplesInserted, purged };
+}
+
+/** Remove amostras mais antigas que a retenção configurada. */
+async function purgeTxSamples(connection) {
+  const retentionDays = parseRetentionDays(process.env.TX_HISTORY_RETENTION_DAYS);
+  const [result] = await connection.execute(
+    `DELETE FROM tx_optical_samples
+     WHERE sampled_at < DATE_SUB(NOW(), INTERVAL ? DAY)`,
+    [retentionDays],
+  );
+  return Number(result.affectedRows ?? 0);
 }

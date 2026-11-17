@@ -5,6 +5,12 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createRequire } from "node:module";
 import { parseTxOpticalCsv, parseBrDecimal } from "../workers/tx-ingest/lib/parse-csv.mjs";
+import {
+  decideTxSampleReason,
+  parseHeartbeatHours,
+  parseRetentionDays,
+  txMetricsEqual,
+} from "../workers/tx-ingest/lib/history.mjs";
 import { extractUfsFromDesignacao, matchesRegion } from "../workers/tx-ingest/lib/uf.mjs";
 
 const require = createRequire(import.meta.url);
@@ -59,6 +65,46 @@ test("parseTxDesignacao lê KM e empresa após (UF)", () => {
     parseTxDesignacao("AGNPFC CRN CAR OTS 001 / 115 KM / (TO)(MA) / OTDR EMBARCADO EM PSS"),
     { rota: "AGNPFC CRN CAR OTS 001", extensaoKm: 115, empresa: null },
   );
+});
+
+test("txMetricsEqual e decideTxSampleReason cobrem first/change/heartbeat/skip", () => {
+  const base = {
+    designacao: "FOO / (PA) / BAR",
+    ufs: "PA",
+    node_a: "A",
+    port_a: "P1",
+    node_b: "B",
+    port_b: "P2",
+    txpower_a: 1.5,
+    rxpower_b: -2,
+    span_loss_a_to_b: 3,
+    ref_span_loss_a_to_b: 3.1,
+    dif_ref_span_loss_a_to_b: 0.1,
+    txpower_b: 1.2,
+    rxpower_a: -1.8,
+    span_loss_b_to_a: 3.2,
+    ref_span_loss_b_to_a: 3.2,
+    dif_ref_span_loss_b_to_a: 0,
+  };
+  const previous = { ...base, sampled_at: "2026-11-17T10:00:00.000Z" };
+  const nowMs = Date.parse("2026-11-17T12:00:00.000Z");
+  const heartbeatMs = 6 * 60 * 60 * 1000;
+
+  assert.equal(decideTxSampleReason(base, null, nowMs, heartbeatMs), "first");
+  assert.equal(txMetricsEqual(base, previous), true);
+  assert.equal(decideTxSampleReason(base, previous, nowMs, heartbeatMs), null);
+  assert.equal(
+    decideTxSampleReason(base, previous, Date.parse("2026-11-17T16:00:00.000Z"), heartbeatMs),
+    "heartbeat",
+  );
+  assert.equal(
+    decideTxSampleReason({ ...base, dif_ref_span_loss_a_to_b: -4.2 }, previous, nowMs, heartbeatMs),
+    "change",
+  );
+  assert.equal(parseHeartbeatHours("6"), 6);
+  assert.equal(parseRetentionDays("90"), 90);
+  assert.equal(parseHeartbeatHours("0"), 6);
+  assert.equal(parseRetentionDays("abc"), 90);
 });
 
 test("parseTxOpticalCsv filtra região no fixture", () => {

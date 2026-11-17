@@ -1,6 +1,6 @@
 # TX ingest — potência óptica GRB
 
-> Worker: `workers/tx-ingest` · Tabela: `tx_optical_spans` · Timer: 5 min
+> Worker: `workers/tx-ingest` · Tabelas: `tx_optical_spans`, `tx_optical_samples` · Timer: 5 min
 
 ## O que faz
 
@@ -10,6 +10,8 @@
 3. Extrai UFs da coluna `DESIGNACAO` (texto entre `()`).
 4. Mantém só spans que tocam **MA / AM / PA / AP** (`TX_REGION_UFS`).
 5. UPSERT em `tx_optical_spans`; ausentes do scrape (na região) → `is_active=0`.
+6. Histórico em `tx_optical_samples`: grava amostra só quando identidade/métricas mudam (`change`), na primeira vez (`first`) ou no heartbeat (`TX_HISTORY_HEARTBEAT_HOURS`, default **6**).
+7. Purge de amostras com `sampled_at` anterior a `TX_HISTORY_RETENTION_DAYS` (default **90**).
 
 O host do worker precisa de rota até `200.255.253.12` (WSL sem rota para essa rede falha com timeout; use o Debian de produção ou um host Windows/VPN com acesso GRB).
 
@@ -47,4 +49,6 @@ journalctl -u tx-ingest.service -n 50 --no-pager
 
 ## UI
 
-`/empresarial/tx` — listagem paginada dos enlaces ópticos ativos (filtro UF + busca), alimentada por `tx_optical_spans`.
+`/empresarial/tx` — listagem paginada dos enlaces ópticos ativos (filtro UF + busca), alimentada por `tx_optical_spans`. O drawer de detalhes carrega o histórico paginado via `/api/tx/history`.
+
+`/empresarial/relatorios/tx` — rankings do estado atual + bloco **Histórico de amostras** (filtro período/UF/busca) e export CSV `/api/export/tx-history`.

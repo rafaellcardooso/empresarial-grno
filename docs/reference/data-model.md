@@ -1,16 +1,18 @@
 # Referência — modelo de dados (SIR app)
 
-> Última revisão: **2026-10-05** · Índice: [../README.md](../README.md)
+> Última revisão: **2026-11-17** · Índice: [../README.md](../README.md)
 
 Schema versionado em `migrations/sir/`. Fronteiras: [../architecture/data-and-write-boundaries.md](../architecture/data-and-write-boundaries.md).
 
 ## Tabelas-fonte (workers)
 
-| Tabela       | Writer         | Notas                                                   |
-| ------------ | -------------- | ------------------------------------------------------- |
-| `rals`       | sir-ingest RAL | Status ATIVO/ENCERRADO                                  |
-| `recs`       | sir-ingest REC | Prefixo REC/DSR/TCQ                                     |
-| `sdh_alarms` | tmip           | `is_active`; colunas de tratativa atualizadas pelo Next |
+| Tabela               | Writer         | Notas                                                   |
+| -------------------- | -------------- | ------------------------------------------------------- |
+| `rals`               | sir-ingest RAL | Status ATIVO/ENCERRADO                                  |
+| `recs`               | sir-ingest REC | Prefixo REC/DSR/TCQ                                     |
+| `sdh_alarms`         | tmip           | `is_active`; colunas de tratativa atualizadas pelo Next |
+| `tx_optical_spans`   | tx-ingest      | Estado atual dos enlaces ópticos (UPSERT; filtro UF)    |
+| `tx_optical_samples` | tx-ingest      | Histórico (change/heartbeat); retenção 90 dias          |
 
 ### BSOD (SIR — writer `workers/bsod`)
 

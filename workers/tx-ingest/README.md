@@ -1,6 +1,6 @@
 # TX ingest (potência óptica)
 
-Worker Node que baixa o CSV do relatório GRB `relatorio_potencia_optica_tx.php`, filtra UFs **MA / AM / PA / AP** e faz upsert em `tx_optical_spans` (MySQL SIR).
+Worker Node que baixa o CSV do relatório GRB `relatorio_potencia_optica_tx.php`, filtra UFs **MA / AM / PA / AP**, faz upsert em `tx_optical_spans` e grava histórico em `tx_optical_samples` (mudança/heartbeat; retenção 90 dias).
 
 Runbook: [docs/runbooks/tx-optical-ingest.md](../../docs/runbooks/tx-optical-ingest.md).
 

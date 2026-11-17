@@ -9,6 +9,7 @@ e o versionamento de mensagens de commit segue [Conventional Commits](https://ww
 
 ### Added
 
+- Histórico consultável TX (`tx_optical_samples`): amostras em mudança/heartbeat com retenção 90 dias; drawer em `/tx` e consulta/export em `/relatorios/tx`.
 - Badges de pendentes (BSOD, SDH, SIR) no menu e pop-up de chamados SIR `/NET/FO`, com notificação do navegador quando a aba está em segundo plano.
 - Alarme de SLA SIR no shell (pop-up + cor na tabela): REC 2h, RAL 6h — verde dentro do SLA, vermelho e aviso ao estourar.
 - Badge do menu **SIR** com dois contadores: abertos (ATIVO) e SLA estourado.
