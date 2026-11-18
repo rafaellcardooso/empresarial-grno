@@ -53,7 +53,7 @@ export const AUTH_COPY = {
   adminUsersLead: "Aprovar cadastros e gerenciar acessos.",
   adminPendingTitle: "Cadastros pendentes",
   adminAllUsersTitle: "Todos os usuários",
-  adminNotificationsTitle: "Notificações",
+  adminNotificationsTitle: "Avisos",
   adminNotificationsLead: "Criar e disparar avisos para todos os usuários.",
   notificationComposerTitle: "Nova notificação",
   notificationComposerLead: "A mensagem será entregue no sino de todos os usuários ativos.",

@@ -196,7 +196,7 @@ export function Sidebar() {
 
           return (
             <SidebarNavButton
-              key={item.label}
+              key={item.href}
               href={item.href}
               label={item.label}
               icon={item.icon}

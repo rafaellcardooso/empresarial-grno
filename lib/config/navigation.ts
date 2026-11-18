@@ -48,12 +48,11 @@ const NAV_SECTIONS_RAW: NavItem[] = [
   { href: "/sdh", label: "SDH", icon: "bi-broadcast", badgeKey: "sdh" },
   { href: "/gpon", label: "GPON", icon: "bi-bezier2" },
   { href: "/tx", label: "TX", icon: "bi-activity", badgeKey: "tx" },
-  { header: true, label: "GRB" },
+  { header: true, label: "Operação" },
+  { href: "/acionamento", label: "Técnicos", icon: "bi-people" },
+  { href: "/fca", label: "FCA", icon: "bi-clipboard-check" },
   { href: "/grb", label: "TELNET", icon: "bi-terminal" },
   { href: "/grb/critel", label: "CRITEL", icon: "bi-graph-up" },
-  { header: true, label: "Operação" },
-  { href: "/acionamento", label: "TÉCNICOS", icon: "bi-people" },
-  { href: "/fca", label: "FCA", icon: "bi-clipboard-check" },
   { header: true, label: "Sistema" },
   { href: "/relatorios", label: "Relatórios", icon: "bi-file-earmark-bar-graph" },
   { href: "/conta", label: AUTH_COPY.accountTitle, icon: "bi-person" },
@@ -75,42 +74,8 @@ const NAV_SECTIONS_RAW: NavItem[] = [
   },
 ];
 
-/** Seções cujo ordem de links segue a declaração em NAV_SECTIONS_RAW. */
-const NAV_SECTIONS_MANUAL_ORDER = new Set(["Sistema", "GRB", "Administração"]);
-
-/** Agrupa itens por seção; ordena links alfabeticamente, exceto seções manuais. */
-function sortNavSectionsByLabel(items: NavItem[]): NavItem[] {
-  const groups: NavItem[][] = [];
-  let current: NavItem[] = [];
-
-  for (const item of items) {
-    if (item.header && current.length > 0) {
-      groups.push(current);
-      current = [item];
-    } else if (item.header) {
-      current = [item];
-    } else {
-      current.push(item);
-    }
-  }
-
-  if (current.length > 0) {
-    groups.push(current);
-  }
-
-  return groups.flatMap((group) => {
-    const header = group.find((item) => item.header);
-    const links = group.filter((item) => !item.header);
-    const sortedLinks =
-      header?.label && NAV_SECTIONS_MANUAL_ORDER.has(header.label)
-        ? links
-        : links.sort((a, b) => a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" }));
-
-    return header ? [header, ...sortedLinks] : sortedLinks;
-  });
-}
-
-export const NAV_SECTIONS = sortNavSectionsByLabel(NAV_SECTIONS_RAW);
+/** Ordem canônica = declaração em NAV_SECTIONS_RAW (sem sort em runtime). */
+export const NAV_SECTIONS = NAV_SECTIONS_RAW;
 
 /** Retorna título da página para o pathname informado. */
 export function getPageTitle(pathname: string): string {
